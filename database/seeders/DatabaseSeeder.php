@@ -9,6 +9,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             WilayahPemdaSeeder::class,
+            KebutuhanKonektivitasSeeder::class,
             MasterInputSeeder::class,
         ]);
     }

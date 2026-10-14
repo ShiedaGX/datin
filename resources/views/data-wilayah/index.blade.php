@@ -14,7 +14,7 @@
     </div>
 
     <div class="table-wrap">
-        <table class="table">
+        <table class="table table-long">
             <thead>
                 <tr>
                     <th>Kabupaten / Kota</th>
