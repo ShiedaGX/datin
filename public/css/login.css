@@ -1,0 +1,96 @@
+/* ===== Halaman Login – Subsidi Transportasi ===== */
+:root{
+  --navy:#0f2943; --navy-card:#173f60; --navy-line:#25506f;
+  --teal:#0f7f73; --teal-dark:#0b675e; --teal-text:#0c7a6d; --mint:#34d399;
+  --ink:#14243a; --muted:#64748b; --line:#cbd5e1; --danger:#dc2626;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:15px;line-height:1.5;color:var(--ink);background:#fff;-webkit-text-size-adjust:100%}
+h1,h2,p,dl,dd{margin:0}
+a{color:inherit}
+button,input{font:inherit;color:inherit}
+
+.shell{display:grid;grid-template-columns:minmax(420px,37.5%) 1fr;min-height:100vh;min-height:100dvh}
+
+/* ---------- kiri ---------- */
+.hero{background:var(--navy);color:#fff;padding:44px 52px;display:flex;flex-direction:column;min-width:0}
+.hero-brand{display:flex;align-items:center;gap:14px;text-decoration:none;color:#fff}
+.hero-brand strong{display:block;font-size:17px;font-weight:600;line-height:1.25}
+.hero-brand small{display:block;font-size:12.5px;color:#a9bccd;letter-spacing:.01em}
+.logo{flex:none;border-radius:10px}
+.hero-body{margin:auto 0;padding:48px 0}
+.eyebrow{display:flex;align-items:center;gap:12px;font-size:13px;font-weight:600;letter-spacing:.04em;color:#b6c8d8;margin-bottom:18px}
+.eyebrow i{display:block;width:22px;height:2px;background:#14a393;border-radius:2px}
+.hero h2{font-size:clamp(26px,2.4vw,38px);line-height:1.28;font-weight:700;letter-spacing:-.01em;max-width:15em}
+.hero-sub{margin-top:18px;color:#a9bccd;font-size:14.5px;max-width:30em}
+.network{position:relative;margin-top:28px;height:clamp(180px,24vh,240px);padding:20px 22px;background:var(--navy-card);border:1px solid var(--navy-line);border-radius:18px;overflow:hidden}
+.network>p{position:relative;z-index:1;font-size:12.5px;font-weight:600;letter-spacing:.03em;color:#b6c8d8}
+.network svg{position:absolute;inset:36px 0 0 0;width:100%;height:calc(100% - 36px)}
+.pill{position:absolute;right:20px;bottom:18px;z-index:1;display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:#0f2943;font-size:13px;font-weight:600}
+.pill i,.portal i{display:block;width:8px;height:8px;border-radius:50%;background:var(--mint)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
+.stats dt{font-size:clamp(22px,1.9vw,28px);font-weight:700;line-height:1.2}
+.stats dd{font-size:13.5px;color:#a9bccd;margin-top:2px}
+.hero-foot{display:flex;align-items:center;gap:12px;font-size:13.5px;color:#b6c8d8}
+.hero-foot svg{flex:none}
+
+/* ---------- kanan ---------- */
+.panel{display:flex;flex-direction:column;padding:36px 72px 32px;min-width:0}
+.panel-top,.panel-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:13.5px;color:var(--muted);font-weight:500}
+.portal{display:inline-flex;align-items:center;gap:12px;color:#475569;font-weight:600}
+.portal i{background:var(--teal)}
+.panel-foot{justify-content:flex-start;gap:6px;flex-wrap:wrap;font-weight:400}
+
+.login-form{width:100%;max-width:448px;margin:auto}
+.kicker{font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--teal-text)}
+.login-form h1{font-size:clamp(28px,2.2vw,34px);line-height:1.2;font-weight:700;letter-spacing:-.01em;margin-top:6px}
+.lead{margin-top:12px;color:var(--muted);font-size:15.5px}
+.alert{margin-top:20px;padding:12px 16px;border:1px solid #fca5a5;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:14px}
+
+.field{margin-top:22px}
+.field label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+.input{display:flex;align-items:center;gap:12px;height:46px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#64748b;transition:border-color .15s,box-shadow .15s}
+.input:focus-within{border-color:#14a393;box-shadow:0 0 0 3px rgba(20,163,147,.18)}
+.input.is-invalid{border-color:var(--danger)}
+.input input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font-size:15px}
+.input input::placeholder{color:#94a3b8}
+.input svg{flex:none}
+.eye{flex:none;display:grid;place-items:center;width:32px;height:32px;margin-right:-6px;border:0;border-radius:6px;background:none;color:#64748b;cursor:pointer}
+.eye:hover{color:var(--ink);background:#f1f5f9}
+
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;font-size:14px}
+.check{display:inline-flex;align-items:center;gap:10px;color:var(--muted);cursor:pointer}
+.check input{position:absolute;opacity:0;width:1px;height:1px}
+.check span{width:18px;height:18px;border:1px solid var(--line);border-radius:5px;background:#fff;display:grid;place-items:center}
+.check input:checked + span{background:var(--teal);border-color:var(--teal)}
+.check input:checked + span::after{content:"";width:9px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.check input:focus-visible + span{box-shadow:0 0 0 3px rgba(20,163,147,.3)}
+.link{color:var(--teal-text);font-weight:600;text-decoration:none}
+.link:hover{text-decoration:underline}
+
+.btn-login{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:48px;margin-top:20px;border:0;border-radius:8px;background:var(--teal);color:#fff;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(15,127,115,.25);transition:background .15s}
+.btn-login:hover{background:var(--teal-dark)}
+.btn-login:disabled{opacity:.7;cursor:wait}
+.register{margin-top:26px;text-align:center;color:var(--muted);font-size:15px}
+.register .link{margin-left:4px}
+.secure{display:flex;gap:12px;align-items:flex-start;margin-top:26px;padding:14px 16px;border-radius:8px;background:#f4f7fa;color:#475569;font-size:13px;line-height:1.5}
+.secure svg{flex:none;margin-top:1px;color:var(--teal-text)}
+
+/* ---------- responsif ---------- */
+@media (max-width:1100px){
+  .shell{grid-template-columns:minmax(360px,42%) 1fr}
+  .hero{padding:36px 36px}
+  .panel{padding:32px 40px 28px}
+}
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .hero{padding:18px 20px}
+  .hero-body,.hero-foot{display:none}
+  .panel{padding:24px 20px 24px}
+  .panel-top{display:none}
+  .login-form{margin:12px auto 24px}
+}
+@media (max-width:420px){
+  .row{flex-wrap:wrap}
+}

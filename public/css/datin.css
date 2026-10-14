@@ -120,15 +120,6 @@ textarea{height:auto;padding:12px 16px;resize:vertical;min-height:64px;line-heig
 .table .empty{text-align:center;color:var(--muted);padding:32px}
 .pager{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 
-/* login */
-.login-body{display:grid;place-items:center;min-height:100vh;padding:20px}
-.login-card{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px;box-shadow:0 10px 30px rgba(15,23,42,.08)}
-.login-card .field{margin-bottom:16px}
-.login-card input{max-width:none}
-.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
-.login-brand h1{font-size:18px}
-.login-brand p{color:var(--muted);font-size:13px}
-
 /* ---------- responsive ---------- */
 @media (max-width:1100px){ .stats{grid-template-columns:repeat(2,1fr)} }
 @media (max-width:960px){

@@ -21,9 +21,6 @@ class User extends Authenticatable
     public function getAuthPassword(): string { return $this->password_hash; }
     public function getAuthPasswordName(): string { return 'password_hash'; }
 
-    // Tabel users pada ERD tidak punya remember_token
-    public function getRememberTokenName(): string { return ''; }
-
     public function role(): BelongsTo { return $this->belongsTo(Role::class, 'id_role', 'id_role'); }
     public function moda(): BelongsTo { return $this->belongsTo(Moda::class, 'id_moda', 'id_moda'); }
     public function dataPemda(): HasMany { return $this->hasMany(DataPemda::class, 'id_user', 'id_user'); }
