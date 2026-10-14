@@ -1,0 +1,151 @@
+@extends('layouts.app')
+
+@section('title', 'Input Data Wilayah Baru')
+@section('heading', 'Input Data Wilayah Baru')
+
+@section('content')
+<form class="card form" id="formInput" method="POST" action="{{ route('input-data.store') }}" enctype="multipart/form-data">
+    @csrf
+
+    <div class="card-head">
+        <h2>Sistem Formulir Digital Pengajuan Subsidi</h2>
+        <p>Pastikan semua data wilayah, keterkaitan geografis, potensi lokal, serta sektor potensial diisi dengan akurat sesuai rujukan Bappenas.</p>
+    </div>
+
+    @if ($errors->any())
+        <div class="alert alert-error" role="alert">
+            <strong>Data belum dapat disimpan.</strong> Periksa kembali isian yang ditandai merah.
+        </div>
+    @endif
+
+    {{-- 1. Informasi Administrasi & Wilayah --}}
+    <section class="step">
+        <h3><span class="step-no">1</span> Informasi Administrasi &amp; Wilayah</h3>
+
+        <div class="grid-2">
+            <div class="field">
+                <label for="id_provinsi">Provinsi</label>
+                <select id="id_provinsi" name="id_provinsi" required class="@error('id_provinsi') is-invalid @enderror">
+                    <option value="">Pilih Provinsi...</option>
+                    @foreach ($provinsi as $p)
+                        <option value="{{ $p->id_provinsi }}" data-wilayah="{{ $p->id_wilayah }}" @selected(old('id_provinsi') == $p->id_provinsi)>{{ $p->nama_provinsi }}</option>
+                    @endforeach
+                </select>
+                @error('id_provinsi')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                <label for="id_wilayah">Wilayah Regional</label>
+                <select id="id_wilayah" name="id_wilayah" required class="@error('id_wilayah') is-invalid @enderror">
+                    <option value="">Pilih Wilayah Regional (Papua/Sulawesi/Maluku/etc)...</option>
+                    @foreach ($wilayah as $w)
+                        <option value="{{ $w->id_wilayah }}" @selected(old('id_wilayah') == $w->id_wilayah)>{{ $w->nama_wilayah }}</option>
+                    @endforeach
+                </select>
+                @error('id_wilayah')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                <label for="nama_kab_kota">Kabupaten / Kota</label>
+                <input type="text" id="nama_kab_kota" name="nama_kab_kota" value="{{ old('nama_kab_kota') }}" maxlength="100" required
+                       placeholder="Contoh: Asmat / Teluk Bintuni" class="@error('nama_kab_kota') is-invalid @enderror">
+                @error('nama_kab_kota')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                <label for="klasifikasi_pemda">Klasifikasi Wilayah</label>
+                <select id="klasifikasi_pemda" name="klasifikasi_pemda" required class="@error('klasifikasi_pemda') is-invalid @enderror">
+                    <option value="">Pilih Klasifikasi...</option>
+                    @foreach ($klasifikasi as $k)
+                        <option value="{{ $k }}" @selected(old('klasifikasi_pemda') === $k)>{{ $k }}</option>
+                    @endforeach
+                </select>
+                @error('klasifikasi_pemda')<p class="error">{{ $message }}</p>@enderror
+            </div>
+        </div>
+    </section>
+
+    {{-- 2. Keterangan Pembangunan & Potensi Lokal --}}
+    <section class="step">
+        <h3><span class="step-no">2</span> Keterangan Pembangunan &amp; Potensi Lokal</h3>
+
+        <fieldset class="field">
+            <legend>Keterangan Daerah (Dapat Memilih Lebih Dari Satu)</legend>
+            <div class="chips">
+                @foreach ($keterangan as $key => $item)
+                    <label class="chip">
+                        <input type="checkbox" name="keterangan[]" value="{{ $key }}" @checked(in_array($key, old('keterangan', [])))>
+                        <span>{{ $item['label'] }}</span>
+                    </label>
+                @endforeach
+            </div>
+            @error('keterangan.*')<p class="error">{{ $message }}</p>@enderror
+        </fieldset>
+
+        <fieldset class="field">
+            <legend>Potensi Unggulan Daerah</legend>
+            <div class="stack">
+                @for ($i = 0; $i < 5; $i++)
+                    <textarea name="potensi[]" rows="2" maxlength="200"
+                              aria-label="Potensi unggulan {{ $i + 1 }}"
+                              placeholder="{{ $i < 4 ? 'Masukkan Potensi Unggulan Daerah' : 'Lainnya' }}">{{ old('potensi.' . $i) }}</textarea>
+                @endfor
+            </div>
+            @error('potensi')<p class="error">{{ $message }}</p>@enderror
+            @error('potensi.*')<p class="error">{{ $message }}</p>@enderror
+        </fieldset>
+
+        <fieldset class="field">
+            <legend>Pemilihan Moda Transportasi</legend>
+            <div class="chips">
+                @foreach ($moda as $m)
+                    <label class="chip">
+                        <input type="radio" name="id_moda" value="{{ $m->id_moda }}" required @checked((string) old('id_moda') === (string) $m->id_moda)>
+                        <span>{{ $m->nama_moda }}</span>
+                    </label>
+                @endforeach
+            </div>
+            @error('id_moda')<p class="error">{{ $message }}</p>@enderror
+        </fieldset>
+
+        <div class="field field-wide">
+            <label for="kebutuhan_konektivitas">Kebutuhan Konektivitas Regional (Hubungan Logistik)</label>
+            <textarea id="kebutuhan_konektivitas" name="kebutuhan_konektivitas" rows="4" maxlength="2000"
+                      placeholder="masukkan kebutuhan konektivitas daerah"
+                      class="@error('kebutuhan_konektivitas') is-invalid @enderror">{{ old('kebutuhan_konektivitas') }}</textarea>
+            @error('kebutuhan_konektivitas')<p class="error">{{ $message }}</p>@enderror
+        </div>
+    </section>
+
+    {{-- 3. Upload Surat --}}
+    <section class="upload-card">
+        <div class="card-head">
+            <h2>Upload Surat</h2>
+            <p>Pastikan semua surat sudah terupload</p>
+        </div>
+
+        <h3><span class="step-no">3</span> Upload Surat</h3>
+
+        <div class="grid-2">
+            @foreach ($dokumen as $field => $label)
+                <div class="field">
+                    <label for="{{ $field }}_name">{{ $label }}</label>
+                    <div class="upload-box @error($field) is-invalid @enderror">
+                        <input type="text" id="{{ $field }}_name" class="upload-name" data-for="{{ $field }}" readonly
+                               placeholder="upload {{ strtolower($label) }}">
+                        <input type="file" id="{{ $field }}" name="{{ $field }}" accept=".pdf,.doc,.docx" data-upload hidden>
+                        <button type="button" class="btn-upload" data-target="{{ $field }}">Upload</button>
+                    </div>
+                    @error($field)<p class="error">{{ $message }}</p>@enderror
+                </div>
+            @endforeach
+        </div>
+        <p class="hint">Format PDF, DOC, atau DOCX. Ukuran maksimal 5 MB per file.</p>
+    </section>
+
+    <div class="actions">
+        <a class="btn btn-outline" href="{{ route('data-wilayah.index') }}">Batal</a>
+        <button type="submit" class="btn btn-primary">Tambah Data</button>
+    </div>
+</form>
+@endsection
