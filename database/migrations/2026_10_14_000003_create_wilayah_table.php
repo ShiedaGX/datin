@@ -7,9 +7,8 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('wilayah', function (Blueprint $t) {
-            $t->id();
-            $t->string('nama', 50)->unique();   // Papua, Sulawesi, Maluku, dst.
-            $t->timestamps();
+            $t->id('id_wilayah');
+            $t->string('nama_wilayah', 50)->unique();
         });
     }
     public function down(): void { Schema::dropIfExists('wilayah'); }
