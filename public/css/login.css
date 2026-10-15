@@ -40,12 +40,14 @@ button,input{font:inherit;color:inherit}
 .panel-top,.panel-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:13.5px;color:var(--muted);font-weight:500}
 .portal{display:inline-flex;align-items:center;gap:12px;color:#475569;font-weight:600}
 .portal i{background:var(--teal)}
-.panel-foot{justify-content:flex-start;gap:6px;flex-wrap:wrap;font-weight:400}
+.panel-foot{justify-content:space-between;gap:6px 16px;flex-wrap:wrap;font-weight:400}
+.copy{color:#94a3b8}
 
 .login-form{width:100%;max-width:448px;margin:auto}
 .kicker{font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--teal-text)}
 .login-form h1{font-size:clamp(28px,2.2vw,34px);line-height:1.2;font-weight:700;letter-spacing:-.01em;margin-top:6px}
 .lead{margin-top:12px;color:var(--muted);font-size:15.5px}
+.alert-ok{border-color:#6ee7b7!important;background:#ecfdf5!important;color:#065f46!important}
 .alert{margin-top:20px;padding:12px 16px;border:1px solid #fca5a5;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:14px}
 
 .field{margin-top:22px}
@@ -77,6 +79,16 @@ button,input{font:inherit;color:inherit}
 .secure{display:flex;gap:12px;align-items:flex-start;margin-top:26px;padding:14px 16px;border-radius:8px;background:#f4f7fa;color:#475569;font-size:13px;line-height:1.5}
 .secure svg{flex:none;margin-top:1px;color:var(--teal-text)}
 
+/* ---------- registrasi ---------- */
+.login-form.wide{max-width:500px}
+.row-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}
+.row-2 .field{min-width:0}
+.field-error{margin:6px 0 0;color:var(--danger);font-size:13px}
+.check{position:relative}
+.agree{display:flex;align-items:flex-start;gap:12px;margin-top:16px;color:var(--muted);font-size:14.5px;line-height:1.55}
+.agree span{flex:none;margin-top:3px}
+.login-form.wide .btn-login{margin-top:18px}
+
 /* ---------- responsif ---------- */
 @media (max-width:1100px){
   .shell{grid-template-columns:minmax(360px,42%) 1fr}
@@ -91,6 +103,7 @@ button,input{font:inherit;color:inherit}
   .panel-top{display:none}
   .login-form{margin:12px auto 24px}
 }
+@media (max-width:560px){ .row-2{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:420px){
   .row{flex-wrap:wrap}
 }

@@ -1,32 +1,17 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Models\DataPemda;
-use App\Models\KabKota;
-use App\Models\Provinsi;
+use App\Models\User;
+use App\Support\StatistikPortal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     public function showLogin()
     {
-        // Ringkasan angka pada panel kiri halaman login (dihitung dari database)
-        $total = DataPemda::count();
-        $lengkap = DataPemda::query()
-            ->whereNotNull('potensi_pemda')->where('potensi_pemda', '!=', '')
-            ->whereNotNull('klasifikasi_pemda')->where('klasifikasi_pemda', '!=', '')
-            ->whereNotNull('keterangan_pemda')->where('keterangan_pemda', '!=', '')
-            ->count();
-
-        return view('auth.login', [
-            'stats' => [
-                'provinsi'    => Provinsi::count(),
-                'wilayah'     => KabKota::count(),
-                // % data_pemda yang potensi, klasifikasi, dan keterangannya terisi
-                'kelengkapan' => $total > 0 ? (int) round($lengkap / $total * 100) : 0,
-            ],
-        ]);
+        return view('auth.login', ['stats' => StatistikPortal::ringkasan()]);
     }
 
     public function login(Request $request)
@@ -39,6 +24,16 @@ class AuthController extends Controller
             'email.email'       => 'Format alamat email tidak valid.',
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
+
+        // Akun yang sudah mendaftar tetapi belum diverifikasi administrator
+        if (config('datin.verifikasi_akun')) {
+            $user = User::where('email', $credentials['email'])->first();
+            if ($user && $user->diverifikasi_at === null && Hash::check($credentials['password'], $user->password_hash)) {
+                return back()
+                    ->withErrors(['email' => 'Akun Anda masih menunggu verifikasi administrator.'])
+                    ->onlyInput('email');
+            }
+        }
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()

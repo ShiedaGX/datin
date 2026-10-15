@@ -13,9 +13,9 @@ class User extends Authenticatable
     protected $table = 'users';
     protected $primaryKey = 'id_user';
 
-    protected $fillable = ['id_role', 'id_moda', 'username', 'email', 'password_hash', 'full_name'];
+    protected $fillable = ['id_role', 'id_moda', 'username', 'email', 'password_hash', 'full_name', 'instansi', 'diverifikasi_at'];
     protected $hidden = ['password_hash'];
-    protected $casts = ['password_hash' => 'hashed'];
+    protected $casts = ['password_hash' => 'hashed', 'diverifikasi_at' => 'datetime'];
 
     // Kolom password pada ERD bernama password_hash
     public function getAuthPassword(): string { return $this->password_hash; }

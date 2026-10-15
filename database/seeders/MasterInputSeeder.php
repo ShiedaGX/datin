@@ -26,6 +26,7 @@ class MasterInputSeeder extends Seeder
                     'email'         => 'pemda@example.test',
                     'full_name'     => 'User Pemda',
                     'password_hash' => 'pemda12345',   // di-hash otomatis oleh cast 'hashed'
+                    'diverifikasi_at' => now(),
                 ]
             );
         }
