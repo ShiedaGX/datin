@@ -25,5 +25,5 @@ class FormOptions
         'surat_rencana_teknis' => 'Surat Rencana Teknis',
     ];
 
-    public const STATUS_AWAL = 'Diajukan';
+    public const STATUS_AWAL = 'Menunggu Persetujuan';
 }

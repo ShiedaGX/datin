@@ -59,6 +59,16 @@
     });
   });
 
+  /* Filter otomatis & konfirmasi hapus */
+  $$('[data-autosubmit]').forEach(function (el) {
+    el.addEventListener('change', function () { el.form.submit(); });
+  });
+  $$('form[data-confirm]').forEach(function (f) {
+    f.addEventListener('submit', function (e) {
+      if (!window.confirm(f.dataset.confirm)) e.preventDefault();
+    });
+  });
+
   /* Cegah submit ganda */
   var form = $('#formInput');
   if (form) {

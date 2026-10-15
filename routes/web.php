@@ -19,6 +19,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/input-data', [InputDataController::class, 'store'])->name('input-data.store');
 
     Route::get('/data-wilayah', [DataWilayahController::class, 'index'])->name('data-wilayah.index');
+    Route::get('/data-wilayah/export', [DataWilayahController::class, 'export'])->name('data-wilayah.export');
+    Route::get('/data-wilayah/{pemda}', [DataWilayahController::class, 'show'])->whereNumber('pemda')->name('data-wilayah.show');
+    Route::delete('/data-wilayah/{pemda}', [DataWilayahController::class, 'destroy'])->whereNumber('pemda')->name('data-wilayah.destroy');
+    Route::get('/dokumen/{dokumen}', [DataWilayahController::class, 'unduh'])->whereNumber('dokumen')->name('dokumen.unduh');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

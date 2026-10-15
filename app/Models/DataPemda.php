@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use App\Support\StatusPengajuan;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -63,5 +64,53 @@ class DataPemda extends Model
         $butir = array_filter(array_map('trim', preg_split('/[,;\n]+/', $teks)), fn ($x) => $x !== '');
 
         return count($butir);
+    }
+
+    // ---- Tampilan daftar Data Wilayah ----
+
+    /** Pengajuan terbaru (relasi ruteSubsidi sebaiknya sudah di-eager-load). */
+    public function getPengajuanTerbaruAttribute(): ?RuteSubsidi
+    {
+        return $this->ruteSubsidi->sortByDesc('id_rute_subsidi')->first();
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return StatusPengajuan::normalisasi($this->pengajuan_terbaru?->status_pengajuan);
+    }
+
+    public function getStatusKelasAttribute(): string
+    {
+        return StatusPengajuan::kelas($this->status_label);
+    }
+
+    /** Butir potensi tanpa penomoran: ["Konstruksi", "Pertanian Sagu", ...] */
+    public function getPotensiDaftarAttribute(): array
+    {
+        $butir = array_map(
+            fn ($x) => trim(preg_replace('/^\s*\d+\.\s*/', '', trim($x))),
+            explode(';', (string) $this->potensi_pemda)
+        );
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
+    public function getPotensiRingkasAttribute(): string
+    {
+        return implode(', ', $this->potensi_daftar);
+    }
+
+    /** Hanya pemilik data yang boleh menghapus, dan tidak setelah Verifikasi Final. */
+    public function bisaDiubahOleh(User $user): bool
+    {
+        return $this->id_user !== null
+            && (int) $this->id_user === (int) $user->id_user
+            && $this->status_label !== StatusPengajuan::FINAL;
+    }
+
+    /** Dokumen pengajuan hanya untuk pemilik data dan staf. */
+    public function dokumenBisaDiunduhOleh(User $user): bool
+    {
+        return $user->isStaf() || ($this->id_user !== null && (int) $this->id_user === (int) $user->id_user);
     }
 }
