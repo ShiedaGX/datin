@@ -1,6 +1,7 @@
 <?php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -8,7 +9,9 @@ use Illuminate\Support\Facades\Schema;
  *  1. data_pemda.kebutuhan_konektivitas  : form punya isian ini, ERD tidak punya kolomnya.
  *  2. data_pemda.id_user tidak lagi unik : satu akun pemda dapat menginput lebih dari satu wilayah.
  *  3. rute_subsidi.id_kab_kota_tujuan nullable : form belum meminta kota tujuan.
- * Membutuhkan Laravel 11+ (->change() tanpa doctrine/dbal).
+ *
+ * Versi ini kompatibel dengan Laravel 10 (tanpa doctrine/dbal) maupun Laravel 11+.
+ * Untuk MySQL/MariaDB perubahan kolom memakai ALTER TABLE langsung.
  */
 return new class extends Migration {
     public function up(): void
@@ -25,9 +28,7 @@ return new class extends Migration {
         Schema::table('rute_subsidi', function (Blueprint $t) {
             $t->dropForeign(['id_kab_kota_tujuan']);
         });
-        Schema::table('rute_subsidi', function (Blueprint $t) {
-            $t->unsignedBigInteger('id_kab_kota_tujuan')->nullable()->change();
-        });
+        $this->ubahTujuan(true);
         Schema::table('rute_subsidi', function (Blueprint $t) {
             $t->foreign('id_kab_kota_tujuan')->references('id_kab_kota')->on('kab_kota')->cascadeOnUpdate()->restrictOnDelete();
         });
@@ -39,9 +40,7 @@ return new class extends Migration {
         Schema::table('rute_subsidi', function (Blueprint $t) {
             $t->dropForeign(['id_kab_kota_tujuan']);
         });
-        Schema::table('rute_subsidi', function (Blueprint $t) {
-            $t->unsignedBigInteger('id_kab_kota_tujuan')->nullable(false)->change();
-        });
+        $this->ubahTujuan(false);
         Schema::table('rute_subsidi', function (Blueprint $t) {
             $t->foreign('id_kab_kota_tujuan')->references('id_kab_kota')->on('kab_kota')->cascadeOnUpdate()->restrictOnDelete();
         });
@@ -53,6 +52,20 @@ return new class extends Migration {
             $t->unique('id_user');
             $t->foreign('id_user')->references('id_user')->on('users')->cascadeOnUpdate()->nullOnDelete();
             $t->dropColumn('kebutuhan_konektivitas');
+        });
+    }
+
+    private function ubahTujuan(bool $nullable): void
+    {
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            DB::statement('ALTER TABLE rute_subsidi MODIFY id_kab_kota_tujuan BIGINT UNSIGNED ' . ($nullable ? 'NULL' : 'NOT NULL'));
+
+            return;
+        }
+
+        // Database lain: butuh doctrine/dbal pada Laravel 10 (composer require doctrine/dbal)
+        Schema::table('rute_subsidi', function (Blueprint $t) use ($nullable) {
+            $t->unsignedBigInteger('id_kab_kota_tujuan')->nullable($nullable)->change();
         });
     }
 };
