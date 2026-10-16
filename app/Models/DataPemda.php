@@ -113,4 +113,20 @@ class DataPemda extends Model
     {
         return $user->isStaf() || ($this->id_user !== null && (int) $this->id_user === (int) $user->id_user);
     }
+
+    /** Pengajuan terbaru di atas; daerah tanpa pengajuan menyusul berdasarkan id terbesar. */
+    public function scopeTerbaru($query)
+    {
+        return $query
+            ->orderByRaw('(SELECT MAX(rute_subsidi.created_at) FROM rute_subsidi WHERE rute_subsidi.id_pemda = data_pemda.id_pemda) DESC')
+            ->orderByDesc('id_pemda');
+    }
+
+    /** Data wilayah boleh diisi pengajuan bila belum punya pengajuan dan tidak dikelola akun lain. */
+    public function bisaDiklaimOleh(User $user): bool
+    {
+        $milikLain = $this->id_user !== null && (int) $this->id_user !== (int) $user->id_user;
+
+        return ! $milikLain && ! $this->ruteSubsidi()->exists();
+    }
 }

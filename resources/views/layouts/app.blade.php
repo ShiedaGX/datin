@@ -24,14 +24,22 @@
         </a>
 
         <nav class="nav">
+            @php($pengguna = auth()->user())
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
                 <span>Dashboard</span>
             </a>
-            <a href="{{ route('input-data.create') }}" class="nav-link {{ request()->routeIs('input-data.*') ? 'active' : '' }}">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
-                <span>Input Data</span>
-            </a>
+            @if ($pengguna->isSuperAdmin())
+                <a href="{{ route('admin.user.index') }}" class="nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+                    <span>Data User</span>
+                </a>
+            @elseif ($pengguna->bisa('pemda.unggah'))
+                <a href="{{ route('input-data.create') }}" class="nav-link {{ request()->routeIs('input-data.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+                    <span>Input Data</span>
+                </a>
+            @endif
             <a href="{{ route('data-wilayah.index') }}" class="nav-link {{ request()->routeIs('data-wilayah.*') ? 'active' : '' }}">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>
                 <span>Data Wilayah</span>
@@ -60,9 +68,9 @@
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
             <h1>@yield('heading')</h1>
-            <form class="search" action="{{ route('data-wilayah.index') }}" method="GET" role="search">
+            <form class="search" action="{{ trim($__env->yieldContent('search_action')) ?: route('data-wilayah.index') }}" method="GET" role="search">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-                <input type="search" name="q" value="{{ request('q') }}" placeholder="Cari data wilayah/provinsi..." aria-label="Cari data wilayah atau provinsi">
+                <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ trim($__env->yieldContent('search_placeholder')) ?: 'Cari data wilayah/provinsi...' }}" aria-label="Cari">
             </form>
             <span class="icon-btn" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>

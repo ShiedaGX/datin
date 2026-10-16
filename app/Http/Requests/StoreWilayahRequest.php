@@ -19,12 +19,12 @@ class StoreWilayahRequest extends FormRequest
         $rules = [
             'id_provinsi'            => ['required', 'integer', 'exists:provinsi,id_provinsi'],
             'id_wilayah'             => ['required', 'integer', 'exists:wilayah,id_wilayah'],
-            'nama_kab_kota'          => ['required', 'string', 'max:100'],
+            'id_kab_kota'            => ['required', 'integer', 'exists:kab_kota,id_kab_kota'],
             'klasifikasi_pemda'      => ['required', Rule::in(FormOptions::KLASIFIKASI)],
             'keterangan'             => ['nullable', 'array'],
             'keterangan.*'           => ['string', Rule::in(array_keys(FormOptions::KETERANGAN))],
             'potensi'                => ['required', 'array', 'max:5'],
-            'potensi.*'              => ['nullable', 'string', 'max:200'],
+            'potensi.*'              => ['nullable', 'string', 'max:200', 'not_regex:/[,;\r\n]/'],   // satu potensi per kolom
             'id_moda'                => ['required', 'integer', 'exists:moda,id_moda'],
             'kebutuhan_konektivitas' => ['nullable', 'string', 'max:2000'],
         ];
@@ -47,14 +47,13 @@ class StoreWilayahRequest extends FormRequest
                 }
             }
 
-            // Kab/Kota tidak boleh ganda dalam satu provinsi
-            if (! $v->errors()->hasAny(['id_provinsi', 'nama_kab_kota'])) {
-                $nama = mb_strtolower(trim((string) $this->input('nama_kab_kota')));
-                $ada = KabKota::where('id_provinsi', $this->input('id_provinsi'))
-                    ->whereRaw('LOWER(nama_kab_kota) = ?', [$nama])
-                    ->exists();
-                if ($ada) {
-                    $v->errors()->add('nama_kab_kota', 'Kabupaten/Kota ini sudah terdaftar pada provinsi tersebut.');
+            // Kab/Kota harus berada di provinsi yang dipilih dan masih tersedia
+            if (! $v->errors()->hasAny(['id_provinsi', 'id_kab_kota'])) {
+                $kab = KabKota::with('dataPemda.ruteSubsidi')->find($this->input('id_kab_kota'));
+                if ($kab && (int) $kab->id_provinsi !== (int) $this->input('id_provinsi')) {
+                    $v->errors()->add('id_kab_kota', 'Kabupaten/Kota tidak berada pada provinsi yang dipilih.');
+                } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user()))) {
+                    $v->errors()->add('id_kab_kota', 'Kabupaten/Kota ini ' . $alasan . '.');
                 }
             }
 
@@ -71,7 +70,7 @@ class StoreWilayahRequest extends FormRequest
         return [
             'id_provinsi'            => 'Provinsi',
             'id_wilayah'             => 'Wilayah regional',
-            'nama_kab_kota'          => 'Kabupaten/Kota',
+            'id_kab_kota'            => 'Kabupaten/Kota',
             'klasifikasi_pemda'      => 'Klasifikasi wilayah',
             'id_moda'                => 'Moda transportasi',
             'kebutuhan_konektivitas' => 'Kebutuhan konektivitas',
@@ -85,13 +84,15 @@ class StoreWilayahRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required'   => ':attribute wajib diisi.',
-            'exists'     => ':attribute tidak valid.',
-            'in'         => ':attribute tidak valid.',
-            'max.string' => ':attribute maksimal :max karakter.',
-            'max.file'   => ':attribute maksimal 5 MB.',
-            'mimes'      => ':attribute harus berformat PDF, DOC, atau DOCX.',
-            'uploaded'   => ':attribute gagal diunggah. Periksa batas ukuran upload pada server (upload_max_filesize).',
+            'required'            => ':attribute wajib diisi.',
+            'id_kab_kota.required' => 'Kabupaten/Kota wajib dipilih.',
+            'exists'              => ':attribute tidak valid.',
+            'in'                  => ':attribute tidak valid.',
+            'max.string'          => ':attribute maksimal :max karakter.',
+            'max.file'            => ':attribute maksimal 5 MB.',
+            'mimes'               => ':attribute harus berformat PDF, DOC, atau DOCX.',
+            'uploaded'            => ':attribute gagal diunggah. Periksa batas ukuran upload pada server (upload_max_filesize).',
+            'potensi.*.not_regex' => 'Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).',
         ];
     }
 }

@@ -83,6 +83,7 @@ class DataWilayahController extends Controller
         )->deleteFileAfterSend(true);
     }
 
+    /** Menghapus PENGAJUAN (rute, dokumen, verifikasi) dan melepas kepemilikan. Data wilayah (kab/kota & data pemda) tetap tersimpan. */
     public function destroy(Request $request, DataPemda $pemda)
     {
         abort_unless($pemda->bisaDiubahOleh($request->user()), 403);
@@ -92,32 +93,23 @@ class DataWilayahController extends Controller
 
         try {
             DB::transaction(function () use ($pemda, &$folder) {
-                $kab = $pemda->kabKota;
-
                 foreach ($pemda->ruteSubsidi as $rute) {
                     $folder[] = "dokumen_pengajuan/{$rute->id_rute_subsidi}";
                     $rute->delete();   // dokumen & verifikasi ikut terhapus (cascade)
                 }
-                $pemda->delete();
-
-                $masihDipakai = DataPemda::where('id_kab_kota', $kab->id_kab_kota)->exists()
-                    || RuteSubsidi::where('id_kab_kota_asal', $kab->id_kab_kota)
-                        ->orWhere('id_kab_kota_tujuan', $kab->id_kab_kota)->exists();
-                if (! $masihDipakai) {
-                    $kab->delete();
-                }
+                $pemda->update(['id_user' => null]);
             });
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with('error', 'Data gagal dihapus. Silakan coba lagi atau hubungi administrator.');
+            return back()->with('error', 'Pengajuan gagal dihapus. Silakan coba lagi atau hubungi administrator.');
         }
 
         foreach ($folder as $f) {
             Storage::disk('local')->deleteDirectory($f);
         }
 
-        return redirect()->route('data-wilayah.index')->with('success', 'Data "' . $nama . '" berhasil dihapus.');
+        return redirect()->route('data-wilayah.index')->with('success', 'Pengajuan "' . $nama . '" berhasil dihapus. Data wilayah tetap tersimpan.');
     }
 
     public function unduh(DokumenPengajuan $dokumen)
@@ -164,7 +156,7 @@ class DataWilayahController extends Controller
                     $q->where('klasifikasi_pemda', 'like', '%strategis%')->where('klasifikasi_pemda', 'not like', '%prioritas%');
                 }
             })
-            ->orderByDesc('id_pemda');
+            ->terbaru();
     }
 
     /** Contoh: [1, 2, 3, '...', 24] */
