@@ -1,6 +1,8 @@
 <?php
 namespace App\Models;
 
+use App\Support\StatusPengajuan;
+use App\Support\Tanggal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,4 +22,51 @@ class RuteSubsidi extends Model
     public function kabKotaTujuan(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota_tujuan', 'id_kab_kota'); }
     public function verifikasi(): HasMany { return $this->hasMany(VerifikasiPengajuan::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
     public function dokumen(): HasMany { return $this->hasMany(DokumenPengajuan::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
+
+    // ---- Tampilan halaman Permohonan ----
+
+    /** Contoh: LP-2026-00482 (tahun pengajuan + id laporan). */
+    public function getNomorLaporanAttribute(): string
+    {
+        $waktu = $this->created_at ?? $this->tanggal_pengajuan;
+
+        return 'LP-' . ($waktu ? $waktu->format('Y') : date('Y')) . '-' . str_pad((string) $this->id_rute_subsidi, 5, '0', STR_PAD_LEFT);
+    }
+
+    public function getWaktuPengajuanAttribute()
+    {
+        return $this->created_at ?? $this->tanggal_pengajuan;
+    }
+
+    public function getTanggalLengkapAttribute(): string
+    {
+        return Tanggal::panjang($this->waktu_pengajuan);
+    }
+
+    public function getJamPengajuanAttribute(): string
+    {
+        return $this->created_at ? Tanggal::jam($this->created_at) : '';
+    }
+
+    /** menunggu | disetujui | revisi | ditolak | lainnya */
+    public function getGrupStatusAttribute(): string
+    {
+        return StatusPengajuan::grup($this->status_pengajuan);
+    }
+
+    public function getSedangMenungguAttribute(): bool
+    {
+        return $this->grup_status === 'menunggu';
+    }
+
+    public function getKelasStatusModaAttribute(): string
+    {
+        return 's-' . $this->grup_status;
+    }
+
+    /** Label status untuk Moda: "Verifikasi 1" dan "Verifikasi Final" ditampilkan sebagai "Disetujui". */
+    public function getLabelStatusModaAttribute(): string
+    {
+        return StatusPengajuan::LABEL_GRUP[$this->grup_status] ?? $this->status_pengajuan;
+    }
 }

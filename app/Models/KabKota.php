@@ -40,4 +40,15 @@ class KabKota extends Model
 
         return null;
     }
+
+    /** "Maluku Tenggara" -> "Kabupaten Maluku Tenggara"; nama berawalan Kota/Kabupaten dibiarkan. */
+    public function getNamaLengkapAttribute(): string
+    {
+        $nama = (string) $this->nama_kab_kota;
+        if (preg_match('/^(kota|kab\.?|kabupaten)\s/i', $nama)) {
+            return $nama;
+        }
+
+        return ($this->jenis ?: 'Kabupaten') . ' ' . $nama;
+    }
 }

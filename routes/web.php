@@ -6,8 +6,10 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWilayahController;
 use App\Http\Controllers\InputDataController;
+use App\Http\Controllers\PermohonanController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Middleware\AkunAktif;
+use App\Http\Middleware\HanyaRole;
 use App\Http\Middleware\HanyaSuperAdmin;
 use App\Http\Middleware\PunyaHakAkses;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +37,16 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
     Route::get('/data-wilayah/{pemda}', [DataWilayahController::class, 'show'])->whereNumber('pemda')->name('data-wilayah.show');
     Route::delete('/data-wilayah/{pemda}', [DataWilayahController::class, 'destroy'])->whereNumber('pemda')->name('data-wilayah.destroy');
     Route::get('/dokumen/{dokumen}', [DataWilayahController::class, 'unduh'])->whereNumber('dokumen')->name('dokumen.unduh');
+
+    // Permohonan: khusus role Moda (dan hak akses "laporan.tinjau"). Laporan dibatasi per moda di controller.
+    Route::middleware([HanyaRole::class . ':Moda', PunyaHakAkses::class . ':laporan.tinjau'])
+        ->prefix('permohonan')->name('permohonan.')->group(function () {
+            Route::get('/', [PermohonanController::class, 'index'])->name('index');
+            Route::get('export', [PermohonanController::class, 'export'])->name('export');
+            Route::get('{rute}', [PermohonanController::class, 'show'])->whereNumber('rute')->name('show');
+            Route::post('{rute}/keputusan', [PermohonanController::class, 'keputusan'])->whereNumber('rute')->name('keputusan');
+            Route::get('{rute}/dokumen/{dokumen}', [PermohonanController::class, 'dokumen'])->whereNumber(['rute', 'dokumen'])->name('dokumen');
+        });
 
     // Khusus Super Admin
     Route::prefix('admin')->name('admin.')->middleware(HanyaSuperAdmin::class)->group(function () {

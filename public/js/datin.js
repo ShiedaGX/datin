@@ -223,6 +223,37 @@
     sesuaikan();
   }
 
+  /* ---------- Review laporan (Moda): checklist & keputusan ---------- */
+  var fk = $('#formKeputusan');
+  if (fk) {
+    var cek = $$('input[name="periksa[]"]', fk);
+    var hitung = $('#cekHitung'), setuju = $('#btnSetuju'), catatan = $('#catatan');
+
+    var perbaruiCek = function () {
+      var n = cek.filter(function (c) { return c.checked; }).length;
+      if (hitung) {
+        hitung.textContent = n + ' dari ' + cek.length + ' pemeriksaan telah dikonfirmasi';
+        hitung.classList.toggle('ok', cek.length > 0 && n === cek.length);
+      }
+      if (setuju) setuju.disabled = n !== cek.length;       // Setujui hanya aktif bila semua pemeriksaan dikonfirmasi
+    };
+    cek.forEach(function (c) { c.addEventListener('change', perbaruiCek); });
+    if (cek.length) perbaruiCek();
+
+    // Catatan wajib untuk Minta Revisi / Tolak
+    ['btnRevisi', 'btnTolak'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b && catatan) b.addEventListener('click', function () { catatan.required = true; });
+    });
+    if (setuju && catatan) setuju.addEventListener('click', function () { catatan.required = false; });
+
+    fk.addEventListener('submit', function (e) {
+      var v = e.submitter ? e.submitter.value : '';
+      var pesan = { setuju: 'Setujui laporan ini?', revisi: 'Kembalikan laporan ini untuk direvisi?', tolak: 'Tolak laporan ini?' }[v];
+      if (pesan && !window.confirm(pesan + ' Keputusan akan tercatat permanen.')) e.preventDefault();
+    });
+  }
+
   /* ---------- Upload surat ---------- */
   var MAX = 5 * 1024 * 1024;
   $$('.btn-upload, .upload-name').forEach(function (el) {

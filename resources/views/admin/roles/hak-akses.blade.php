@@ -27,7 +27,7 @@
         @endforeach
     </ul>
 
-    <p class="hint">Saat ini hak akses <strong>pemda.unggah</strong> menentukan siapa yang dapat membuka halaman Input Data. Hak akses lainnya disiapkan untuk fitur peninjauan dan surat CHR yang akan dibuat berikutnya.</p>
+    <p class="hint">Hak akses yang sudah berlaku: <strong>pemda.unggah</strong> menentukan siapa yang dapat membuka halaman Input Data, dan <strong>laporan.tinjau</strong> menentukan akses ke halaman Permohonan (khusus role Moda). Hak akses lainnya disiapkan untuk fitur surat CHR dan rancangan teknis yang akan dibuat berikutnya.</p>
 
     <div class="actions">
         <a class="btn btn-outline" href="{{ route('admin.user.index') }}">Batal</a>

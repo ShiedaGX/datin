@@ -38,7 +38,7 @@ class DataWilayahController extends Controller
 
     public function show(DataPemda $pemda)
     {
-        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen');
+        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator');
 
         return view('data-wilayah.show', [
             'pemda'      => $pemda,
@@ -114,8 +114,7 @@ class DataWilayahController extends Controller
 
     public function unduh(DokumenPengajuan $dokumen)
     {
-        $pemda = $dokumen->rute->pemda;
-        abort_unless($pemda->dokumenBisaDiunduhOleh(auth()->user()), 403);
+        abort_unless($dokumen->bisaDiunduhOleh(auth()->user()), 403);
         abort_unless(Storage::disk('local')->exists($dokumen->path_file), 404);
 
         return Storage::disk('local')->download($dokumen->path_file, $dokumen->nama_file);

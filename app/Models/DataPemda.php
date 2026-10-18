@@ -100,18 +100,35 @@ class DataPemda extends Model
         return implode(', ', $this->potensi_daftar);
     }
 
-    /** Hanya pemilik data yang boleh menghapus, dan tidak setelah Verifikasi Final. */
+    /**
+     * Hanya pemilik data yang boleh membatalkan pengajuan, dan tidak setelah disetujui Moda
+     * (Verifikasi 1 / Verifikasi Final). Pengajuan yang ditolak atau perlu revisi boleh dibatalkan
+     * agar Pemda dapat mengajukan ulang.
+     */
     public function bisaDiubahOleh(User $user): bool
     {
         return $this->id_user !== null
             && (int) $this->id_user === (int) $user->id_user
-            && $this->status_label !== StatusPengajuan::FINAL;
+            && ! in_array($this->status_label, [StatusPengajuan::V1, StatusPengajuan::FINAL], true);
     }
 
-    /** Dokumen pengajuan hanya untuk pemilik data dan staf. */
+    /**
+     * Dokumen pengajuan hanya untuk pemilik data, Super Admin, Intram, dan Moda yang menjadi
+     * tujuan salah satu pengajuan daerah ini.
+     */
     public function dokumenBisaDiunduhOleh(User $user): bool
     {
-        return $user->isStaf() || ($this->id_user !== null && (int) $this->id_user === (int) $user->id_user);
+        if ($this->id_user !== null && (int) $this->id_user === (int) $user->id_user) {
+            return true;
+        }
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return true;
+        }
+        if ($user->isModa() && $user->id_moda !== null) {
+            return $this->ruteSubsidi->contains(fn ($r) => (int) $r->id_moda === (int) $user->id_moda);
+        }
+
+        return false;
     }
 
     /** Pengajuan terbaru di atas; daerah tanpa pengajuan menyusul berdasarkan id terbesar. */

@@ -30,6 +30,16 @@ class User extends Authenticatable
         return ($this->role->nama_role ?? null) === PeranUser::SUPER_ADMIN;
     }
 
+    public function isModa(): bool
+    {
+        return ($this->role->nama_role ?? null) === PeranUser::MODA;
+    }
+
+    public function isIntram(): bool
+    {
+        return ($this->role->nama_role ?? null) === PeranUser::INTRAM;
+    }
+
     /** Super Admin selalu boleh; role lain mengikuti tabel role_hak_akses. */
     public function bisa(string $kode): bool
     {
