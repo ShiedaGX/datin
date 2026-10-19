@@ -43,6 +43,7 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
         ->prefix('permohonan')->name('permohonan.')->group(function () {
             Route::get('/', [PermohonanController::class, 'index'])->name('index');
             Route::get('export', [PermohonanController::class, 'export'])->name('export');
+            Route::get('{rute}/export', [PermohonanController::class, 'exportDetail'])->whereNumber('rute')->name('export-detail');
             Route::get('{rute}', [PermohonanController::class, 'show'])->whereNumber('rute')->name('show');
             Route::post('{rute}/keputusan', [PermohonanController::class, 'keputusan'])->whereNumber('rute')->name('keputusan');
             Route::get('{rute}/dokumen/{dokumen}', [PermohonanController::class, 'dokumen'])->whereNumber(['rute', 'dokumen'])->name('dokumen');

@@ -95,6 +95,22 @@ class DataPemda extends Model
         return array_values(array_filter($butir, fn ($x) => $x !== ''));
     }
 
+    /** Daftar tujuan pada kebutuhan_konektivitas: ["Merauke", "Jayapura", ...] */
+    public function getTujuanDaftarAttribute(): array
+    {
+        $butir = array_map('trim', preg_split('/[,;\n]+/', (string) $this->kebutuhan_konektivitas));
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
+    /** Butir keterangan daerah: ["3TP", "KSPEAN", ...] */
+    public function getKeteranganDaftarAttribute(): array
+    {
+        $butir = array_map('trim', explode(',', (string) $this->keterangan_pemda));
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
     public function getPotensiRingkasAttribute(): string
     {
         return implode(', ', $this->potensi_daftar);

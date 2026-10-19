@@ -117,19 +117,102 @@ class PermohonanController extends Controller
                 $r->kabKotaAsal->wilayah->nama_wilayah,
                 trim($r->tanggal_lengkap . ' ' . $r->jam_pengajuan),
                 $r->label_status_moda,
+                // data yang diinput Pemda
+                $r->pemda->klasifikasi_label,
+                $r->pemda->keterangan_pemda,
+                $r->pemda->potensi_ringkas,
+                implode(', ', $r->pemda->sektor_terdeteksi),
+                implode(', ', $r->pemda->tujuan_daftar),
+                $r->pemda->jumlah_tujuan,
             ];
         }
 
         $path = XlsxExporter::buat(
-            ['No', 'Nomor Laporan', 'Pemda', 'Provinsi', 'Wilayah', 'Tanggal Pengajuan', 'Status'],
+            ['No', 'Nomor Laporan', 'Pemda', 'Provinsi', 'Wilayah', 'Tanggal Pengajuan', 'Status',
+             'Klasifikasi Wilayah', 'Keterangan Daerah', 'Potensi Unggulan Daerah', 'Sektor Potensi', 'Kebutuhan Konektivitas / Rute Tujuan', 'Jumlah Tujuan'],
             $rows,
             'Permohonan',
-            [6, 18, 34, 24, 18, 30, 24]
+            [6, 18, 34, 24, 18, 30, 24, 22, 40, 60, 36, 50, 14]
         );
 
         return response()->download(
             $path,
             'permohonan-' . now()->format('Ymd-His') . '.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        )->deleteFileAfterSend(true);
+    }
+
+    /** Ekspor satu laporan (data yang diinput Pemda, dokumen, dan riwayat peninjauan) ke Excel. */
+    public function exportDetail(Request $request, RuteSubsidi $rute)
+    {
+        $this->pastikanMilik($request->user(), $rute);
+
+        if (! class_exists(\ZipArchive::class)) {
+            return back()->with('error', 'Ekspor Excel membutuhkan ekstensi PHP "zip". Aktifkan extension=zip di php.ini lalu restart server.');
+        }
+
+        $rute->load('pemda.user', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator');
+        $p = $rute->pemda;
+        $k = $rute->kabKotaAsal;
+        $pengaju = $p->user;
+
+        $baris = [];
+        $tebal = [];
+        $bagian = function (string $judul) use (&$baris, &$tebal) {
+            if ($baris) {
+                $baris[] = ['', ''];
+            }
+            $tebal[] = count($baris);
+            $baris[] = [$judul, ''];
+        };
+        $isi = function (string $label, $nilai) use (&$baris) {
+            $baris[] = [$label, $nilai];
+        };
+
+        $bagian('LAPORAN');
+        $isi('Nomor laporan', $rute->nomor_laporan);
+        $isi('Status', $rute->label_status_moda);
+        $isi('Tanggal pengajuan', trim($rute->tanggal_lengkap . ' ' . $rute->jam_pengajuan));
+        $isi('Moda transportasi', $rute->moda->nama_moda ?? '-');
+
+        $bagian('PEMOHON');
+        $isi('Instansi', $pengaju->instansi ?? ('Pemerintah Daerah ' . $k->nama_lengkap));
+        $isi('Nama pengaju', $pengaju->full_name ?? '-');
+        $isi('Email pengaju', $pengaju->email ?? '-');
+
+        $bagian('WILAYAH');
+        $isi('Provinsi', $k->provinsi->nama_provinsi);
+        $isi('Kabupaten / Kota', $k->nama_lengkap);
+        $isi('Wilayah regional', $k->wilayah->nama_wilayah);
+
+        $bagian('DATA YANG DIINPUT PEMDA');
+        $isi('Klasifikasi wilayah', $p->klasifikasi_label);
+        $isi('Keterangan daerah', $p->keterangan_pemda ?: '-');
+        $isi('Potensi unggulan daerah', $p->potensi_pemda ?: '-');
+        $isi('Sektor potensi', implode(', ', $p->sektor_terdeteksi) ?: '-');
+        $isi('Kebutuhan konektivitas / rute tujuan', $p->kebutuhan_konektivitas ?: '-');
+        $isi('Jumlah tujuan', $p->jumlah_tujuan ?? '-');
+
+        $bagian('DOKUMEN SURAT');
+        foreach ($rute->dokumen as $d) {
+            $isi($d->jenis_dokumen, $d->nama_file . ' (' . ($this->ukuran($d->path_file) ?? 'berkas tidak ditemukan') . ')');
+        }
+
+        $bagian('RIWAYAT PENINJAUAN');
+        $isi('Laporan diajukan', trim(($pengaju->full_name ?? '-') . ', ' . $rute->tanggal_lengkap . ' ' . $rute->jam_pengajuan));
+        foreach ($rute->verifikasi->sortBy('id_verifikasi_pengajuan') as $v) {
+            $isi(
+                $v->tahap_verifikasi . ': ' . $v->status_verifikasi,
+                'Oleh ' . ($v->verifikator->full_name ?? '-') . ', ' . Tanggal::panjang($v->tanggal_verifikasi) . ' ' . Tanggal::jam($v->tanggal_verifikasi)
+                    . ($v->catatan_verifikasi ? ' | Catatan: ' . $v->catatan_verifikasi : '')
+            );
+        }
+
+        $path = XlsxExporter::buat(['Data', 'Isi'], $baris, 'Review Laporan', [38, 100], $tebal);
+
+        return response()->download(
+            $path,
+            $rute->nomor_laporan . '.xlsx',
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         )->deleteFileAfterSend(true);
     }
@@ -143,6 +226,7 @@ class PermohonanController extends Controller
 
         return view('permohonan.review', [
             'rute'      => $rute,
+            'pemda'     => $rute->pemda,
             'pengaju'   => $rute->pemda->user,
             'berkas'    => $rute->dokumen->map(fn ($d) => [
                 'model'  => $d,

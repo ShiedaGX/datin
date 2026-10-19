@@ -16,10 +16,16 @@
         <h2 class="pm-title">Review Surat Laporan</h2>
         <p class="pm-sub">Periksa kelengkapan, kesesuaian data, dan berikan keputusan atas laporan yang diajukan.</p>
     </div>
-    <a class="btn btn-light" href="{{ route('permohonan.index') }}">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
-        Kembali ke Daftar
-    </a>
+    <div class="pm-head-act">
+        <a class="btn btn-export" href="{{ route('permohonan.export-detail', $rute->id_rute_subsidi) }}">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2"/></svg>
+            Ekspor Excel
+        </a>
+        <a class="btn btn-light" href="{{ route('permohonan.index') }}">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+            Kembali ke Daftar
+        </a>
+    </div>
 </div>
 
 <form class="rv-card" id="formKeputusan" method="POST" action="{{ route('permohonan.keputusan', $rute->id_rute_subsidi) }}">
@@ -74,10 +80,47 @@
                 </ul>
             </section>
 
+            {{-- 2. Data yang diinput Pemda --}}
+            <section>
+                <h3 class="rv-h"><span class="step-no">2</span> Data Pengajuan Pemda</h3>
+                <p class="muted rv-hs">Data yang diinput Pemda pada formulir pengajuan. Cocokkan dengan isi dokumen surat.</p>
+                <div class="rv-data">
+                    <dl class="rv-grid">
+                        <div><dt>Provinsi</dt><dd>{{ $rute->kabKotaAsal->provinsi->nama_provinsi }}</dd></div>
+                        <div><dt>Kabupaten / Kota</dt><dd>{{ $rute->kabKotaAsal->nama_lengkap }}</dd></div>
+                        <div><dt>Wilayah regional</dt><dd>{{ $rute->kabKotaAsal->wilayah->nama_wilayah }}</dd></div>
+                        <div><dt>Moda transportasi</dt><dd>{{ $rute->moda->nama_moda ?? '-' }}</dd></div>
+                        <div><dt>Klasifikasi wilayah</dt><dd><span class="badge badge-{{ \Illuminate\Support\Str::slug($pemda->klasifikasi_label) }}">{{ $pemda->klasifikasi_label }}</span></dd></div>
+                    </dl>
+                    <div class="rv-block">
+                        <h4>Keterangan daerah</h4>
+                        @forelse ($pemda->keterangan_daftar as $butir)<span class="tag">{{ $butir }}</span>@empty<span class="muted">-</span>@endforelse
+                    </div>
+                    <div class="rv-block">
+                        <h4>Potensi unggulan daerah</h4>
+                        @if (count($pemda->potensi_daftar))
+                            <ol class="rv-list">
+                                @foreach ($pemda->potensi_daftar as $butir)<li>{{ $butir }}</li>@endforeach
+                            </ol>
+                        @else
+                            <span class="muted">-</span>
+                        @endif
+                    </div>
+                    <div class="rv-block">
+                        <h4>Sektor potensi ({{ $pemda->jumlah_sektor }})</h4>
+                        @forelse ($pemda->sektor_terdeteksi as $sektor)<span class="tag">{{ $sektor }}</span>@empty<span class="muted">-</span>@endforelse
+                    </div>
+                    <div class="rv-block">
+                        <h4>Kebutuhan konektivitas / rute tujuan @if ($pemda->jumlah_tujuan !== null)({{ $pemda->jumlah_tujuan }} tujuan)@endif</h4>
+                        @forelse ($pemda->tujuan_daftar as $tujuan)<span class="tag tag-alt">{{ $tujuan }}</span>@empty<span class="muted">-</span>@endforelse
+                    </div>
+                </div>
+            </section>
+
             @if ($rute->sedang_menunggu)
                 {{-- 2. Checklist --}}
                 <section>
-                    <h3 class="rv-h"><span class="step-no">2</span> Checklist Persetujuan</h3>
+                    <h3 class="rv-h"><span class="step-no">3</span> Checklist Persetujuan</h3>
                     <p class="muted rv-hs">Konfirmasikan hasil peninjauan sebelum menetapkan keputusan akhir.</p>
                     <div class="rv-checks">
                         @foreach ($checklist as $kunci => [$judul, $uraian])
@@ -99,7 +142,7 @@
                 </section>
             @else
                 <section>
-                    <h3 class="rv-h"><span class="step-no">2</span> Hasil Peninjauan</h3>
+                    <h3 class="rv-h"><span class="step-no">3</span> Hasil Peninjauan</h3>
                     <div class="rv-result {{ $rute->kelas_status_moda }}">
                         <strong>{{ $rute->label_status_moda }}</strong>
                         @if ($terakhir)
