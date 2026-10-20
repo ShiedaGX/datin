@@ -32,6 +32,12 @@
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
                 <span>Dashboard</span>
             </a>
+            @if ($pengguna->isModa() && $pengguna->bisa('chr.pantau'))
+                <a href="{{ route('surat.index') }}" class="nav-link {{ request()->routeIs('surat.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+                    <span>Surat</span>
+                </a>
+            @endif
             @if ($pengguna->isSuperAdmin())
                 <a href="{{ route('admin.user.index') }}" class="nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
@@ -54,7 +60,9 @@
                 </a>
             @endif
         </nav>
-        @if (auth()->user()->isModa() && auth()->user()->bisa('laporan.tinjau'))
+        @hasSection('sidecard')
+            @yield('sidecard')
+        @elseif (auth()->user()->isModa() && auth()->user()->bisa('laporan.tinjau'))
             @php($ringkas = \App\Support\Permohonan::ringkasanSidebar(auth()->user()))
             <a class="side-card" href="{{ route('permohonan.index', ['status' => 'menunggu']) }}">
                 <span class="side-card-top">

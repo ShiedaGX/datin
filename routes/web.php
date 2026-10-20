@@ -8,6 +8,7 @@ use App\Http\Controllers\DataWilayahController;
 use App\Http\Controllers\InputDataController;
 use App\Http\Controllers\PermohonanController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\SuratController;
 use App\Http\Middleware\AkunAktif;
 use App\Http\Middleware\HanyaRole;
 use App\Http\Middleware\HanyaSuperAdmin;
@@ -48,6 +49,15 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
             Route::post('{rute}/keputusan', [PermohonanController::class, 'keputusan'])->whereNumber('rute')->name('keputusan');
             Route::get('{rute}/dokumen/{dokumen}', [PermohonanController::class, 'dokumen'])->whereNumber(['rute', 'dokumen'])->name('dokumen');
         });
+
+    // Surat CHR: Moda mengunggah surat dan mengirimkannya ke INTRAM
+    Route::middleware(HanyaRole::class . ':Moda')->prefix('surat')->name('surat.')->group(function () {
+        Route::get('/', [SuratController::class, 'index'])->middleware(PunyaHakAkses::class . ':chr.pantau')->name('index');
+        Route::post('/', [SuratController::class, 'simpan'])->middleware(PunyaHakAkses::class . ':chr.unggah')->name('simpan');
+        Route::delete('dokumen/{dokumen}', [SuratController::class, 'hapus'])->whereNumber('dokumen')->middleware(PunyaHakAkses::class . ':chr.unggah')->name('hapus');
+    });
+    // Pratinjau/unduh berkas: pemilik, atau INTRAM/Super Admin untuk surat yang sudah dikirim (diperiksa di controller)
+    Route::get('/surat/dokumen/{dokumen}', [SuratController::class, 'dokumen'])->whereNumber('dokumen')->name('surat.dokumen');
 
     // Khusus Super Admin
     Route::prefix('admin')->name('admin.')->middleware(HanyaSuperAdmin::class)->group(function () {

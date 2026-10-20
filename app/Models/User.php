@@ -62,5 +62,6 @@ class User extends Authenticatable
     public function moda(): BelongsTo { return $this->belongsTo(Moda::class, 'id_moda', 'id_moda'); }
     public function dataPemda(): HasMany { return $this->hasMany(DataPemda::class, 'id_user', 'id_user'); }
     public function verifikasi(): HasMany { return $this->hasMany(VerifikasiPengajuan::class, 'id_user', 'id_user'); }
+    public function pengajuanSurat(): HasMany { return $this->hasMany(PengajuanSurat::class, 'id_user', 'id_user'); }
     public function dokumen(): HasMany { return $this->hasMany(DokumenPengajuan::class, 'id_user', 'id_user'); }
 }

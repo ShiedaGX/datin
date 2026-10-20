@@ -17,7 +17,7 @@ class Tanggal
     /** 28 Sep 2026 */
     public static function pendek(?CarbonInterface $d): string
     {
-        return $d ? $d->day . ' ' . mb_substr(self::BULAN[$d->month], 0, 3) . ' ' . $d->year : '-';
+        return $d ? $d->format('d') . ' ' . mb_substr(self::BULAN[$d->month], 0, 3) . ' ' . $d->year : '-';
     }
 
     /** 14.32 WIB (singkatan zona mengikuti timezone aplikasi, mis. Asia/Jakarta -> WIB) */

@@ -254,6 +254,114 @@
     });
   }
 
+  /* ---------- Surat CHR: unggah, ringkasan, dan kirim ---------- */
+  var fs = $('#formSurat');
+  if (fs) {
+    var MAKS_BYTE = (parseInt(fs.dataset.maksMb, 10) || 10) * 1024 * 1024;
+    var slots = $$('.sr-slot', fs);
+    var baru = {};   // kode slot -> File yang baru dipilih (belum disimpan)
+
+    var fmt = function (b) {
+      return b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+    };
+    var adaDiServer = function (slot) { return slot.dataset.adaNama !== undefined; };
+
+    var perbaruiSlot = function (slot) {
+      var f = baru[slot.dataset.slot], ada = adaDiServer(slot);
+      var fAda = $('.sr-file-ada', slot), fBaru = $('.sr-file-baru', slot), drop = $('.sr-drop', slot), st = $('[data-state]', slot);
+      fAda.hidden = !(ada && !f);
+      fBaru.hidden = !f;
+      drop.hidden = !!(ada || f);
+      if (f) {
+        $('[data-nama]', fBaru).textContent = f.name;
+        $('[data-meta]', fBaru).textContent = 'PDF · ' + fmt(f.size) + ' · Belum disimpan';
+      }
+      st.textContent = f ? 'Siap disimpan' : (ada ? 'Terunggah' : 'Belum diunggah');
+      st.classList.toggle('is-ok', !!(f || ada));
+    };
+
+    var hitung = function () {
+      var n = 0, total = 0, wajib = 0, wajibOk = 0;
+      slots.forEach(function (s) {
+        var f = baru[s.dataset.slot], ada = adaDiServer(s), wj = s.dataset.wajib === '1';
+        var ukuran = f ? f.size : (ada ? (parseInt(s.dataset.adaUkuran, 10) || 0) : 0);
+        var ada_ = !!(f || ada);
+        if (ada_) { n++; total += ukuran; }
+        if (wj) { wajib++; if (ada_) wajibOk++; }
+        var li = $('#srList li[data-slot="' + s.dataset.slot + '"]');
+        if (li) {
+          li.classList.toggle('ok', ada_);
+          var ket = $('[data-ket]', li);
+          if (ket) ket.textContent = ada_ ? '' : 'Belum diunggah · ' + (wj ? 'Wajib' : 'Opsional');
+        }
+      });
+
+      var lengkap = wajibOk === wajib;
+      $('#srCount').textContent = n + ' surat · Total ' + (total ? fmt(total) : '0 KB');
+      $('#srBar').style.width = (wajib ? Math.round(wajibOk / wajib * 100) : 100) + '%';
+      $('#srBarLabel').textContent = lengkap ? 'Surat wajib lengkap' : 'Surat wajib belum lengkap (' + wajibOk + '/' + wajib + ')';
+      $('#srSiap').classList.toggle('is-belum', !lengkap);
+      $('#srSiapChip').textContent = lengkap ? 'Siap dikirim' : 'Belum lengkap';
+      $('#srSiapTeks').textContent = lengkap ? 'Surat sudah siap dikirim' : 'Unggah ' + (wajib - wajibOk) + ' surat wajib lagi';
+      $('#srFooterJudul').textContent = lengkap ? 'Siap mengirim ' + n + ' surat ke User INTRAM' : 'Lengkapi surat wajib untuk mengirim';
+      $('#btnKirim').disabled = !lengkap;
+    };
+
+    slots.forEach(function (slot) {
+      var kode = slot.dataset.slot, input = $('input[type=file]', slot), drop = $('.sr-drop', slot);
+
+      var terima = function (file) {
+        if (!file) return;
+        if (!/\.pdf$/i.test(file.name) || (file.type && file.type !== 'application/pdf')) {
+          window.alert('Berkas harus berformat PDF.'); input.value = ''; return;
+        }
+        if (file.size > MAKS_BYTE) {
+          window.alert('Ukuran berkas maksimal ' + (MAKS_BYTE / 1048576) + ' MB.'); input.value = ''; return;
+        }
+        baru[kode] = file;
+        perbaruiSlot(slot); hitung();
+      };
+
+      $$('[data-pilih],[data-ganti]', slot).forEach(function (b) { b.addEventListener('click', function () { input.click(); }); });
+      input.addEventListener('change', function () {
+        if (input.files && input.files[0]) { terima(input.files[0]); }
+        else { delete baru[kode]; perbaruiSlot(slot); hitung(); }
+      });
+      $$('[data-batal]', slot).forEach(function (b) {
+        b.addEventListener('click', function () { input.value = ''; delete baru[kode]; perbaruiSlot(slot); hitung(); });
+      });
+
+      // Tarik dan lepas berkas
+      ['dragenter', 'dragover'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-over'); });
+      });
+      drop.addEventListener('dragleave', function () { drop.classList.remove('is-over'); });
+      drop.addEventListener('drop', function (e) {
+        e.preventDefault(); drop.classList.remove('is-over');
+        var f = e.dataTransfer && e.dataTransfer.files[0];
+        if (!f) return;
+        try { var dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; }
+        catch (err) { window.alert('Browser Anda belum mendukung tarik-dan-lepas. Gunakan tombol Pilih berkas.'); return; }
+        terima(f);
+      });
+    });
+
+    var ta = $('#srCatatan'), ctr = $('#srCounter');
+    if (ta && ctr) {
+      var hitungKarakter = function () { ctr.textContent = ta.value.length.toLocaleString('id-ID') + ' / 1.000 karakter'; };
+      ta.addEventListener('input', hitungKarakter);
+      hitungKarakter();
+    }
+
+    fs.addEventListener('submit', function (e) {
+      var v = e.submitter ? e.submitter.value : '';
+      if (v === 'kirim' && !window.confirm('Kirim surat ke User INTRAM? Surat yang sudah dikirim tidak dapat diubah.')) e.preventDefault();
+    });
+
+    slots.forEach(perbaruiSlot);
+    hitung();
+  }
+
   /* ---------- Upload surat ---------- */
   var MAX = 5 * 1024 * 1024;
   $$('.btn-upload, .upload-name').forEach(function (el) {
