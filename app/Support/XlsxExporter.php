@@ -11,7 +11,7 @@ class XlsxExporter
     private const LEBAR = [6, 24, 16, 26, 22, 44, 60, 50, 14, 14, 44, 22];
 
     /** @param array<int,string> $header  @param array<int,array<int,mixed>> $rows  @return string path file sementara */
-    public static function buat(array $header, array $rows, string $namaSheet = 'Data'): string
+    public static function buat(array $header, array $rows, string $namaSheet = 'Data', ?array $lebar = null, array $barisTebal = []): string
     {
         $path = tempnam(sys_get_temp_dir(), 'xlsx');
         $zip = new \ZipArchive();
@@ -23,7 +23,7 @@ class XlsxExporter
         $zip->addFromString('xl/workbook.xml', self::workbook($namaSheet));
         $zip->addFromString('xl/_rels/workbook.xml.rels', self::relsWorkbook());
         $zip->addFromString('xl/styles.xml', self::styles());
-        $zip->addFromString('xl/worksheets/sheet1.xml', self::sheet($header, $rows));
+        $zip->addFromString('xl/worksheets/sheet1.xml', self::sheet($header, $rows, $lebar ?? self::LEBAR, $barisTebal));
         $zip->close();
 
         return $path;
@@ -54,12 +54,12 @@ class XlsxExporter
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
     }
 
-    private static function sheet(array $header, array $rows): string
+    private static function sheet(array $header, array $rows, array $lebarKolom, array $barisTebal = []): string
     {
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
         $xml .= '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
         $xml .= '<sheetFormatPr defaultRowHeight="15"/><cols>';
-        foreach (self::LEBAR as $i => $lebar) {
+        foreach ($lebarKolom as $i => $lebar) {
             $n = $i + 1;
             $xml .= '<col min="' . $n . '" max="' . $n . '" width="' . $lebar . '" customWidth="1"/>';
         }
@@ -72,11 +72,12 @@ class XlsxExporter
         }
         $xml .= '</row>';
 
-        foreach ($rows as $row) {
+        foreach (array_values($rows) as $i => $row) {
             $baris++;
+            $tebal = in_array($i, $barisTebal, true);   // mis. judul bagian
             $xml .= '<row r="' . $baris . '">';
             foreach (array_values($row) as $c => $nilai) {
-                $xml .= self::sel($c, $baris, $nilai, false);
+                $xml .= self::sel($c, $baris, $nilai, $tebal);
             }
             $xml .= '</row>';
         }

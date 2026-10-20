@@ -16,4 +16,20 @@ class DokumenPengajuan extends Model
 
     public function rute(): BelongsTo { return $this->belongsTo(RuteSubsidi::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
     public function pengunggah(): BelongsTo { return $this->belongsTo(User::class, 'id_user', 'id_user'); }
+
+    /** Pemilik pengajuan, Super Admin, Intram, dan Moda yang moda-nya sama dengan moda pengajuan. */
+    public function bisaDiunduhOleh(User $user): bool
+    {
+        $rute = $this->rute;
+        $pemda = $rute->pemda;
+
+        if ($pemda->id_user !== null && (int) $pemda->id_user === (int) $user->id_user) {
+            return true;
+        }
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return true;
+        }
+
+        return $user->isModa() && $user->id_moda !== null && (int) $rute->id_moda === (int) $user->id_moda;
+    }
 }

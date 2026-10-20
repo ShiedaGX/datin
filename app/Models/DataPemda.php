@@ -95,22 +95,71 @@ class DataPemda extends Model
         return array_values(array_filter($butir, fn ($x) => $x !== ''));
     }
 
+    /** Daftar tujuan pada kebutuhan_konektivitas: ["Merauke", "Jayapura", ...] */
+    public function getTujuanDaftarAttribute(): array
+    {
+        $butir = array_map('trim', preg_split('/[,;\n]+/', (string) $this->kebutuhan_konektivitas));
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
+    /** Butir keterangan daerah: ["3TP", "KSPEAN", ...] */
+    public function getKeteranganDaftarAttribute(): array
+    {
+        $butir = array_map('trim', explode(',', (string) $this->keterangan_pemda));
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
     public function getPotensiRingkasAttribute(): string
     {
         return implode(', ', $this->potensi_daftar);
     }
 
-    /** Hanya pemilik data yang boleh menghapus, dan tidak setelah Verifikasi Final. */
+    /**
+     * Hanya pemilik data yang boleh membatalkan pengajuan, dan tidak setelah disetujui Moda
+     * (Verifikasi 1 / Verifikasi Final). Pengajuan yang ditolak atau perlu revisi boleh dibatalkan
+     * agar Pemda dapat mengajukan ulang.
+     */
     public function bisaDiubahOleh(User $user): bool
     {
         return $this->id_user !== null
             && (int) $this->id_user === (int) $user->id_user
-            && $this->status_label !== StatusPengajuan::FINAL;
+            && ! in_array($this->status_label, [StatusPengajuan::V1, StatusPengajuan::FINAL], true);
     }
 
-    /** Dokumen pengajuan hanya untuk pemilik data dan staf. */
+    /**
+     * Dokumen pengajuan hanya untuk pemilik data, Super Admin, Intram, dan Moda yang menjadi
+     * tujuan salah satu pengajuan daerah ini.
+     */
     public function dokumenBisaDiunduhOleh(User $user): bool
     {
-        return $user->isStaf() || ($this->id_user !== null && (int) $this->id_user === (int) $user->id_user);
+        if ($this->id_user !== null && (int) $this->id_user === (int) $user->id_user) {
+            return true;
+        }
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return true;
+        }
+        if ($user->isModa() && $user->id_moda !== null) {
+            return $this->ruteSubsidi->contains(fn ($r) => (int) $r->id_moda === (int) $user->id_moda);
+        }
+
+        return false;
+    }
+
+    /** Pengajuan terbaru di atas; daerah tanpa pengajuan menyusul berdasarkan id terbesar. */
+    public function scopeTerbaru($query)
+    {
+        return $query
+            ->orderByRaw('(SELECT MAX(rute_subsidi.created_at) FROM rute_subsidi WHERE rute_subsidi.id_pemda = data_pemda.id_pemda) DESC')
+            ->orderByDesc('id_pemda');
+    }
+
+    /** Data wilayah boleh diisi pengajuan bila belum punya pengajuan dan tidak dikelola akun lain. */
+    public function bisaDiklaimOleh(User $user): bool
+    {
+        $milikLain = $this->id_user !== null && (int) $this->id_user !== (int) $user->id_user;
+
+        return ! $milikLain && ! $this->ruteSubsidi()->exists();
     }
 }

@@ -92,5 +92,21 @@
     @endif
 </section>
 
+@if ($rute && $rute->verifikasi->isNotEmpty())
+<section class="box">
+    <div class="box-head"><h2>Riwayat Peninjauan</h2></div>
+    <ol class="rv-timeline">
+        @foreach ($rute->verifikasi->sortBy('id_verifikasi_pengajuan') as $v)
+            <li class="done s-{{ \App\Support\StatusPengajuan::grup($v->status_verifikasi) }}">
+                <strong>{{ $v->tahap_verifikasi }}: {{ $v->status_verifikasi }}</strong>
+                <span>Oleh {{ $v->verifikator->full_name ?? '-' }}</span>
+                @if ($v->catatan_verifikasi)<p class="rv-note">{{ $v->catatan_verifikasi }}</p>@endif
+                <small>{{ \App\Support\Tanggal::pendek($v->tanggal_verifikasi) }} &bull; {{ \App\Support\Tanggal::jam($v->tanggal_verifikasi) }}</small>
+            </li>
+        @endforeach
+    </ol>
+</section>
+@endif
+
 <a class="btn btn-outline" href="{{ route('data-wilayah.index') }}">&larr; Kembali ke daftar</a>
 @endsection

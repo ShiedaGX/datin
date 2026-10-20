@@ -25,14 +25,12 @@ class AuthController extends Controller
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
 
-        // Akun yang sudah mendaftar tetapi belum diverifikasi administrator
-        if (config('datin.verifikasi_akun')) {
-            $user = User::where('email', $credentials['email'])->first();
-            if ($user && $user->diverifikasi_at === null && Hash::check($credentials['password'], $user->password_hash)) {
-                return back()
-                    ->withErrors(['email' => 'Akun Anda masih menunggu verifikasi administrator.'])
-                    ->onlyInput('email');
-            }
+        // Akun yang belum diverifikasi / dinonaktifkan administrator
+        $user = User::where('email', $credentials['email'])->first();
+        if ($user && $user->diverifikasi_at === null && Hash::check($credentials['password'], $user->password_hash)) {
+            return back()
+                ->withErrors(['email' => 'Akun Anda belum aktif. Menunggu verifikasi administrator atau telah dinonaktifkan.'])
+                ->onlyInput('email');
         }
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
@@ -43,7 +41,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('input-data.create'));
+        return redirect()->intended(route('dashboard'));
     }
 
     public function logout(Request $request)

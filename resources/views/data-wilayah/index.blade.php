@@ -76,10 +76,10 @@
                         <td class="td-aksi">
                             <div class="acts">
                                 @if ($row->bisaDiubahOleh(auth()->user()))
-                                    <form method="POST" action="{{ route('data-wilayah.destroy', $row->id_pemda) }}" data-confirm="Hapus data {{ $row->kabKota->nama_kab_kota }}? Dokumen yang sudah diunggah juga akan dihapus.">
+                                    <form method="POST" action="{{ route('data-wilayah.destroy', $row->id_pemda) }}" data-confirm="Hapus pengajuan {{ $row->kabKota->nama_kab_kota }}? Dokumen yang sudah diunggah akan dihapus. Data wilayah tetap tersimpan.">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="act act-del" title="Hapus" aria-label="Hapus {{ $row->kabKota->nama_kab_kota }}">
+                                        <button type="submit" class="act act-del" title="Hapus pengajuan" aria-label="Hapus pengajuan {{ $row->kabKota->nama_kab_kota }}">
                                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>
                                         </button>
                                     </form>

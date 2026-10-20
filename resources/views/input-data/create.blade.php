@@ -46,10 +46,16 @@
             </div>
 
             <div class="field">
-                <label for="nama_kab_kota">Kabupaten / Kota</label>
-                <input type="text" id="nama_kab_kota" name="nama_kab_kota" value="{{ old('nama_kab_kota') }}" maxlength="100" required
-                       placeholder="Contoh: Asmat / Teluk Bintuni" class="@error('nama_kab_kota') is-invalid @enderror">
-                @error('nama_kab_kota')<p class="error">{{ $message }}</p>@enderror
+                <label for="id_kab_kota">Kabupaten / Kota</label>
+                <select id="id_kab_kota" name="id_kab_kota" required class="@error('id_kab_kota') is-invalid @enderror">
+                    <option value="">Pilih Kabupaten / Kota</option>
+                    @foreach ($kabKota as $k)
+                        <option value="{{ $k['id'] }}" data-provinsi="{{ $k['id_provinsi'] }}"
+                                @if ($k['alasan']) disabled data-terkunci="1" @endif
+                                @selected((string) old('id_kab_kota') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@endif</option>
+                    @endforeach
+                </select>
+                @error('id_kab_kota')<p class="error">{{ $message }}</p>@enderror
             </div>
 
             <div class="field">
@@ -86,11 +92,13 @@
             <legend>Potensi Unggulan Daerah</legend>
             <div class="stack">
                 @for ($i = 0; $i < 5; $i++)
-                    <textarea name="potensi[]" rows="2" maxlength="200"
-                              aria-label="Potensi unggulan {{ $i + 1 }}"
-                              placeholder="{{ $i < 4 ? 'Masukkan Potensi Unggulan Daerah' : 'Lainnya' }}">{{ old('potensi.' . $i) }}</textarea>
+                    <input type="text" name="potensi[]" maxlength="200" autocomplete="off"
+                           aria-label="Potensi unggulan {{ $i + 1 }}"
+                           placeholder="{{ $i < 4 ? 'Masukkan Potensi Unggulan Daerah' : 'Lainnya' }}"
+                           value="{{ old('potensi.' . $i) }}">
                 @endfor
             </div>
+            <p class="hint" id="potensiHint" aria-live="polite">Isi satu potensi pada setiap kolom.</p>
             @error('potensi')<p class="error">{{ $message }}</p>@enderror
             @error('potensi.*')<p class="error">{{ $message }}</p>@enderror
         </fieldset>
@@ -109,11 +117,17 @@
         </fieldset>
 
         <div class="field field-wide">
-            <label for="kebutuhan_konektivitas">Kebutuhan Konektivitas Regional (Hubungan Logistik)</label>
-            <textarea id="kebutuhan_konektivitas" name="kebutuhan_konektivitas" rows="4" maxlength="2000"
-                      placeholder="masukkan kebutuhan konektivitas daerah"
-                      class="@error('kebutuhan_konektivitas') is-invalid @enderror">{{ old('kebutuhan_konektivitas') }}</textarea>
+            <label for="kebutuhan_konektivitas">Kebutuhan Konektivitas Regional (Hubungan Logistik) / Rute Tujuan</label>
+            <div class="ac">
+                <textarea id="kebutuhan_konektivitas" name="kebutuhan_konektivitas" rows="4" maxlength="2000"
+                          placeholder="masukkan kebutuhan konektivitas daerah" autocomplete="off"
+                          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acList"
+                          class="@error('kebutuhan_konektivitas') is-invalid @enderror">{{ old('kebutuhan_konektivitas') }}</textarea>
+                <ul class="ac-list" id="acList" role="listbox" hidden></ul>
+            </div>
+            <p class="hint">Ketik nama kabupaten/kota, lalu klik saran yang muncul. Bisa memilih lebih dari satu; pisahkan dengan koma.</p>
             @error('kebutuhan_konektivitas')<p class="error">{{ $message }}</p>@enderror
+            <script type="application/json" id="data-kabkota">@json($saran)</script>
         </div>
     </section>
 

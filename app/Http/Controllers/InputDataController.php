@@ -12,11 +12,17 @@ use App\Models\Wilayah;
 use App\Support\FormOptions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class InputDataController extends Controller
 {
     public function create()
     {
+        $user = auth()->user();
+
+        $semua = KabKota::with('provinsi:id_provinsi,nama_provinsi', 'dataPemda.ruteSubsidi')
+            ->orderBy('nama_kab_kota')->get();
+
         return view('input-data.create', [
             'provinsi'    => Provinsi::orderBy('nama_provinsi')->get(),
             'wilayah'     => Wilayah::orderBy('nama_wilayah')->get(),
@@ -24,6 +30,19 @@ class InputDataController extends Controller
             'klasifikasi' => FormOptions::KLASIFIKASI,
             'keterangan'  => FormOptions::KETERANGAN,
             'dokumen'     => FormOptions::DOKUMEN,
+            // pilihan dropdown Kabupaten/Kota (yang sudah diajukan ditandai & dinonaktifkan)
+            'kabKota'     => $semua->map(fn ($k) => [
+                'id'          => $k->id_kab_kota,
+                'id_provinsi' => $k->id_provinsi,
+                'nama'        => $k->nama_kab_kota,
+                'alasan'      => $k->alasanTidakTersedia($user),
+            ])->values(),
+            // saran otomatis untuk kolom Kebutuhan Konektivitas
+            'saran'       => $semua->map(fn ($k) => [
+                'id'       => $k->id_kab_kota,
+                'nama'     => $k->nama_kab_kota,
+                'provinsi' => $k->provinsi->nama_provinsi,
+            ])->values(),
         ]);
     }
 
@@ -31,10 +50,11 @@ class InputDataController extends Controller
     {
         $data = $request->validated();
         $user = $request->user();
+        $kab = KabKota::findOrFail($data['id_kab_kota']);
 
         // Format sama dengan data Excel: "1. A; 2. B; 3. C"
         $potensi = collect($data['potensi'])
-            ->map(fn ($v) => trim(str_replace(';', ',', (string) $v)))
+            ->map(fn ($v) => trim((string) $v))
             ->filter()
             ->values()
             ->map(fn ($v, $i) => ($i + 1) . '. ' . $v)
@@ -45,26 +65,30 @@ class InputDataController extends Controller
             ->map(fn ($key) => FormOptions::KETERANGAN[$key]['nilai'])
             ->implode(', ');
 
+        // "Merauke, Jayapura, " -> "Merauke, Jayapura"
+        $konektivitas = trim((string) ($data['kebutuhan_konektivitas'] ?? ''), " \t\r\n,");
+
         $tersimpan = []; // path file, untuk dibersihkan jika transaksi gagal
 
         try {
-            DB::transaction(function () use ($request, $data, $user, $potensi, $keterangan, &$tersimpan) {
-                $kab = KabKota::create([
-                    'id_wilayah'    => $data['id_wilayah'],
-                    'id_provinsi'   => $data['id_provinsi'],
-                    'nama_kab_kota' => trim($data['nama_kab_kota']),
-                ]);
+            DB::transaction(function () use ($request, $data, $user, $kab, $potensi, $keterangan, $konektivitas, &$tersimpan) {
+                // Daerah dipilih dari data yang sudah ada: isi/ambil alih data_pemda miliknya.
+                $pemda = DataPemda::where('id_kab_kota', $kab->id_kab_kota)->lockForUpdate()->first()
+                    ?? new DataPemda(['id_kab_kota' => $kab->id_kab_kota]);
 
-                $pemda = DataPemda::create([
+                if ($pemda->exists && ! $pemda->bisaDiklaimOleh($user)) {
+                    throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan atau dikelola akun lain.']);
+                }
+
+                $pemda->fill([
                     'id_user'                => $user->id_user,
-                    'id_kab_kota'            => $kab->id_kab_kota,
                     'potensi_pemda'          => $potensi,
                     'klasifikasi_pemda'      => $data['klasifikasi_pemda'],
                     'keterangan_pemda'       => $keterangan !== '' ? $keterangan : null,
-                    'kebutuhan_konektivitas' => $data['kebutuhan_konektivitas'] ?? null,
-                ]);
+                    'kebutuhan_konektivitas' => $konektivitas !== '' ? $konektivitas : null,
+                ])->save();
 
-                // Satu pengajuan = satu rute_subsidi. Tujuan belum diketahui pada tahap ini.
+                // Satu pengajuan = satu rute_subsidi. Kota tujuan tertulis pada kebutuhan_konektivitas.
                 $rute = RuteSubsidi::create([
                     'id_pemda'           => $pemda->id_pemda,
                     'id_moda'            => $data['id_moda'],
@@ -90,6 +114,10 @@ class InputDataController extends Controller
                     ]);
                 }
             });
+        } catch (ValidationException $e) {
+            Storage::disk('local')->delete($tersimpan);
+
+            throw $e;
         } catch (\Throwable $e) {
             Storage::disk('local')->delete($tersimpan);
             report($e);
@@ -98,6 +126,6 @@ class InputDataController extends Controller
         }
 
         return redirect()->route('data-wilayah.index')
-            ->with('success', 'Data wilayah "' . trim($data['nama_kab_kota']) . '" berhasil ditambahkan.');
+            ->with('success', 'Pengajuan untuk "' . $kab->nama_kab_kota . '" berhasil ditambahkan.');
     }
 }

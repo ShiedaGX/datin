@@ -74,7 +74,7 @@ class DashboardController extends Controller
 
         // ---- 5 entri terbaru ----
         $terbaru = DataPemda::with('kabKota.provinsi', 'kabKota.wilayah')
-            ->orderByDesc('id_pemda')->limit(5)->get();
+            ->terbaru()->limit(5)->get();
 
         return view('dashboard', compact('kpi', 'distribusi', 'donat', 'totalPemda', 'terbaru'));
     }

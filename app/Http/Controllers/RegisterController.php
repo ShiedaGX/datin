@@ -38,7 +38,7 @@ class RegisterController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('input-data.create');
+        return redirect()->route('dashboard');
     }
 
     /** Username dibuat otomatis dari bagian depan email, ditambah angka bila sudah dipakai. */
