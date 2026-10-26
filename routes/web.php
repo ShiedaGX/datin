@@ -50,10 +50,11 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
             Route::get('{rute}/dokumen/{dokumen}', [PermohonanController::class, 'dokumen'])->whereNumber(['rute', 'dokumen'])->name('dokumen');
         });
 
-    // Surat CHR: Moda mengunggah surat dan mengirimkannya ke INTRAM
+    // Surat CHR: Moda mengunggah surat untuk laporan Pemda yang sudah disetujui, lalu mengirimkannya ke INTRAM
     Route::middleware(HanyaRole::class . ':Moda')->prefix('surat')->name('surat.')->group(function () {
         Route::get('/', [SuratController::class, 'index'])->middleware(PunyaHakAkses::class . ':chr.pantau')->name('index');
-        Route::post('/', [SuratController::class, 'simpan'])->middleware(PunyaHakAkses::class . ':chr.unggah')->name('simpan');
+        Route::get('laporan/{rute}', [SuratController::class, 'laporan'])->whereNumber('rute')->middleware(PunyaHakAkses::class . ':chr.pantau')->name('laporan');
+        Route::post('laporan/{rute}', [SuratController::class, 'simpan'])->whereNumber('rute')->middleware(PunyaHakAkses::class . ':chr.unggah')->name('simpan');
         Route::delete('dokumen/{dokumen}', [SuratController::class, 'hapus'])->whereNumber('dokumen')->middleware(PunyaHakAkses::class . ':chr.unggah')->name('hapus');
     });
     // Pratinjau/unduh berkas: pemilik, atau INTRAM/Super Admin untuk surat yang sudah dikirim (diperiksa di controller)

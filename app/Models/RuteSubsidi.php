@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use App\Support\StatusPengajuan;
+use App\Support\SuratOptions;
 use App\Support\Tanggal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class RuteSubsidi extends Model
     public function kabKotaAsal(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota_asal', 'id_kab_kota'); }
     public function kabKotaTujuan(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota_tujuan', 'id_kab_kota'); }
     public function verifikasi(): HasMany { return $this->hasMany(VerifikasiPengajuan::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
+    public function pengajuanSurat(): HasMany { return $this->hasMany(PengajuanSurat::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
     public function dokumen(): HasMany { return $this->hasMany(DokumenPengajuan::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
 
     // ---- Tampilan halaman Permohonan ----
@@ -68,5 +70,29 @@ class RuteSubsidi extends Model
     public function getLabelStatusModaAttribute(): string
     {
         return StatusPengajuan::LABEL_GRUP[$this->grup_status] ?? $this->status_pengajuan;
+    }
+
+    // ---- Surat CHR yang terhubung dengan laporan ini ----
+
+    /** Surat CHR terbaru untuk laporan ini (relasi pengajuanSurat sebaiknya sudah di-eager-load). */
+    public function getChrTerbaruAttribute(): ?PengajuanSurat
+    {
+        return $this->pengajuanSurat->sortByDesc('id_pengajuan_surat')->first();
+    }
+
+    /** Moda masih perlu/bisa mengunggah CHR: belum ada, masih draf, atau perlu perbaikan. */
+    public function getPerluChrAttribute(): bool
+    {
+        $chr = $this->chr_terbaru;
+
+        return ! $chr || in_array($chr->status, [SuratOptions::DRAF, SuratOptions::PERLU_PERBAIKAN], true);
+    }
+
+    /** Waktu laporan disetujui (keputusan "Disetujui" terakhir pada riwayat peninjauan). */
+    public function getTanggalDisetujuiAttribute()
+    {
+        $v = $this->verifikasi->where('status_verifikasi', 'Disetujui')->sortByDesc('id_verifikasi_pengajuan')->first();
+
+        return $v ? $v->tanggal_verifikasi : $this->updated_at;
     }
 }

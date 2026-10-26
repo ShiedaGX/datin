@@ -27,6 +27,11 @@ class SuratOptions
         'perlu-perbaikan' => self::PERLU_PERBAIKAN,
     ];
 
+    public const BELUM_ADA = 'Belum ada CHR';
+
+    /** Filter status pada daftar permohonan disetujui: "belum" + semua status surat. */
+    public const STATUS_LAPORAN_OPSI = ['belum' => self::BELUM_ADA] + self::STATUS_OPSI;
+
     public static function jumlahWajib(): int
     {
         return count(array_filter(self::JENIS, fn ($j) => $j['wajib']));
@@ -39,7 +44,7 @@ class SuratOptions
 
     public static function kelasStatus(string $status): string
     {
-        return 'sr-' . array_search($status, self::STATUS_OPSI, true);
+        return 'sr-' . (array_search($status, self::STATUS_LAPORAN_OPSI, true) ?: 'draf');
     }
 
     /** 2,4 MB atau 69 KB */

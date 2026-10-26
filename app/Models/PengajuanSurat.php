@@ -10,11 +10,12 @@ class PengajuanSurat extends Model
 {
     protected $table = 'pengajuan_surat';
     protected $primaryKey = 'id_pengajuan_surat';
-    protected $fillable = ['id_user', 'id_moda', 'tujuan', 'status', 'catatan_pengiriman', 'catatan_review', 'dikirim_at'];
+    protected $fillable = ['id_user', 'id_moda', 'id_rute_subsidi', 'tujuan', 'status', 'catatan_pengiriman', 'catatan_review', 'dikirim_at'];
     protected $casts = ['dikirim_at' => 'datetime'];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class, 'id_user', 'id_user'); }
     public function moda(): BelongsTo { return $this->belongsTo(Moda::class, 'id_moda', 'id_moda'); }
+    public function rute(): BelongsTo { return $this->belongsTo(RuteSubsidi::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
     public function dokumen(): HasMany { return $this->hasMany(DokumenSurat::class, 'id_pengajuan_surat', 'id_pengajuan_surat'); }
 
     /** Contoh: SR-2026-0018 */
