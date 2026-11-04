@@ -30,7 +30,7 @@ class Permohonan
     /** Data detail laporan untuk tampilan: dokumen Pemda, riwayat peninjauan, dan data yang diinput Pemda. */
     public static function detail(RuteSubsidi $rute): array
     {
-        $rute->load('pemda.user.role', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator');
+        $rute->load('pemda.user.role', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator', 'rekomendasi', 'pengajuanSurat');
         $disk = Storage::disk('local');
         $riwayat = $rute->verifikasi->sortBy('id_verifikasi_pengajuan')->values();
 
@@ -43,6 +43,7 @@ class Permohonan
                 'jenis'  => strtoupper(pathinfo($d->nama_file, PATHINFO_EXTENSION)),
                 'ukuran' => $disk->exists($d->path_file) ? SuratOptions::formatUkuran((int) $disk->size($d->path_file)) : null,
             ]),
+            'rekomendasi' => $rute->rekomendasi_terbaru,
             'riwayat'  => $riwayat,
             'terakhir' => $riwayat->last(),
         ];

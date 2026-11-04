@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Admin\HakAksesController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWilayahController;
 use App\Http\Controllers\InputDataController;
 use App\Http\Controllers\PermohonanController;
+use App\Http\Controllers\RekomendasiController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\SuratController;
 use App\Http\Middleware\AkunAktif;
@@ -57,6 +59,24 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
         Route::post('laporan/{rute}', [SuratController::class, 'simpan'])->whereNumber('rute')->middleware(PunyaHakAkses::class . ':chr.unggah')->name('simpan');
         Route::delete('dokumen/{dokumen}', [SuratController::class, 'hapus'])->whereNumber('dokumen')->middleware(PunyaHakAkses::class . ':chr.unggah')->name('hapus');
     });
+    // Approval Surat CHR dan Hasil Unggahan: khusus INTRAM
+    Route::middleware(HanyaRole::class . ':Intram')->group(function () {
+        Route::prefix('approval')->name('approval.')->middleware(PunyaHakAkses::class . ':chr.tinjau')->group(function () {
+            Route::get('/', [ApprovalController::class, 'index'])->name('index');
+            Route::post('{pengajuan}/mulai', [ApprovalController::class, 'mulai'])->whereNumber('pengajuan')->name('mulai');
+            Route::post('{pengajuan}/keputusan', [ApprovalController::class, 'keputusan'])->whereNumber('pengajuan')->name('keputusan');
+            Route::post('{pengajuan}/revisi-pemda', [ApprovalController::class, 'revisiPemda'])->whereNumber('pengajuan')->name('revisi');
+        });
+
+        Route::prefix('hasil-unggahan')->name('hasil.')->group(function () {
+            Route::get('/', [RekomendasiController::class, 'index'])->middleware(PunyaHakAkses::class . ':cakupan.lihat_unggahan')->name('index');
+            Route::get('{rute}', [RekomendasiController::class, 'show'])->whereNumber('rute')->middleware(PunyaHakAkses::class . ':cakupan.lihat_unggahan')->name('show');
+            Route::post('{rute}', [RekomendasiController::class, 'simpan'])->whereNumber('rute')->middleware(PunyaHakAkses::class . ':rekomendasi_teknis.unggah')->name('simpan');
+        });
+    });
+    // Surat Rekomendasi Teknis: INTRAM, Super Admin, Moda yang sama, dan Pemda pemilik laporan (diperiksa di controller)
+    Route::get('/rekomendasi-teknis/{rekomendasi}', [RekomendasiController::class, 'dokumen'])->whereNumber('rekomendasi')->name('rekomendasi.dokumen');
+
     // Pratinjau/unduh berkas: pemilik, atau INTRAM/Super Admin untuk surat yang sudah dikirim (diperiksa di controller)
     Route::get('/surat/dokumen/{dokumen}', [SuratController::class, 'dokumen'])->whereNumber('dokumen')->name('surat.dokumen');
 

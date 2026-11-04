@@ -55,6 +55,10 @@
             @include('permohonan._dokumen', ['no' => 1])
 
             @include('permohonan._data_pemda', ['no' => 2])
+
+            @if ($rute->rekomendasi_terbaru)
+                @include('permohonan._rekomendasi', ['no' => 3])
+            @endif
         </div>
         <aside class="rv-side">
             @include('permohonan._ringkasan')
@@ -104,7 +108,7 @@
 
         @if ($perbaikan)
             <div class="alert alert-error rv-alert" role="alert">
-                <strong>Surat {{ $perbaikan->nomor }} perlu perbaikan.</strong>
+                <strong>Surat {{ $perbaikan->nomor }} {{ $perbaikan->status === \App\Support\SuratOptions::DITOLAK ? 'ditolak INTRAM.' : 'perlu perbaikan.' }}</strong>
                 @if ($perbaikan->catatan_review) {{ $perbaikan->catatan_review }} @endif
                 Unggah surat yang sudah diperbaiki di bawah ini.
             </div>

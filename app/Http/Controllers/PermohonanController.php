@@ -118,12 +118,12 @@ class PermohonanController extends Controller
                 trim($r->tanggal_lengkap . ' ' . $r->jam_pengajuan),
                 $r->label_status_moda,
                 // data yang diinput Pemda
-                $r->pemda->klasifikasi_label,
-                $r->pemda->keterangan_pemda,
-                $r->pemda->potensi_ringkas,
-                implode(', ', $r->pemda->sektor_terdeteksi),
-                implode(', ', $r->pemda->tujuan_daftar),
-                $r->pemda->jumlah_tujuan,
+                $r->klasifikasi_label,
+                $r->keterangan_pemda,
+                $r->potensi_ringkas,
+                implode(', ', $r->sektor_terdeteksi),
+                implode(', ', $r->tujuan_daftar),
+                $r->jumlah_tujuan,
             ];
         }
 
@@ -186,12 +186,12 @@ class PermohonanController extends Controller
         $isi('Wilayah regional', $k->wilayah->nama_wilayah);
 
         $bagian('DATA YANG DIINPUT PEMDA');
-        $isi('Klasifikasi wilayah', $p->klasifikasi_label);
-        $isi('Keterangan daerah', $p->keterangan_pemda ?: '-');
-        $isi('Potensi unggulan daerah', $p->potensi_pemda ?: '-');
-        $isi('Sektor potensi', implode(', ', $p->sektor_terdeteksi) ?: '-');
-        $isi('Kebutuhan konektivitas / rute tujuan', $p->kebutuhan_konektivitas ?: '-');
-        $isi('Jumlah tujuan', $p->jumlah_tujuan ?? '-');
+        $isi('Klasifikasi wilayah', $rute->klasifikasi_label);
+        $isi('Keterangan daerah', $rute->keterangan_pemda ?: '-');
+        $isi('Potensi unggulan daerah', $rute->potensi_pemda ?: '-');
+        $isi('Sektor potensi', implode(', ', $rute->sektor_terdeteksi) ?: '-');
+        $isi('Kebutuhan konektivitas / rute tujuan', $rute->kebutuhan_konektivitas ?: '-');
+        $isi('Jumlah tujuan', $rute->jumlah_tujuan ?? '-');
 
         $bagian('DOKUMEN SURAT');
         foreach ($rute->dokumen as $d) {
@@ -220,7 +220,7 @@ class PermohonanController extends Controller
     public function show(Request $request, RuteSubsidi $rute)
     {
         $this->pastikanMilik($request->user(), $rute);
-        $rute->load('pemda.user.role', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator');
+        $rute->load('pemda.user.role', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator', 'rekomendasi');
 
         $riwayat = $rute->verifikasi->sortBy('id_verifikasi_pengajuan')->values();
 

@@ -38,7 +38,7 @@ class DataWilayahController extends Controller
 
     public function show(DataPemda $pemda)
     {
-        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator');
+        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator', 'ruteSubsidi.pengajuanSurat', 'ruteSubsidi.rekomendasi', 'permintaanRevisi.moda', 'permintaanRevisi.peminta');
 
         return view('data-wilayah.show', [
             'pemda'      => $pemda,
@@ -112,12 +112,14 @@ class DataWilayahController extends Controller
         return redirect()->route('data-wilayah.index')->with('success', 'Pengajuan "' . $nama . '" berhasil dihapus. Data wilayah tetap tersimpan.');
     }
 
-    public function unduh(DokumenPengajuan $dokumen)
+    public function unduh(Request $request, DokumenPengajuan $dokumen)
     {
         abort_unless($dokumen->bisaDiunduhOleh(auth()->user()), 403);
         abort_unless(Storage::disk('local')->exists($dokumen->path_file), 404);
 
-        return Storage::disk('local')->download($dokumen->path_file, $dokumen->nama_file);
+        return $request->boolean('lihat')
+            ? Storage::disk('local')->response($dokumen->path_file, $dokumen->nama_file)
+            : Storage::disk('local')->download($dokumen->path_file, $dokumen->nama_file);
     }
 
     // ------------------------------------------------------------------
@@ -137,7 +139,7 @@ class DataWilayahController extends Controller
     private function query(array $f)
     {
         return DataPemda::query()
-            ->with('kabKota.provinsi', 'kabKota.wilayah', 'ruteSubsidi')
+            ->with('kabKota.provinsi', 'kabKota.wilayah', 'ruteSubsidi', 'permintaanRevisi.moda')
             ->when($f['q'] !== '', function ($q) use ($f) {
                 $like = '%' . addcslashes($f['q'], '\\%_') . '%';
                 $q->whereHas('kabKota', function ($k) use ($like) {

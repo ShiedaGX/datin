@@ -4,6 +4,19 @@
 @section('heading', 'Detail Data Wilayah')
 
 @section('content')
+@foreach ($pemda->permintaan_terbuka as $pr)
+    <div class="alert alert-revisi" role="status">
+        <div>
+            <strong>INTRAM meminta pengajuan untuk moda {{ $pr->moda->nama_moda }}</strong>
+            <p>{{ $pr->catatan }}</p>
+            <small>Diminta {{ \App\Support\Tanggal::panjang($pr->created_at) }}. Pengajuan moda lain tidak perlu direvisi.</small>
+        </div>
+        @if ((int) $pemda->id_user === (int) auth()->user()->id_user && auth()->user()->bisa('pemda.unggah'))
+            <a class="btn btn-primary" href="{{ route('input-data.create', ['kab' => $pemda->id_kab_kota]) }}">Ajukan untuk moda {{ $pr->moda->nama_moda }}</a>
+        @endif
+    </div>
+@endforeach
+
 <section class="box">
     <div class="box-head row-between">
         <div>
@@ -62,6 +75,45 @@
             <dd>{{ $pemda->user->full_name ?? '-' }}</dd>
         </div>
     </dl>
+</section>
+
+<section class="box">
+    <div class="box-head">
+        <h2>Pengajuan per Moda</h2>
+        <p class="muted">Setiap moda diajukan dan ditinjau secara terpisah.</p>
+    </div>
+    <div class="table-box">
+        <table class="table table-data">
+            <thead>
+                <tr><th>Nomor laporan</th><th>Moda</th><th>Status</th><th>Surat CHR</th><th>Surat Rekomendasi Teknis</th></tr>
+            </thead>
+            <tbody>
+                @forelse ($pemda->ruteSubsidi->sortBy('id_rute_subsidi') as $r)
+                    @php($st = \App\Support\StatusPengajuan::normalisasi($r->status_pengajuan))
+                    <tr>
+                        <td data-label="Nomor laporan"><strong>{{ $r->nomor_laporan }}</strong></td>
+                        <td data-label="Moda">{{ $r->moda->nama_moda ?? '-' }}</td>
+                        <td data-label="Status"><span class="badge {{ \App\Support\StatusPengajuan::kelas($st) }}">{{ $st }}</span></td>
+                        <td data-label="Surat CHR">{{ $r->chr_terbaru->status ?? '-' }}</td>
+                        <td data-label="Surat Rekomendasi Teknis">
+                            @if ($rt = $r->rekomendasi_terbaru)
+                                <div class="acts">
+                                    <a class="sr-lihat" target="_blank" rel="noopener" href="{{ route('rekomendasi.dokumen', $rt->id_rekomendasi_teknis) }}">Lihat</a>
+                                    <a class="icon-act" href="{{ route('rekomendasi.dokumen', [$rt->id_rekomendasi_teknis, 'unduh' => 1]) }}" title="Unduh" aria-label="Unduh Surat Rekomendasi Teknis">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></svg>
+                                    </a>
+                                </div>
+                            @else
+                                <span class="muted">Belum diunggah</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="empty">Belum ada pengajuan.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 </section>
 
 <section class="box">

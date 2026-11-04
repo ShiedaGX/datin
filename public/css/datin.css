@@ -237,6 +237,7 @@ textarea{height:auto;padding:12px 16px;resize:vertical;min-height:64px;line-heig
 .status-menunggu{background:#e0e9fd;color:#1d4ed8}
 .status-revisi{background:#fdf0c4;color:#92400e}
 .status-v1{background:#cff5ec;color:#0f766e}
+.status-v2{background:#dbeafe;color:#1d4ed8}
 .status-final{background:#d8f5df;color:#15803d}
 .status-belum{background:#eef2f6;color:#475569}
 .status-ditolak{background:#fde8ec;color:#b91c1c}
@@ -665,3 +666,94 @@ a.pm-nav:hover{color:var(--teal)}
 .sr-table th:first-child,.sr-table td:first-child{min-width:270px}
 .sr-table td[data-label="Penerima"]{min-width:120px}
 @media (max-width:720px){ .sr-table th:first-child,.sr-table td:first-child,.sr-table td[data-label="Penerima"]{min-width:0} }
+
+.chip.is-off{cursor:not-allowed}
+.chip.is-off span{opacity:.4}
+.chip input:disabled + span{cursor:not-allowed}
+
+/* ===== INTRAM: Approval, Hasil Unggahan, revisi Pemda ===== */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.t-teal{color:var(--teal)!important}
+.rv-kosong{padding:16px 18px;border:1px dashed var(--line-2);border-radius:12px;background:#f8fafc;color:#64748b;font-size:15px}
+.alert-revisi{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;border-color:#fcd34d;background:#fffbeb;color:#92400e}
+.alert-revisi strong{display:block;font-size:16px}
+.alert-revisi p{margin:4px 0 2px}
+.alert-revisi small{color:#a16207}
+
+.ap-list{padding:0;overflow:hidden}
+.ap-list-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:22px 26px 6px}
+.ap-list-head h3{font-size:20px;font-weight:700}
+.ap-list-head .muted{margin-top:2px}
+.ap-filter{display:grid;grid-template-columns:minmax(0,2.4fr) repeat(3,minmax(0,1fr));gap:16px;padding:14px 26px 4px;align-items:end}
+.ap-filter .field{margin:0}
+.ap-filter label:not(.sr-only){font-size:13px;font-weight:600;color:#64748b;margin-bottom:6px}
+.ap-filter select,.ap-filter input[type=text]{max-width:none;height:46px}
+.ap-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;padding:10px 26px 18px;font-size:13.5px}
+.ap-table tr.is-pilih td{background:#f0fdfa}
+.ap-table tr.is-pilih td:first-child{box-shadow:inset 3px 0 0 var(--teal)}
+.ap-foot{padding:18px 26px;border-top:1px solid var(--line);margin-top:0}
+.btn-tinjau{display:inline-flex;align-items:center;justify-content:center;min-width:86px;height:40px;padding:0 18px;border:1px solid var(--line-2);border-radius:9px;background:#fff;color:#334155;font-size:14.5px;font-weight:600;text-decoration:none;cursor:pointer}
+.btn-tinjau:hover{border-color:var(--teal);color:var(--teal)}
+.btn-tinjau.is-utama{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-tinjau.is-utama:hover{background:var(--teal-dark);color:#fff}
+.ap-table td.td-aksi form{margin:0}
+
+.ap-sub{margin:20px 0 8px;font-size:16px;font-weight:700}
+.ap-catatan{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;color:#475569;font-size:15px;white-space:pre-wrap}
+.ap-ta{display:block;width:100%;max-width:none;min-height:110px}
+.rv-doc-act-teks .sr-lihat{height:38px}
+.ap-ruj{display:block;margin:2px 0 6px;font-size:19px;font-weight:700;color:var(--teal);text-decoration:none}
+.ap-ruj:hover{text-decoration:underline}
+.ap-ruj-pemda{margin:0 0 10px;font-size:15.5px}
+.ap-ruj-ket{margin:12px 0 14px;font-size:14px}
+.ap-ruj-btn{height:42px;padding:0 16px}
+
+.ap-revisi{padding:22px 28px}
+.ap-revisi-head{display:flex;gap:16px;align-items:flex-start;margin-bottom:16px}
+.ap-revisi-head h3{font-size:19px;font-weight:700;margin-bottom:2px}
+.ap-revisi-head .muted{font-size:14.5px;max-width:60em}
+.ap-minta{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:10px}
+.ap-minta li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+.ap-minta small{flex-basis:100%;color:#64748b;font-size:13.5px}
+.ap-revisi-form .field{margin-bottom:14px}
+.ap-revisi-form legend{font-weight:600;margin-bottom:8px}
+.chip.is-off input:disabled + span{opacity:.5}
+
+.ap-blok{padding:22px 28px;margin-bottom:24px}
+.ap-blok-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.ap-blok-head h3{font-size:19px;font-weight:700}
+.ap-blok .rv-docs{margin-top:14px}
+.ap-blok .muted{margin:2px 0 6px}
+.ap-rt-form{margin-top:16px}
+.ap-rt-form .upload-box{max-width:620px}
+
+@media (max-width:1180px){ .ap-filter{grid-template-columns:repeat(2,minmax(0,1fr))} .ap-f-q{grid-column:1 / -1} }
+@media (max-width:720px){
+  .ap-list-head,.ap-filter,.ap-note,.ap-foot{padding-left:18px;padding-right:18px}
+  .ap-filter{grid-template-columns:1fr}
+  .ap-revisi,.ap-blok{padding:18px}
+  .alert-revisi .btn{width:100%}
+  .btn-tinjau{width:100%}
+}
+
+.sr-ditolak{background:#fde8ec;color:#b91c1c}
+
+/* ===== Notifikasi (lonceng) ===== */
+.notif{position:relative}
+.notif-btn{position:relative;border:0;background:var(--surface-2,#eef2f6);cursor:pointer}
+.notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-shadow:0 0 0 2px #fff}
+.notif-panel{position:absolute;right:0;top:calc(100% + 10px);z-index:60;width:min(360px,calc(100vw - 32px));max-height:70vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(15,23,42,.16)}
+.notif-panel[hidden]{display:none}
+.notif-panel header{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700}
+.notif-item{display:block;padding:14px 16px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.notif-item:last-child{border-bottom:0}
+.notif-item:hover{background:#f8fafc}
+.notif-item strong{display:block;font-size:14.5px;color:#92400e}
+.notif-item span{display:block;margin-top:2px;font-size:13.5px;color:#475569}
+.notif-item small{display:block;margin-top:4px;font-size:12.5px;color:#94a3b8}
+.notif-empty{margin:0;padding:22px 16px;text-align:center;color:#94a3b8;font-size:14px}
+.rev-note{display:block;margin-top:4px;font-size:12.5px;font-weight:600;color:#b45309}
+.form-prefill{display:flex;gap:10px;align-items:flex-start;margin-bottom:20px}
+.alert-info{background:#f0fdfa;border-color:#99f6e4;color:#115e59}
+.alert-info strong{display:block;font-size:15.5px}
+.alert-info p{margin:4px 0 0}

@@ -46,7 +46,7 @@ return new class extends Migration {
             'chr.tinjau'              => 'Meninjau dan menyetujui Surat CHR',
             'chr.unggah'              => 'Mengunggah Surat Catatan Hasil Review (CHR) sesuai moda',
             'chr.pantau'              => 'Memantau status Surat CHR',
-            'rancangan_teknis.unggah' => 'Mengunggah Surat Rancangan Teknis',
+            'rekomendasi_teknis.unggah' => 'Mengunggah Surat Rekomendasi Teknis',
             'cakupan.lihat_unggahan'  => 'Melihat unggahan dalam cakupan peninjauan',
         ];
         foreach ($katalog as $kode => $nama) {
@@ -56,7 +56,7 @@ return new class extends Migration {
         $bawaan = [
             'Pemda'  => ['pemda.unggah', 'pemda.lihat_status'],
             'Moda'   => ['laporan.tinjau', 'chr.unggah', 'chr.pantau'],
-            'Intram' => ['laporan.tinjau', 'chr.tinjau', 'rancangan_teknis.unggah', 'cakupan.lihat_unggahan'],
+            'Intram' => ['laporan.tinjau', 'chr.tinjau', 'rekomendasi_teknis.unggah', 'cakupan.lihat_unggahan'],
         ];
         foreach ($bawaan as $role => $kodeList) {
             $idRole = DB::table('role')->where('nama_role', $role)->value('id_role');

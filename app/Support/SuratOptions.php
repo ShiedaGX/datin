@@ -17,6 +17,14 @@ class SuratOptions
     public const DALAM_REVIEW    = 'Dalam Review';
     public const DISETUJUI       = 'Disetujui';
     public const PERLU_PERBAIKAN = 'Perlu Perbaikan';
+    public const DITOLAK         = 'Ditolak';
+
+    // Tindakan pada riwayat peninjauan (peninjauan_surat.aksi)
+    public const AKSI_MULAI    = 'Review dimulai';
+    public const AKSI_SETUJU   = 'Disetujui';
+    public const AKSI_PERBAIKI = 'Perlu Perbaikan';
+    public const AKSI_TOLAK    = 'Ditolak';
+    public const AKSI_REVISI   = 'Minta Revisi Pemda';
 
     /** kunci filter => status */
     public const STATUS_OPSI = [
@@ -25,6 +33,7 @@ class SuratOptions
         'dalam-review'    => self::DALAM_REVIEW,
         'disetujui'       => self::DISETUJUI,
         'perlu-perbaikan' => self::PERLU_PERBAIKAN,
+        'ditolak'         => self::DITOLAK,
     ];
 
     public const BELUM_ADA = 'Belum ada CHR';

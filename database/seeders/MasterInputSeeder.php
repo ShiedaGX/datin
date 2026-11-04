@@ -43,6 +43,31 @@ class MasterInputSeeder extends Seeder
                     'diverifikasi_at' => now(),
                 ]
             );
+
+            // Akun demo untuk mencoba alur Moda -> INTRAM (Intram tanpa cakupan wilayah/moda)
+            User::firstOrCreate(
+                ['username' => 'intram'],
+                [
+                    'id_role'         => Role::where('nama_role', 'Intram')->value('id_role'),
+                    'email'           => 'intram@example.test',
+                    'full_name'       => 'User INTRAM',
+                    'password_hash'   => 'intram12345',
+                    'diverifikasi_at' => now(),
+                ]
+            );
+            foreach (['Darat', 'Laut'] as $namaModa) {
+                User::firstOrCreate(
+                    ['username' => 'moda.' . strtolower($namaModa)],
+                    [
+                        'id_role'         => Role::where('nama_role', 'Moda')->value('id_role'),
+                        'id_moda'         => Moda::where('nama_moda', $namaModa)->value('id_moda'),
+                        'email'           => 'moda.' . strtolower($namaModa) . '@example.test',
+                        'full_name'       => 'User Moda ' . $namaModa,
+                        'password_hash'   => 'moda12345',
+                        'diverifikasi_at' => now(),
+                    ]
+                );
+            }
         }
     }
 }

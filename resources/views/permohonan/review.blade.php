@@ -93,6 +93,10 @@
                     </div>
                 </section>
             @endif
+
+            @if ($rute->rekomendasi_terbaru)
+                @include('permohonan._rekomendasi', ['no' => 4])
+            @endif
         </div>
 
         <aside class="rv-side">

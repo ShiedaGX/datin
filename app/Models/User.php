@@ -52,6 +52,28 @@ class User extends Authenticatable
     }
 
     /** Staf = pengguna dengan role selain 'Pemda' (mis. verifikator moda). */
+    /**
+     * Notifikasi untuk lonceng topbar. Pemda: permintaan revisi INTRAM yang belum dipenuhi,
+     * ditampilkan pada data yang sudah diajukan.
+     */
+    public function notifikasi(): \Illuminate\Support\Collection
+    {
+        if ($this->isSuperAdmin() || $this->isModa() || $this->isIntram()) {
+            return collect();
+        }
+
+        return PermintaanRevisi::with('moda', 'pemda.kabKota')
+            ->where('status', PermintaanRevisi::MENUNGGU)
+            ->whereHas('pemda', fn ($q) => $q->where('id_user', $this->id_user))
+            ->orderByDesc('created_at')->limit(10)->get()
+            ->map(fn ($p) => [
+                'judul' => 'INTRAM meminta revisi: moda ' . ($p->moda->nama_moda ?? '-'),
+                'isi'   => ($p->pemda->kabKota->nama_lengkap ?? 'Data Anda') . ' — ' . $p->catatan,
+                'waktu' => \App\Support\Tanggal::pendek($p->created_at),
+                'url'   => route('data-wilayah.show', $p->id_pemda),
+            ]);
+    }
+
     public function isStaf(): bool
     {
         return ($this->role->nama_role ?? 'Pemda') !== 'Pemda';
@@ -62,6 +84,9 @@ class User extends Authenticatable
     public function moda(): BelongsTo { return $this->belongsTo(Moda::class, 'id_moda', 'id_moda'); }
     public function dataPemda(): HasMany { return $this->hasMany(DataPemda::class, 'id_user', 'id_user'); }
     public function verifikasi(): HasMany { return $this->hasMany(VerifikasiPengajuan::class, 'id_user', 'id_user'); }
+    public function peninjauanSurat(): HasMany { return $this->hasMany(PeninjauanSurat::class, 'id_user', 'id_user'); }
+    public function rekomendasiTeknis(): HasMany { return $this->hasMany(RekomendasiTeknis::class, 'id_user', 'id_user'); }
+    public function permintaanRevisi(): HasMany { return $this->hasMany(PermintaanRevisi::class, 'id_user', 'id_user'); }
     public function pengajuanSurat(): HasMany { return $this->hasMany(PengajuanSurat::class, 'id_user', 'id_user'); }
     public function dokumen(): HasMany { return $this->hasMany(DokumenPengajuan::class, 'id_user', 'id_user'); }
 }

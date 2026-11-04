@@ -109,7 +109,8 @@ class UserController extends Controller
         if ($user->isSuperAdmin() && $this->superAdminAktifLain($user) === 0) {
             return back()->with('error', 'Tidak dapat menghapus Super Admin aktif terakhir.');
         }
-        if ($user->dataPemda()->whereHas('ruteSubsidi')->exists() || $user->dokumen()->exists() || $user->verifikasi()->exists() || $user->pengajuanSurat()->exists()) {
+        if ($user->dataPemda()->whereHas('ruteSubsidi')->exists() || $user->dokumen()->exists() || $user->verifikasi()->exists() || $user->pengajuanSurat()->exists()
+            || $user->peninjauanSurat()->exists() || $user->rekomendasiTeknis()->exists() || $user->permintaanRevisi()->exists()) {
             return back()->with('error', 'Akun tidak dapat dihapus karena sudah memiliki pengajuan, dokumen, surat, atau riwayat verifikasi. Nonaktifkan akun lewat menu Edit.');
         }
 

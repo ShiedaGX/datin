@@ -129,7 +129,7 @@ class SuratController extends Controller
         return view('surat.laporan', Permohonan::detail($rute) + [
             'draf'           => $draf,
             'terkunci'       => $terkunci,
-            'perbaikan'      => $draf ? null : $semua->first(fn ($p) => $p->status === SuratOptions::PERLU_PERBAIKAN),
+            'perbaikan'      => $draf ? null : $semua->first(fn ($p) => in_array($p->status, [SuratOptions::PERLU_PERBAIKAN, SuratOptions::DITOLAK], true)),
             'slot'           => $slot,
             'jumlahWajib'    => SuratOptions::jumlahWajib(),
             'terlampir'      => $berkasDraf->count(),

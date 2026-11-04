@@ -23,12 +23,20 @@ class KabKota extends Model
      * Alasan kab/kota tidak bisa dipilih pada form Input Data, atau null bila tersedia.
      * Tidak tersedia bila sudah punya pengajuan atau datanya dikelola akun lain.
      */
-    public function alasanTidakTersedia(User $user): ?string
+    public function alasanTidakTersedia(User $user, ?int $idModa = null): ?string
     {
-        $this->loadMissing('dataPemda.ruteSubsidi');
+        $this->loadMissing('dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi');
 
         foreach ($this->dataPemda as $pemda) {
             if ($pemda->ruteSubsidi->isNotEmpty()) {
+                // Sudah ada pengajuan. Pemilik boleh mengajukan lagi hanya untuk moda yang DIMINTA INTRAM.
+                $milik = $pemda->id_user !== null && (int) $pemda->id_user === (int) $user->id_user;
+                $diminta = $pemda->permintaan_terbuka;
+                $cocok = $idModa === null ? $diminta->isNotEmpty() : $diminta->contains(fn ($p) => (int) $p->id_moda === $idModa);
+                if ($milik && $cocok) {
+                    continue;
+                }
+
                 return 'sudah diajukan';
             }
         }
@@ -39,6 +47,17 @@ class KabKota extends Model
         }
 
         return null;
+    }
+
+    /** id moda yang diminta INTRAM untuk diajukan lagi oleh akun ini pada daerah ini. */
+    public function modaRevisiTerbuka(User $user): array
+    {
+        $this->loadMissing('dataPemda.permintaanRevisi');
+
+        return $this->dataPemda
+            ->filter(fn ($p) => $p->id_user !== null && (int) $p->id_user === (int) $user->id_user)
+            ->flatMap(fn ($p) => $p->permintaan_terbuka->pluck('id_moda'))
+            ->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     /** "Maluku Tenggara" -> "Kabupaten Maluku Tenggara"; nama berawalan Kota/Kabupaten dibiarkan. */

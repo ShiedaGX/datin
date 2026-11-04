@@ -49,10 +49,10 @@ class StoreWilayahRequest extends FormRequest
 
             // Kab/Kota harus berada di provinsi yang dipilih dan masih tersedia
             if (! $v->errors()->hasAny(['id_provinsi', 'id_kab_kota'])) {
-                $kab = KabKota::with('dataPemda.ruteSubsidi')->find($this->input('id_kab_kota'));
+                $kab = KabKota::with('dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi')->find($this->input('id_kab_kota'));
                 if ($kab && (int) $kab->id_provinsi !== (int) $this->input('id_provinsi')) {
                     $v->errors()->add('id_kab_kota', 'Kabupaten/Kota tidak berada pada provinsi yang dipilih.');
-                } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user()))) {
+                } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user(), $this->filled('id_moda') ? (int) $this->input('id_moda') : null))) {
                     $v->errors()->add('id_kab_kota', 'Kabupaten/Kota ini ' . $alasan . '.');
                 }
             }
