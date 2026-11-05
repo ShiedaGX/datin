@@ -53,7 +53,9 @@ class StoreWilayahRequest extends FormRequest
                 if ($kab && (int) $kab->id_provinsi !== (int) $this->input('id_provinsi')) {
                     $v->errors()->add('id_kab_kota', 'Kabupaten/Kota tidak berada pada provinsi yang dipilih.');
                 } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user(), $this->filled('id_moda') ? (int) $this->input('id_moda') : null))) {
-                    $v->errors()->add('id_kab_kota', 'Kabupaten/Kota ini ' . $alasan . '.');
+                    $v->errors()->add('id_kab_kota', $alasan === 'sudah diajukan'
+                        ? 'Kabupaten/Kota ini sudah diajukan untuk moda tersebut. Pengajuan ulang hanya dapat dilakukan setelah INTRAM meminta revisi.'
+                        : 'Kabupaten/Kota ini ' . $alasan . '.');
                 }
             }
 

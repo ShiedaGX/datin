@@ -26,6 +26,7 @@ class InputDataController extends Controller
             ->orderBy('nama_kab_kota')->get();
 
         [$isian, $sumber] = $this->isianDariPengajuanSebelumnya($request, $semua, $user);
+        $namaModa = Moda::pluck('nama_moda', 'id_moda');
 
         return view('input-data.create', [
             'isian'       => $isian,           // data pengajuan sebelumnya (revisi INTRAM), kosong untuk pengajuan baru
@@ -43,6 +44,8 @@ class InputDataController extends Controller
                 'nama'        => $k->nama_kab_kota,
                 'alasan'      => $k->alasanTidakTersedia($user),
                 'revisi'      => $k->modaRevisiTerbuka($user),     // id moda yang diminta INTRAM
+                'sudah'       => $k->modaDiajukan($user),          // id moda yang sudah diajukan akun ini
+                'sudahNama'   => collect($k->modaDiajukan($user))->map(fn ($id) => $namaModa[$id] ?? '')->filter()->values()->all(),
                 'revisiNama'  => Moda::whereIn('id_moda', $k->modaRevisiTerbuka($user))->orderBy('id_moda')->pluck('nama_moda')->all(),
             ])->values(),
             // saran otomatis untuk kolom Kebutuhan Konektivitas

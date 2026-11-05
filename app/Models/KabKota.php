@@ -28,15 +28,18 @@ class KabKota extends Model
         $this->loadMissing('dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi');
 
         foreach ($this->dataPemda as $pemda) {
-            if ($pemda->ruteSubsidi->isNotEmpty()) {
-                // Sudah ada pengajuan. Pemilik boleh mengajukan lagi hanya untuk moda yang DIMINTA INTRAM.
-                $milik = $pemda->id_user !== null && (int) $pemda->id_user === (int) $user->id_user;
-                $diminta = $pemda->permintaan_terbuka;
-                $cocok = $idModa === null ? $diminta->isNotEmpty() : $diminta->contains(fn ($p) => (int) $p->id_moda === $idModa);
-                if ($milik && $cocok) {
-                    continue;
-                }
+            if ($pemda->ruteSubsidi->isEmpty()) {
+                continue;
+            }
 
+            // Daerah yang sudah diajukan akun lain tidak dapat dipilih
+            if ($pemda->id_user === null || (int) $pemda->id_user !== (int) $user->id_user) {
+                return 'dikelola akun lain';
+            }
+
+            // Milik akun ini: tetap bisa DIPILIH (untuk pengajuan ulang), tetapi saat menyimpan moda yang dipilih
+            // harus sedang diminta INTRAM untuk diajukan lagi.
+            if ($idModa !== null && ! $pemda->permintaan_terbuka->contains(fn ($p) => (int) $p->id_moda === $idModa)) {
                 return 'sudah diajukan';
             }
         }
@@ -47,6 +50,17 @@ class KabKota extends Model
         }
 
         return null;
+    }
+
+    /** id moda yang sudah diajukan akun ini pada daerah ini. */
+    public function modaDiajukan(User $user): array
+    {
+        $this->loadMissing('dataPemda.ruteSubsidi');
+
+        return $this->dataPemda
+            ->filter(fn ($p) => $p->id_user !== null && (int) $p->id_user === (int) $user->id_user)
+            ->flatMap(fn ($p) => $p->ruteSubsidi->pluck('id_moda'))
+            ->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     /** id moda yang diminta INTRAM untuk diajukan lagi oleh akun ini pada daerah ini. */

@@ -17,4 +17,5 @@ return [
     'Garam'                      => ['garam'],
     'Konstruksi'                 => ['konstruksi'],
     'Perbatasan & Pertahanan'    => ['perbatasan', 'plbn', 'pksn', 'pertahanan'],
+    'Tanaman Hias & Obat'        => ['tanaman hias', 'tanaman obat'],
 ];

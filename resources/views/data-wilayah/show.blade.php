@@ -4,6 +4,7 @@
 @section('heading', 'Detail Data Wilayah')
 
 @section('content')
+@php($isi = $rute ?? $pemda)
 @foreach ($pemda->permintaan_terbuka as $pr)
     <div class="alert alert-revisi" role="status">
         <div>
@@ -24,7 +25,7 @@
             <p class="muted">{{ $pemda->kabKota->provinsi->nama_provinsi }} &middot; {{ $pemda->kabKota->wilayah->nama_wilayah }}</p>
         </div>
         <div class="acts">
-            <span class="badge badge-{{ \Illuminate\Support\Str::slug($pemda->klasifikasi_label) }}">{{ $pemda->klasifikasi_label }}</span>
+            <span class="badge badge-{{ \Illuminate\Support\Str::slug($isi->klasifikasi_label) }}">{{ $isi->klasifikasi_label }}</span>
             <span class="badge {{ $pemda->status_kelas }}">{{ $pemda->status_label }}</span>
         </div>
     </div>
@@ -32,7 +33,7 @@
     <dl class="detail-grid">
         <div>
             <dt>Keterangan Daerah</dt>
-            <dd>{{ $pemda->keterangan_pemda ?: '-' }}</dd>
+            <dd>{{ $isi->keterangan_pemda ?: '-' }}</dd>
         </div>
         <div>
             <dt>Moda Transportasi</dt>
@@ -41,9 +42,9 @@
         <div class="span-2">
             <dt>Potensi Unggulan Daerah</dt>
             <dd>
-                @if (count($pemda->potensi_daftar))
+                @if (count($isi->potensi_daftar))
                     <ol class="plain-list">
-                        @foreach ($pemda->potensi_daftar as $butir)
+                        @foreach ($isi->potensi_daftar as $butir)
                             <li>{{ $butir }}</li>
                         @endforeach
                     </ol>
@@ -53,9 +54,9 @@
             </dd>
         </div>
         <div class="span-2">
-            <dt>Sektor Potensi ({{ $pemda->jumlah_sektor }})</dt>
+            <dt>Sektor Potensi ({{ $isi->jumlah_sektor }})</dt>
             <dd>
-                @forelse ($pemda->sektor_terdeteksi as $sektor)
+                @forelse ($isi->sektor_terdeteksi as $sektor)
                     <span class="tag">{{ $sektor }}</span>
                 @empty
                     -
@@ -63,8 +64,8 @@
             </dd>
         </div>
         <div class="span-2">
-            <dt>Kebutuhan Konektivitas Regional @if ($pemda->jumlah_tujuan !== null)({{ $pemda->jumlah_tujuan }} tujuan)@endif</dt>
-            <dd class="prewrap">{{ $pemda->kebutuhan_konektivitas ?: '-' }}</dd>
+            <dt>Kebutuhan Konektivitas Regional @if ($isi->jumlah_tujuan !== null)({{ $isi->jumlah_tujuan }} tujuan)@endif</dt>
+            <dd class="prewrap">{{ $isi->kebutuhan_konektivitas ?: '-' }}</dd>
         </div>
         <div>
             <dt>Tanggal Pengajuan</dt>

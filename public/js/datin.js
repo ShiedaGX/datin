@@ -19,17 +19,29 @@
   var prov = $('#id_provinsi'), wil = $('#id_wilayah'), kab = $('#id_kab_kota');
 
   /* ---------- Revisi dari INTRAM: moda dibatasi pada moda yang diminta ---------- */
-  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false;
+  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false, btnKirim = $('#formInput button[type=submit]');
   function batasiModa() {
     if (!kab || !modaRadios.length) return;
     var o = kab.options[kab.selectedIndex];
     var diminta = o && o.dataset && o.dataset.revisi ? o.dataset.revisi.split(',') : [];
+    var sudah = o && o.dataset && o.dataset.sudah ? o.dataset.sudah.split(',') : [];
+    var terkunciUlang = !diminta.length && sudah.length > 0;   // sudah diajukan dan belum ada permintaan revisi INTRAM
+    if (btnKirim) btnKirim.disabled = terkunciUlang;
     modaRadios.forEach(function (r) {
-      var boleh = !diminta.length || diminta.indexOf(r.value) !== -1;
+      var boleh = terkunciUlang ? false : (!diminta.length || diminta.indexOf(r.value) !== -1);
       r.disabled = !boleh;
       r.closest('.chip').classList.toggle('is-off', !boleh);
       if (!boleh && r.checked) r.checked = false;
     });
+    if (terkunciUlang) {
+      if (modaHint) {
+        modaHint.textContent = 'Daerah ini sudah diajukan untuk moda ' + modaRadios.filter(function (r) { return sudah.indexOf(r.value) !== -1; })
+          .map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ') + '. Pengajuan ulang dapat dilakukan setelah INTRAM meminta revisi.';
+        modaHint.hidden = false;
+      }
+      modaAuto = false;
+      return;
+    }
     if (!diminta.length) {
       if (modaHint) modaHint.hidden = true;
       if (modaAuto) { modaRadios.forEach(function (r) { r.checked = false; }); modaAuto = false; }  // batalkan pilihan otomatis
@@ -83,6 +95,16 @@
     filterProvinsi();
   }
   if (kab) kab.addEventListener('change', batasiModa);
+  function formKosong() {
+    var kb = $('#kebutuhan_konektivitas'), kl = $('#klasifikasi_pemda');
+    return !(kb && kb.value.trim()) && !(kl && kl.value) &&
+      !$$('input[name="potensi[]"]').some(function (i) { return i.value.trim(); }) &&
+      !$$('input[name="keterangan[]"]').some(function (c) { return c.checked; });
+  }
+  if (kab) kab.addEventListener('change', function () {   // daerah yang diminta direvisi: buka form yang terisi dari pengajuan sebelumnya
+    var o = kab.options[kab.selectedIndex];
+    if (o && o.dataset && o.dataset.isi && location.search.indexOf('kab=') === -1 && formKosong()) location.href = o.dataset.isi;
+  });
   filterKab();
 
   /* ---------- Potensi: satu potensi per kolom ---------- */
@@ -464,6 +486,7 @@
     });
     window.addEventListener('pageshow', function () {
       if (btn) { btn.disabled = false; btn.textContent = 'Tambah Data'; }
+      batasiModa();
     });
   }
 })();

@@ -164,6 +164,24 @@ class DataPemda extends Model
         return false;
     }
 
+    /**
+     * Data Wilayah per role: Pemda hanya data yang diunggahnya; Moda hanya data pemda yang memiliki pengajuan
+     * untuk moda akun itu; INTRAM dan Super Admin melihat semuanya.
+     */
+    public function scopeTerlihatOleh($query, User $user)
+    {
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return $query;
+        }
+        if ($user->isModa()) {
+            return $user->id_moda === null
+                ? $query->whereRaw('1 = 0')
+                : $query->whereHas('ruteSubsidi', fn ($r) => $r->where('id_moda', $user->id_moda));
+        }
+
+        return $query->where('data_pemda.id_user', $user->id_user);
+    }
+
     /** Pengajuan terbaru di atas; daerah tanpa pengajuan menyusul berdasarkan id terbesar. */
     public function scopeTerbaru($query)
     {

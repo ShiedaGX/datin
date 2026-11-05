@@ -32,6 +32,7 @@
 
     <noscript><button type="submit" class="btn btn-outline">Terapkan</button></noscript>
 
+    @if ($lingkup)<span class="scope-note">{{ $lingkup }}</span>@endif
     <span class="count">Menampilkan {{ $data->count() }} dari {{ number_format($data->total(), 0, ',', '.') }} entri</span>
     @if ($adaFilter)
         <a class="reset" href="{{ route('data-wilayah.index') }}">Reset</a>
