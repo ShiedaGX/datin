@@ -171,6 +171,7 @@
                                 <div>
                                     <strong>{{ $r->nama_jenis }}</strong>
                                     <span>{{ $r->nama_file }}</span>
+                                    @if ($r->nomor_surat)<small>No. {{ $r->nomor_surat }}</small>@endif
                                     <small>{{ $p->nomor }} &middot; {{ $r->ekstensi }} &middot; {{ $r->ukuran_teks }}</small>
                                 </div>
                             </div>

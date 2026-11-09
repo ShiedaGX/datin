@@ -145,6 +145,12 @@
                                     <span class="sr-state {{ $d ? 'is-ok' : '' }}" data-state>{{ $d ? 'Terunggah' : 'Belum diunggah' }}</span>
                                 </div>
 
+                                <div class="sr-nomor">
+                                    <label for="nomor-{{ $s['kode'] }}">Nomor surat @if ($s['wajib'])<span class="wajib">*</span>@endif</label>
+                                    <input type="text" id="nomor-{{ $s['kode'] }}" name="nomor[{{ $s['kode'] }}]" value="{{ old('nomor.' . $s['kode'], $d->nomor_surat ?? '') }}" maxlength="100" placeholder="Contoh: CHR/016/LAUT/IX/2026" autocomplete="off" class="@error('nomor.' . $s['kode']) is-invalid @enderror">
+                                    @error('nomor.' . $s['kode'])<p class="error">{{ $message }}</p>@enderror
+                                </div>
+
                                 <div class="sr-file sr-file-ada" @if (! $d) hidden @endif>
                                     <i class="rv-file"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></i>
                                     <div class="sr-file-main">
@@ -295,6 +301,7 @@
                                 <div>
                                     <strong>{{ $r->nama_jenis }}</strong>
                                     <span>{{ $r->nama_file }}</span>
+                                    @if ($r->nomor_surat)<small>No. {{ $r->nomor_surat }}</small>@endif
                                     <small>{{ $p->nomor }} &middot; {{ $r->ekstensi }} &middot; {{ $r->ukuran_teks }}</small>
                                 </div>
                             </div>

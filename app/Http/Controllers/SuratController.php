@@ -151,7 +151,10 @@ class SuratController extends Controller
             'catatan'   => ['nullable', 'string', 'max:1000'],
             'berkas'    => ['nullable', 'array'],
             'berkas.*'  => ['file', 'mimes:pdf', 'max:' . SuratOptions::MAKS_KB],
+            'nomor'     => ['nullable', 'array'],
+            'nomor.*'   => ['nullable', 'string', 'max:100'],
         ], [
+            'nomor.*.max'       => 'Nomor surat maksimal :max karakter.',
             'catatan.max'       => 'Catatan maksimal :max karakter.',
             'berkas.*.mimes'    => 'Berkas harus berformat PDF.',
             'berkas.*.max'      => 'Ukuran berkas maksimal ' . intdiv(SuratOptions::MAKS_KB, 1024) . ' MB.',
@@ -186,17 +189,38 @@ class SuratController extends Controller
                 $catatan = trim((string) ($data['catatan'] ?? ''));
                 $draf->catatan_pengiriman = $catatan !== '' ? $catatan : null;
 
+                // Nomor surat diisi manual; wajib untuk setiap surat yang ada (baru diunggah atau sudah tersimpan pada draf)
+                $nomor = fn (string $kode): string => trim((string) ($data['nomor'][$kode] ?? ''));
+                $wajibNomor = fn (string $kode) => ValidationException::withMessages(['nomor.' . $kode => 'Nomor surat wajib diisi untuk ' . SuratOptions::JENIS[$kode]['nama'] . '.']);
+
                 foreach ($berkas as $jenis => $file) {
+                    if ($nomor($jenis) === '') {
+                        throw $wajibNomor($jenis);
+                    }
                     $path = $file->store("surat_chr/{$draf->id_pengajuan_surat}", 'local');
                     $tersimpan[] = $path;
 
-                    $atribut = ['nama_file' => $file->getClientOriginalName(), 'path_file' => $path, 'ukuran' => $file->getSize()];
+                    $atribut = ['nama_file' => $file->getClientOriginalName(), 'nomor_surat' => $nomor($jenis), 'path_file' => $path, 'ukuran' => $file->getSize()];
                     $lama = $draf->dokumen()->where('jenis', $jenis)->first();
                     if ($lama) {
                         $usang[] = $lama->path_file;
                         $lama->update($atribut);
                     } else {
                         DokumenSurat::create($atribut + ['id_pengajuan_surat' => $draf->id_pengajuan_surat, 'jenis' => $jenis]);
+                    }
+                }
+
+                // Surat yang sudah ada pada draf (tanpa berkas baru): nomor surat tetap harus terisi dan boleh diperbarui
+                foreach ($draf->dokumen()->get() as $ada) {
+                    if (array_key_exists($ada->jenis, $berkas)) {
+                        continue;
+                    }
+                    $n = $nomor($ada->jenis);
+                    if ($n === '') {
+                        throw $wajibNomor($ada->jenis);
+                    }
+                    if ($n !== $ada->nomor_surat) {
+                        $ada->update(['nomor_surat' => $n]);
                     }
                 }
 

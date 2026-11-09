@@ -9,7 +9,7 @@ class RekomendasiTeknis extends Model
 {
     protected $table = 'rekomendasi_teknis';
     protected $primaryKey = 'id_rekomendasi_teknis';
-    protected $fillable = ['id_pengajuan_surat', 'id_user', 'nama_file', 'path_file', 'ukuran', 'catatan'];
+    protected $fillable = ['id_pengajuan_surat', 'id_user', 'nama_file', 'nomor_surat', 'path_file', 'ukuran', 'catatan'];
 
     public function pengajuan(): BelongsTo { return $this->belongsTo(PengajuanSurat::class, 'id_pengajuan_surat', 'id_pengajuan_surat'); }
     public function user(): BelongsTo { return $this->belongsTo(User::class, 'id_user', 'id_user'); }

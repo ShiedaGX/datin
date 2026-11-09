@@ -9,7 +9,7 @@
                 <div class="rv-doc-main">
                     <strong>Surat Rekomendasi Teknis</strong>
                     <span>{{ $rt->nama_file }}</span>
-                    <small>{{ $rt->ekstensi }} &bull; {{ $rt->ukuran_teks }} &bull; Diunggah {{ \App\Support\Tanggal::pendek($rt->updated_at) }} oleh {{ $rt->user->full_name ?? 'User INTRAM' }}</small>
+                    <small>@if ($rt->nomor_surat)No. {{ $rt->nomor_surat }} &bull; @endif{{ $rt->ekstensi }} &bull; {{ $rt->ukuran_teks }} &bull; Diunggah {{ \App\Support\Tanggal::pendek($rt->updated_at) }} oleh {{ $rt->user->full_name ?? 'User INTRAM' }}</small>
                 </div>
                 <div class="rv-doc-act">
                     <a class="icon-act" target="_blank" rel="noopener" href="{{ route('rekomendasi.dokumen', $rt->id_rekomendasi_teknis) }}" title="Lihat dokumen" aria-label="Lihat Surat Rekomendasi Teknis">

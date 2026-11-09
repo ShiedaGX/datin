@@ -71,7 +71,7 @@
                         <div class="rv-doc-main">
                             <strong>{{ $d->nama_jenis }}</strong>
                             <span>{{ $d->nama_file }}</span>
-                            <small>{{ $d->ekstensi }} &bull; {{ $d->ukuran_teks }}</small>
+                            <small>@if ($d->nomor_surat)No. {{ $d->nomor_surat }} &bull; @endif{{ $d->ekstensi }} &bull; {{ $d->ukuran_teks }}</small>
                         </div>
                         <div class="rv-doc-act rv-doc-act-teks">
                             <a class="sr-lihat" target="_blank" rel="noopener" href="{{ route('surat.dokumen', $d->id_dokumen_surat) }}">Lihat</a>
@@ -102,7 +102,7 @@
                 <div class="rv-doc-main">
                     <strong>Surat Rekomendasi Teknis</strong>
                     <span>{{ $rt->nama_file }}</span>
-                    <small>{{ $rt->ekstensi }} &bull; {{ $rt->ukuran_teks }} &bull; Diunggah {{ \App\Support\Tanggal::panjang($rt->updated_at) }}, {{ \App\Support\Tanggal::jam($rt->updated_at) }} oleh {{ $rt->user->full_name ?? 'User INTRAM' }}</small>
+                    <small>@if ($rt->nomor_surat)No. {{ $rt->nomor_surat }} &bull; @endif{{ $rt->ekstensi }} &bull; {{ $rt->ukuran_teks }} &bull; Diunggah {{ \App\Support\Tanggal::panjang($rt->updated_at) }}, {{ \App\Support\Tanggal::jam($rt->updated_at) }} oleh {{ $rt->user->full_name ?? 'User INTRAM' }}</small>
                 </div>
                 <div class="rv-doc-act rv-doc-act-teks">
                     <a class="sr-lihat" target="_blank" rel="noopener" href="{{ route('rekomendasi.dokumen', $rt->id_rekomendasi_teknis) }}">Lihat</a>
@@ -120,6 +120,11 @@
             @csrf
             <p class="muted">{{ $rt ? 'Unggah berkas baru untuk mengganti Surat Rekomendasi Teknis yang sudah ada.' : 'Surat Rekomendasi Teknis akan tampil pada Pemda pemilik laporan dan pada Moda ' . ($rute->moda->nama_moda ?? '') . '.' }}</p>
 
+            <div class="field">
+                <label for="rt_nomor">Nomor surat <span class="wajib">*</span></label>
+                <input type="text" id="rt_nomor" name="nomor_surat" value="{{ old('nomor_surat') }}" maxlength="100" required placeholder="Contoh: 123/REK/INTRAM/2026" autocomplete="off" class="@error('nomor_surat') is-invalid @enderror">
+                @error('nomor_surat')<p class="error">{{ $message }}</p>@enderror
+            </div>
             <div class="field">
                 <label for="rt_name">Berkas Surat Rekomendasi Teknis <span class="wajib">*</span></label>
                 <div class="upload-box @error('berkas') is-invalid @enderror">

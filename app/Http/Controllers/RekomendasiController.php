@@ -90,9 +90,12 @@ class RekomendasiController extends Controller
         $this->pastikanLaporan($rute);
 
         $data = $request->validate([
+            'nomor_surat' => ['required', 'string', 'max:100'],
             'berkas'  => ['required', 'file', 'mimes:pdf', 'max:' . SuratOptions::MAKS_KB],
             'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
+            'nomor_surat.required' => 'Nomor surat wajib diisi.',
+            'nomor_surat.max'      => 'Nomor surat maksimal :max karakter.',
             'berkas.required' => 'Pilih berkas Surat Rekomendasi Teknis (PDF).',
             'berkas.mimes'    => 'Berkas harus berformat PDF.',
             'berkas.max'      => 'Ukuran berkas maksimal ' . intdiv(SuratOptions::MAKS_KB, 1024) . ' MB.',
@@ -117,6 +120,7 @@ class RekomendasiController extends Controller
                 $atribut = [
                     'id_user'   => $user->id_user,
                     'nama_file' => $file->getClientOriginalName(),
+                    'nomor_surat' => trim($data['nomor_surat']),
                     'path_file' => $baru,
                     'ukuran'    => $file->getSize(),
                     'catatan'   => $catatan !== '' ? $catatan : null,

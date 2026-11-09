@@ -9,7 +9,7 @@ class DokumenSurat extends Model
 {
     protected $table = 'dokumen_surat';
     protected $primaryKey = 'id_dokumen_surat';
-    protected $fillable = ['id_pengajuan_surat', 'jenis', 'nama_file', 'path_file', 'ukuran'];
+    protected $fillable = ['id_pengajuan_surat', 'jenis', 'nama_file', 'nomor_surat', 'path_file', 'ukuran'];
 
     public function pengajuan(): BelongsTo { return $this->belongsTo(PengajuanSurat::class, 'id_pengajuan_surat', 'id_pengajuan_surat'); }
 

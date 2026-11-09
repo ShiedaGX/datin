@@ -334,28 +334,30 @@
     };
 
     var hitung = function () {
-      var n = 0, total = 0, wajib = 0, wajibOk = 0;
+      var n = 0, total = 0, wajib = 0, wajibOk = 0, tanpaNomor = 0;
       slots.forEach(function (s) {
         var f = baru[s.dataset.slot], ada = adaDiServer(s), wj = s.dataset.wajib === '1';
         var ukuran = f ? f.size : (ada ? (parseInt(s.dataset.adaUkuran, 10) || 0) : 0);
         var ada_ = !!(f || ada);
         if (ada_) { n++; total += ukuran; }
-        if (wj) { wajib++; if (ada_) wajibOk++; }
+        var nomorEl = $('.sr-nomor input', s), nomorOk = !nomorEl || nomorEl.value.trim() !== '';
+        if (ada_ && !nomorOk) tanpaNomor++;
+        if (wj) { wajib++; if (ada_ && nomorOk) wajibOk++; }
         var li = $('#srList li[data-slot="' + s.dataset.slot + '"]');
         if (li) {
-          li.classList.toggle('ok', ada_);
+          li.classList.toggle('ok', ada_ && nomorOk);
           var ket = $('[data-ket]', li);
-          if (ket) ket.textContent = ada_ ? '' : 'Belum diunggah · ' + (wj ? 'Wajib' : 'Opsional');
+          if (ket) ket.textContent = ada_ ? (nomorOk ? '' : 'Nomor surat belum diisi') : 'Belum diunggah · ' + (wj ? 'Wajib' : 'Opsional');
         }
       });
 
-      var lengkap = wajibOk === wajib;
+      var lengkap = wajibOk === wajib && tanpaNomor === 0;
       $('#srCount').textContent = n + ' surat · Total ' + (total ? fmt(total) : '0 KB');
       $('#srBar').style.width = (wajib ? Math.round(wajibOk / wajib * 100) : 100) + '%';
-      $('#srBarLabel').textContent = lengkap ? 'Surat wajib lengkap' : 'Surat wajib belum lengkap (' + wajibOk + '/' + wajib + ')';
+      $('#srBarLabel').textContent = wajibOk === wajib ? 'Surat wajib lengkap' : 'Surat wajib belum lengkap (' + wajibOk + '/' + wajib + ')';
       $('#srSiap').classList.toggle('is-belum', !lengkap);
       $('#srSiapChip').textContent = lengkap ? 'Siap dikirim' : 'Belum lengkap';
-      $('#srSiapTeks').textContent = lengkap ? 'Surat sudah siap dikirim' : 'Unggah ' + (wajib - wajibOk) + ' surat wajib lagi';
+      $('#srSiapTeks').textContent = lengkap ? 'Surat sudah siap dikirim' : (wajibOk < wajib ? 'Lengkapi ' + (wajib - wajibOk) + ' surat wajib (berkas dan nomor surat)' : 'Isi nomor surat pada setiap berkas');
       $('#srFooterJudul').textContent = lengkap ? 'Siap mengirim ' + n + ' surat ke User INTRAM' : 'Lengkapi surat wajib untuk mengirim';
       $('#btnKirim').disabled = !lengkap;
     };
@@ -411,6 +413,7 @@
       if (v === 'kirim' && !window.confirm('Kirim surat ke User INTRAM? Surat yang sudah dikirim tidak dapat diubah.')) e.preventDefault();
     });
 
+    $$('.sr-nomor input', fs).forEach(function (el) { el.addEventListener('input', hitung); });
     slots.forEach(perbaruiSlot);
     hitung();
   }

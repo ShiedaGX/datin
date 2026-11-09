@@ -215,7 +215,7 @@
                             <div class="rv-doc-main">
                                 <strong>{{ $d->nama_jenis }}</strong>
                                 <span>{{ $d->nama_file }}</span>
-                                <small>{{ $d->ekstensi }} &bull; {{ $d->ukuran_teks }} &bull; Diunggah {{ \App\Support\Tanggal::pendek($d->updated_at) }}, {{ \App\Support\Tanggal::jam($d->updated_at) }}</small>
+                                <small>@if ($d->nomor_surat)No. {{ $d->nomor_surat }} &bull; @endif{{ $d->ekstensi }} &bull; {{ $d->ukuran_teks }} &bull; Diunggah {{ \App\Support\Tanggal::pendek($d->updated_at) }}, {{ \App\Support\Tanggal::jam($d->updated_at) }}</small>
                             </div>
                             <div class="rv-doc-act rv-doc-act-teks">
                                 <a class="sr-lihat" target="_blank" rel="noopener" href="{{ route('surat.dokumen', $d->id_dokumen_surat) }}">Lihat</a>
@@ -281,6 +281,7 @@
                     <dt>Pengirim</dt><dd>{{ $dipilih->user->full_name ?? '-' }}</dd>
                     <dt>Unit pengirim</dt><dd>{{ $dipilih->user->instansi ?: '-' }}</dd>
                     <dt>Penerima</dt><dd>User INTRAM</dd>
+                    <dt>Nomor surat</dt><dd>{{ $dipilih->dokumen->firstWhere('jenis', 'chr')->nomor_surat ?? '-' }}</dd>
                     <dt>Nomor pengajuan</dt><dd>{{ $dipilih->nomor }}</dd>
                     <dt>Tanggal dikirim</dt><dd>{{ \App\Support\Tanggal::panjang($dipilih->dikirim_at) }} &middot; {{ \App\Support\Tanggal::jam($dipilih->dikirim_at) }}</dd>
                     <dt>Moda / Tahun</dt><dd>{{ $dipilih->moda->nama_moda ?? '-' }} / {{ $dipilih->dikirim_at->format('Y') }}</dd>

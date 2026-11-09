@@ -156,6 +156,11 @@
             @foreach ($dokumen as $field => $label)
                 <div class="field">
                     <label for="{{ $field }}_name">{{ $label }}</label>
+                    <div class="nomor-surat">
+                        <label for="nomor_{{ $field }}" class="sub">Nomor surat <span class="wajib">*</span></label>
+                        <input type="text" id="nomor_{{ $field }}" name="nomor[{{ $field }}]" value="{{ old('nomor.' . $field) }}" maxlength="100" required placeholder="Contoh: 045/123/DISHUB/2026" autocomplete="off" class="@error('nomor.' . $field) is-invalid @enderror">
+                        @error('nomor.' . $field)<p class="error">{{ $message }}</p>@enderror
+                    </div>
                     <div class="upload-box @error($field) is-invalid @enderror">
                         <input type="text" id="{{ $field }}_name" class="upload-name" data-for="{{ $field }}" readonly
                                placeholder="upload {{ strtolower($label) }}">

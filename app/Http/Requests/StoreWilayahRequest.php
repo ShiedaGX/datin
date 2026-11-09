@@ -31,6 +31,7 @@ class StoreWilayahRequest extends FormRequest
 
         foreach (array_keys(FormOptions::DOKUMEN) as $field) {
             $rules[$field] = ['required', 'file', 'mimes:pdf,doc,docx', 'max:5120']; // 5 MB
+            $rules['nomor.' . $field] = ['required', 'string', 'max:100'];          // nomor surat diisi manual
         }
 
         return $rules;
@@ -69,7 +70,12 @@ class StoreWilayahRequest extends FormRequest
 
     public function attributes(): array
     {
-        return [
+        $nomor = [];
+        foreach (FormOptions::DOKUMEN as $field => $label) {
+            $nomor['nomor.' . $field] = 'Nomor ' . mb_strtolower($label);
+        }
+
+        return $nomor + [
             'id_provinsi'            => 'Provinsi',
             'id_wilayah'             => 'Wilayah regional',
             'id_kab_kota'            => 'Kabupaten/Kota',

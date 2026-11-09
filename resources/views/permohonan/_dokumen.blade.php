@@ -10,7 +10,7 @@
                             <div class="rv-doc-main">
                                 <strong>{{ $b['model']->jenis_dokumen }}</strong>
                                 <span>{{ $b['model']->nama_file }}</span>
-                                <small>{{ $b['jenis'] }}@if ($b['ukuran']) &bull; {{ $b['ukuran'] }}@endif &bull; Diunggah {{ \App\Support\Tanggal::pendek($b['model']->tanggal_upload) }}</small>
+                                <small>@if ($b['model']->nomor_surat)No. {{ $b['model']->nomor_surat }} &bull; @endif{{ $b['jenis'] }}@if ($b['ukuran']) &bull; {{ $b['ukuran'] }}@endif &bull; Diunggah {{ \App\Support\Tanggal::pendek($b['model']->tanggal_upload) }}</small>
                             </div>
                             <div class="rv-doc-act">
                                 <a class="icon-act" target="_blank" rel="noopener" href="{{ $intram ? route('dokumen.unduh', [$b['model']->id_dokumen_pengajuan, 'lihat' => 1]) : route('permohonan.dokumen', [$rute->id_rute_subsidi, $b['model']->id_dokumen_pengajuan]) }}" title="Lihat dokumen" aria-label="Lihat {{ $b['model']->jenis_dokumen }}">

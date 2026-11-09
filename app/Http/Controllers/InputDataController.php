@@ -168,6 +168,7 @@ class InputDataController extends Controller
                         'id_user'         => $user->id_user,
                         'jenis_dokumen'   => $jenis,
                         'nama_file'       => $file->getClientOriginalName(),
+                        'nomor_surat'     => trim($data['nomor'][$field]),
                         'path_file'       => $path,
                         'versi_dokumen'   => 1,
                         'tanggal_upload'  => now(),

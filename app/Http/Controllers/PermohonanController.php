@@ -195,7 +195,7 @@ class PermohonanController extends Controller
 
         $bagian('DOKUMEN SURAT');
         foreach ($rute->dokumen as $d) {
-            $isi($d->jenis_dokumen, $d->nama_file . ' (' . ($this->ukuran($d->path_file) ?? 'berkas tidak ditemukan') . ')');
+            $isi($d->jenis_dokumen, ($d->nomor_surat ? 'No. ' . $d->nomor_surat . ' | ' : '') . $d->nama_file . ' (' . ($this->ukuran($d->path_file) ?? 'berkas tidak ditemukan') . ')');
         }
 
         $bagian('RIWAYAT PENINJAUAN');

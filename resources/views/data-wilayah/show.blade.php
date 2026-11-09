@@ -122,11 +122,12 @@
     @if ($rute && $rute->dokumen->isNotEmpty())
         <div class="table-box">
             <table class="table table-data">
-                <thead><tr><th>Jenis Dokumen</th><th>Nama File</th><th class="num">Versi</th><th>Tanggal Upload</th><th></th></tr></thead>
+                <thead><tr><th>Jenis Dokumen</th><th>Nomor Surat</th><th>Nama File</th><th class="num">Versi</th><th>Tanggal Upload</th><th></th></tr></thead>
                 <tbody>
                     @foreach ($rute->dokumen as $dok)
                         <tr>
                             <td data-label="Jenis Dokumen"><strong>{{ $dok->jenis_dokumen }}</strong></td>
+                            <td data-label="Nomor Surat" class="soft">{{ $dok->nomor_surat ?: '-' }}</td>
                             <td data-label="Nama File" class="soft">{{ $dok->nama_file }}</td>
                             <td data-label="Versi" class="num">{{ $dok->versi_dokumen }}</td>
                             <td data-label="Tanggal Upload" class="soft">{{ $dok->tanggal_upload?->format('d-m-Y H:i') }}</td>
