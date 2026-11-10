@@ -1,6 +1,11 @@
 <?php
 namespace App\Models;
 
+/* 
+ * HakAkses model represents the "hak_akses" table in the database.
+ * It defines the relationship with the Role model through a many-to-many relationship.
+ */
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
