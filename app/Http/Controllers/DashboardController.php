@@ -29,7 +29,7 @@ class DashboardController extends Controller
             'provinsi'  => Provinsi::count(),
             'wilayah'   => Wilayah::count(),
             'kab_kota'  => KabKota::count(),
-            'sektor'    => count(config('sektor')),
+            'sektor'    => count(\App\Support\Sektor::daftar()),
         ];
 
         // ---- Distribusi per wilayah (jumlah kab/kota) ----

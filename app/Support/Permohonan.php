@@ -3,6 +3,7 @@ namespace App\Support;
 
 use App\Models\RuteSubsidi;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 /** Query dasar halaman Permohonan: laporan hanya untuk moda milik akun yang sedang login. */
 class Permohonan
@@ -23,6 +24,28 @@ class Permohonan
             'menunggu' => (clone $menunggu)->count(),
             'lewat'    => (clone $menunggu)->where('created_at', '<', now()->subDays($target))->count(),
             'target'   => $target,
+        ];
+    }
+
+    /** Data detail laporan untuk tampilan: dokumen Pemda, riwayat peninjauan, dan data yang diinput Pemda. */
+    public static function detail(RuteSubsidi $rute): array
+    {
+        $rute->load('pemda.user.role', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator', 'rekomendasi', 'pengajuanSurat');
+        $disk = Storage::disk('local');
+        $riwayat = $rute->verifikasi->sortBy('id_verifikasi_pengajuan')->values();
+
+        return [
+            'rute'     => $rute,
+            'pemda'    => $rute->pemda,
+            'pengaju'  => $rute->pemda->user,
+            'berkas'   => $rute->dokumen->map(fn ($d) => [
+                'model'  => $d,
+                'jenis'  => strtoupper(pathinfo($d->nama_file, PATHINFO_EXTENSION)),
+                'ukuran' => $disk->exists($d->path_file) ? SuratOptions::formatUkuran((int) $disk->size($d->path_file)) : null,
+            ]),
+            'rekomendasi' => $rute->rekomendasi_terbaru,
+            'riwayat'  => $riwayat,
+            'terakhir' => $riwayat->last(),
         ];
     }
 }

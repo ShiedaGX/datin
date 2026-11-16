@@ -18,6 +18,7 @@ class DataPemda extends Model
 
     public function user(): BelongsTo { return $this->belongsTo(User::class, 'id_user', 'id_user'); }
     public function kabKota(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota', 'id_kab_kota'); }
+    public function permintaanRevisi(): HasMany { return $this->hasMany(PermintaanRevisi::class, 'id_pemda', 'id_pemda'); }
     public function ruteSubsidi(): HasMany { return $this->hasMany(RuteSubsidi::class, 'id_pemda', 'id_pemda'); }
 
     /** Prioritas Strategis | Prioritas | Strategis | Belum diklasifikasi */
@@ -38,15 +39,7 @@ class DataPemda extends Model
     /** Daftar sektor yang terdeteksi dari teks potensi_pemda (lihat config/sektor.php). */
     public function getSektorTerdeteksiAttribute(): array
     {
-        $teks = mb_strtolower((string) $this->potensi_pemda);
-        if ($teks === '') {
-            return [];
-        }
-
-        return collect(config('sektor'))
-            ->filter(fn ($kataKunci) => collect($kataKunci)->contains(fn ($k) => str_contains($teks, $k)))
-            ->keys()
-            ->all();
+        return \App\Support\Sektor::deteksi((string) $this->potensi_pemda);
     }
 
     public function getJumlahSektorAttribute(): int
@@ -74,8 +67,19 @@ class DataPemda extends Model
         return $this->ruteSubsidi->sortByDesc('id_rute_subsidi')->first();
     }
 
+    /** Permintaan revisi INTRAM yang belum dipenuhi Pemda. */
+    public function getPermintaanTerbukaAttribute()
+    {
+        return $this->permintaanRevisi->where('status', PermintaanRevisi::MENUNGGU)->values();
+    }
+
     public function getStatusLabelAttribute(): string
     {
+        // Ada permintaan revisi dari INTRAM yang belum dipenuhi -> tampil "Perlu Revisi"
+        if ($this->permintaan_terbuka->isNotEmpty()) {
+            return StatusPengajuan::REVISI;
+        }
+
         return StatusPengajuan::normalisasi($this->pengajuan_terbaru?->status_pengajuan);
     }
 
@@ -123,9 +127,14 @@ class DataPemda extends Model
      */
     public function bisaDiubahOleh(User $user): bool
     {
+        // Pengajuan pada moda mana pun yang sudah disetujui mengunci seluruh data daerah ini
+        $adaYangDisetujui = $this->ruteSubsidi->contains(
+            fn ($r) => StatusPengajuan::grup($r->status_pengajuan) === 'disetujui'
+        );
+
         return $this->id_user !== null
             && (int) $this->id_user === (int) $user->id_user
-            && ! in_array($this->status_label, [StatusPengajuan::V1, StatusPengajuan::FINAL], true);
+            && ! $adaYangDisetujui;
     }
 
     /**
@@ -145,6 +154,24 @@ class DataPemda extends Model
         }
 
         return false;
+    }
+
+    /**
+     * Data Wilayah per role: Pemda hanya data yang diunggahnya; Moda hanya data pemda yang memiliki pengajuan
+     * untuk moda akun itu; INTRAM dan Super Admin melihat semuanya.
+     */
+    public function scopeTerlihatOleh($query, User $user)
+    {
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return $query;
+        }
+        if ($user->isModa()) {
+            return $user->id_moda === null
+                ? $query->whereRaw('1 = 0')
+                : $query->whereHas('ruteSubsidi', fn ($r) => $r->where('id_moda', $user->id_moda));
+        }
+
+        return $query->where('data_pemda.id_user', $user->id_user);
     }
 
     /** Pengajuan terbaru di atas; daerah tanpa pengajuan menyusul berdasarkan id terbesar. */

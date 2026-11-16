@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 class VerifikasiAkun extends Command
 {
     protected $signature = 'akun:verifikasi {email? : Email akun yang akan diverifikasi. Kosongkan untuk melihat daftar yang menunggu}';
-    protected $description = 'Verifikasi akun instansi yang mendaftar, atau tampilkan daftar akun yang masih menunggu';
+    protected $description = 'Aktifkan akun yang belum aktif, atau tampilkan daftar akun yang belum aktif';
 
     public function handle(): int
     {
@@ -21,7 +21,7 @@ class VerifikasiAkun extends Command
                 return self::SUCCESS;
             }
             $this->table(
-                ['Nama', 'Instansi', 'Email', 'Mendaftar'],
+                ['Nama', 'Instansi', 'Email', 'Dibuat'],
                 $menunggu->map(fn ($u) => [$u->full_name, $u->instansi, $u->email, $u->created_at])->all()
             );
 

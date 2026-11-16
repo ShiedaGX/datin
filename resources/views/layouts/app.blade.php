@@ -25,7 +25,7 @@
 
         <nav class="nav">
             @php($pengguna = auth()->user())
-            @if ($pengguna->isModa())
+            @if ($pengguna->isModa() || $pengguna->isIntram())
                 <p class="nav-title">MENU UTAMA</p>
             @endif
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
@@ -59,6 +59,18 @@
                     <span>Permohonan</span>
                 </a>
             @endif
+            @if ($pengguna->isIntram() && $pengguna->bisa('chr.tinjau'))
+                <a href="{{ route('approval.index') }}" class="nav-link {{ request()->routeIs('approval.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16"/><path d="M9 16v-5M13 16V8M17 16v-3"/></svg>
+                    <span>Approval</span>
+                </a>
+            @endif
+            @if ($pengguna->isIntram() && ($pengguna->bisa('cakupan.lihat_unggahan') || $pengguna->bisa('rekomendasi_teknis.unggah')))
+                <a href="{{ route('hasil.index') }}" class="nav-link {{ request()->routeIs('hasil.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                    <span>Hasil Unggahan</span>
+                </a>
+            @endif
         </nav>
         @hasSection('sidecard')
             @yield('sidecard')
@@ -77,6 +89,15 @@
                         Tidak ada laporan yang melewati target waktu peninjauan
                     @endif
                 </small>
+            </a>
+        @elseif (auth()->user()->isIntram())
+            @php($menunggu = \App\Models\PengajuanSurat::whereIn('status', [\App\Support\SuratOptions::TERKIRIM, \App\Support\SuratOptions::DALAM_REVIEW])->count())
+            <a class="side-card side-info" href="{{ route('approval.index') }}">
+                <span class="side-card-top side-info-top">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+                    <span>Ruang kerja INTRAM</span>
+                </span>
+                <small>Tinjau Surat CHR dari user moda dan lihat hasil unggahan Pemda. {{ $menunggu }} surat menunggu peninjauan.</small>
             </a>
         @endif
 
@@ -106,9 +127,25 @@
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
                 <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ trim($__env->yieldContent('search_placeholder')) ?: 'Cari data wilayah/provinsi...' }}" aria-label="Cari">
             </form>
-            <span class="icon-btn" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
-            </span>
+            @php($notif = auth()->user()->notifikasi())
+            <div class="notif" id="notif">
+                <button type="button" class="icon-btn notif-btn" id="notifBtn" aria-haspopup="true" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifikasi{{ $notif->count() ? ' (' . $notif->count() . ' baru)' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+                    @if ($notif->count())<span class="notif-dot">{{ $notif->count() }}</span>@endif
+                </button>
+                <div class="notif-panel" id="notifPanel" hidden>
+                    <header>Notifikasi</header>
+                    @forelse ($notif as $n)
+                        <a class="notif-item" href="{{ $n['url'] }}">
+                            <strong>{{ $n['judul'] }}</strong>
+                            <span>{{ $n['isi'] }}</span>
+                            <small>{{ $n['waktu'] }}</small>
+                        </a>
+                    @empty
+                        <p class="notif-empty">Belum ada notifikasi.</p>
+                    @endforelse
+                </div>
+            </div>
             <span class="lang">ID</span>
         </header>
 

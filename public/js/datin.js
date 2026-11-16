@@ -18,6 +18,44 @@
   /* ---------- Wilayah -> Provinsi -> Kabupaten/Kota (dropdown bertingkat) ---------- */
   var prov = $('#id_provinsi'), wil = $('#id_wilayah'), kab = $('#id_kab_kota');
 
+  /* ---------- Revisi dari INTRAM: moda dibatasi pada moda yang diminta ---------- */
+  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false, btnKirim = $('#formInput button[type=submit]');
+  function batasiModa() {
+    if (!kab || !modaRadios.length) return;
+    var o = kab.options[kab.selectedIndex];
+    var diminta = o && o.dataset && o.dataset.revisi ? o.dataset.revisi.split(',') : [];
+    var sudah = o && o.dataset && o.dataset.sudah ? o.dataset.sudah.split(',') : [];
+    var terkunciUlang = !diminta.length && sudah.length > 0;   // sudah diajukan dan belum ada permintaan revisi INTRAM
+    if (btnKirim) btnKirim.disabled = terkunciUlang;
+    modaRadios.forEach(function (r) {
+      var boleh = terkunciUlang ? false : (!diminta.length || diminta.indexOf(r.value) !== -1);
+      r.disabled = !boleh;
+      r.closest('.chip').classList.toggle('is-off', !boleh);
+      if (!boleh && r.checked) r.checked = false;
+    });
+    if (terkunciUlang) {
+      if (modaHint) {
+        modaHint.textContent = 'Daerah ini sudah diajukan untuk moda ' + modaRadios.filter(function (r) { return sudah.indexOf(r.value) !== -1; })
+          .map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ') + '. Pengajuan ulang dapat dilakukan setelah INTRAM meminta revisi.';
+        modaHint.hidden = false;
+      }
+      modaAuto = false;
+      return;
+    }
+    if (!diminta.length) {
+      if (modaHint) modaHint.hidden = true;
+      if (modaAuto) { modaRadios.forEach(function (r) { r.checked = false; }); modaAuto = false; }  // batalkan pilihan otomatis
+      return;
+    }
+    var aktif = modaRadios.filter(function (r) { return !r.disabled; });
+    if (aktif.length && !modaRadios.some(function (r) { return r.checked; })) { aktif[0].checked = true; modaAuto = true; }
+    if (modaHint) {
+      modaHint.textContent = 'INTRAM meminta Anda mengajukan untuk moda ' + aktif.map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ')
+        + '. Pengajuan moda sebelumnya tidak berubah.';
+      modaHint.hidden = false;
+    }
+  }
+
   function filterProvinsi() {
     if (!prov || !wil) return;
     var w = wil.value;
@@ -43,6 +81,7 @@
     });
     var terpilih = kab.options[kab.selectedIndex];
     if (terpilih && terpilih.value && terpilih.disabled) kab.value = '';
+    batasiModa();
   }
 
   if (prov && wil) {
@@ -55,10 +94,24 @@
     wil.addEventListener('change', function () { filterProvinsi(); if (kab) kab.value = ''; filterKab(); });
     filterProvinsi();
   }
+  if (kab) kab.addEventListener('change', batasiModa);
+  function formKosong() {
+    var kb = $('#kebutuhan_konektivitas'), kl = $('#klasifikasi_pemda');
+    return !(kb && kb.value.trim()) && !(kl && kl.value) &&
+      !$$('input[name="potensi[]"]').some(function (i) { return i.value.trim(); }) &&
+      !$$('input[name="keterangan[]"]').some(function (c) { return c.checked; });
+  }
+  if (kab) kab.addEventListener('change', function () {   // daerah yang diminta direvisi: buka form yang terisi dari pengajuan sebelumnya
+    var o = kab.options[kab.selectedIndex];
+    if (o && o.dataset && o.dataset.isi && location.search.indexOf('kab=') === -1 && formKosong()) location.href = o.dataset.isi;
+  });
   filterKab();
 
   /* ---------- Potensi: satu potensi per kolom ---------- */
   var potensi = $$('input[name="potensi[]"]');
+  var dataSektor = [];
+  try { dataSektor = JSON.parse(($('#data-sektor') || {}).textContent || '[]'); } catch (e) { dataSektor = []; }
+  var namaSektor = dataSektor.map(function (x) { return x.nama; });
   var hint = $('#potensiHint');
   var hintAsli = hint ? hint.textContent : '';
   var hintTimer;
@@ -72,6 +125,7 @@
   potensi.forEach(function (el, i) {
     el.addEventListener('input', function () {
       if (!/[,;\n\r]/.test(el.value)) return;
+      if (namaSektor.indexOf(el.value.trim()) !== -1) return;   // nama sektor yang memuat koma jangan dipecah
       // Dipaste/diketik berisi beberapa butir: sisakan satu di kolom ini, sebar sisanya ke kolom kosong berikutnya
       var bagian = el.value.split(/[,;\n\r]+/).map(function (x) { return x.trim(); }).filter(Boolean);
       el.value = bagian.shift() || '';
@@ -89,6 +143,90 @@
       }
     });
   });
+
+  /* ---------- Potensi: saran sektor ---------- */
+  var sektorList = $('#sektorList');
+  if (sektorList && potensi.length && dataSektor.length) {
+    var sAktif = -1, sHasil = [], sInput = null;
+    var sNorm = function (t) { return String(t).toLowerCase(); };
+
+    var sTutup = function () {
+      sektorList.hidden = true; sektorList.innerHTML = ''; sAktif = -1;
+      if (sInput) { sInput.setAttribute('aria-expanded', 'false'); sInput.removeAttribute('aria-activedescendant'); }
+    };
+    var sCari = function (el) {
+      var q = sNorm(el.value).trim();
+      var dipakai = potensi.filter(function (o) { return o !== el; }).map(function (o) { return sNorm(o.value).trim(); });
+      var out = [], kataCari = q === '' ? [] : q.split(/\s+/);
+      dataSektor.forEach(function (d) {
+        if (dipakai.indexOf(sNorm(d.nama)) !== -1) return;          // sektor yang sudah dipilih pada kolom lain
+        var nama = sNorm(d.nama), kata = '', cocok = true;
+        // setiap kata yang diketik harus cocok dengan nama sektor atau salah satu kata kuncinya
+        kataCari.forEach(function (t) {
+          if (nama.indexOf(t) !== -1) return;
+          var k = d.kunci.filter(function (x) { return x.indexOf(t) !== -1; })[0];
+          if (k) { kata = kata || k; } else { cocok = false; }
+        });
+        if (!cocok) return;
+        out.push({ nama: d.nama, kata: kata, skor: nama.indexOf(q) === 0 ? 0 : (kata ? 2 : 1) });
+      });
+      if (q !== '') out.sort(function (a, b) { return a.skor - b.skor; });
+      return out;
+    };
+    var sSelesaiAt = 0;
+    var sPilih = function (item) {
+      sSelesaiAt = Date.now();
+      sInput.value = item.nama;
+      sTutup();
+      var berikut = potensi[potensi.indexOf(sInput) + 1];
+      if (berikut && berikut.value.trim() === '') berikut.focus();
+    };
+    var sGambar = function (el) {
+      sInput = el; sektorList.innerHTML = '';
+      sHasil.forEach(function (it, i) {
+        var li = document.createElement('li');
+        li.id = 'sektor-opt-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+        var a = document.createElement('span'); a.textContent = it.nama;
+        var b = document.createElement('small'); b.textContent = it.kata ? 'cocok: ' + it.kata : 'Sektor';
+        li.appendChild(a); li.appendChild(b);
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); sPilih(it); });
+        sektorList.appendChild(li);
+      });
+      // posisikan tepat di bawah kolom yang sedang diisi
+      sektorList.style.top = (el.offsetTop + el.offsetHeight + 4) + 'px';
+      sektorList.style.left = el.offsetLeft + 'px';
+      sektorList.style.right = 'auto';
+      sektorList.style.width = el.offsetWidth + 'px';
+      sektorList.hidden = false; el.setAttribute('aria-expanded', 'true');
+    };
+    var sPerbarui = function (el) {
+      sHasil = sCari(el);
+      if (!sHasil.length) { sTutup(); return; }
+      sAktif = -1; sGambar(el);
+    };
+    var sSorot = function () {
+      Array.prototype.forEach.call(sektorList.children, function (li, i) {
+        li.setAttribute('aria-selected', String(i === sAktif));
+        if (i === sAktif) { sInput.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+      });
+    };
+
+    potensi.forEach(function (el) {
+      el.setAttribute('role', 'combobox'); el.setAttribute('aria-autocomplete', 'list');
+      el.setAttribute('aria-expanded', 'false'); el.setAttribute('aria-controls', 'sektorList');
+      el.addEventListener('focus', function () { sPerbarui(el); });
+      el.addEventListener('click', function () { if (Date.now() - sSelesaiAt > 400) sPerbarui(el); });   // abaikan click susulan setelah memilih saran
+      el.addEventListener('input', function () { sPerbarui(el); });
+      el.addEventListener('blur', function () { setTimeout(function () { if (document.activeElement !== el && sInput === el) sTutup(); }, 120); });   // jangan tutup daftar yang sudah berpindah ke kolom lain
+      el.addEventListener('keydown', function (e) {
+        if (sektorList.hidden || sInput !== el) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); sAktif = (sAktif + 1) % sHasil.length; sSorot(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); sAktif = (sAktif - 1 + sHasil.length) % sHasil.length; sSorot(); }
+        else if (e.key === 'Enter' && sAktif >= 0) { e.preventDefault(); sPilih(sHasil[sAktif]); }
+        else if (e.key === 'Escape') { e.stopPropagation(); sTutup(); }
+      });
+    });
+  }
 
   /* ---------- Kebutuhan konektivitas: saran nama kabupaten/kota ---------- */
   var ta = $('#kebutuhan_konektivitas'), list = $('#acList'), dataEl = $('#data-kabkota');
@@ -245,11 +383,14 @@
       var b = document.getElementById(id);
       if (b && catatan) b.addEventListener('click', function () { catatan.required = true; });
     });
+    $$('[data-wajib-catatan]', fk).forEach(function (b) {
+      if (catatan) b.addEventListener('click', function () { catatan.required = true; });
+    });
     if (setuju && catatan) setuju.addEventListener('click', function () { catatan.required = false; });
 
     fk.addEventListener('submit', function (e) {
       var v = e.submitter ? e.submitter.value : '';
-      var pesan = { setuju: 'Setujui laporan ini?', revisi: 'Kembalikan laporan ini untuk direvisi?', tolak: 'Tolak laporan ini?' }[v];
+      var pesan = { setuju: 'Setujui laporan ini?', revisi: 'Kembalikan laporan ini untuk direvisi?', perbaikan: 'Kembalikan surat ini untuk diperbaiki?', tolak: 'Tolak laporan ini?' }[v];
       if (pesan && !window.confirm(pesan + ' Keputusan akan tercatat permanen.')) e.preventDefault();
     });
   }
@@ -281,28 +422,30 @@
     };
 
     var hitung = function () {
-      var n = 0, total = 0, wajib = 0, wajibOk = 0;
+      var n = 0, total = 0, wajib = 0, wajibOk = 0, tanpaNomor = 0;
       slots.forEach(function (s) {
         var f = baru[s.dataset.slot], ada = adaDiServer(s), wj = s.dataset.wajib === '1';
         var ukuran = f ? f.size : (ada ? (parseInt(s.dataset.adaUkuran, 10) || 0) : 0);
         var ada_ = !!(f || ada);
         if (ada_) { n++; total += ukuran; }
-        if (wj) { wajib++; if (ada_) wajibOk++; }
+        var nomorEl = $('.sr-nomor input', s), nomorOk = !nomorEl || nomorEl.value.trim() !== '';
+        if (ada_ && !nomorOk) tanpaNomor++;
+        if (wj) { wajib++; if (ada_ && nomorOk) wajibOk++; }
         var li = $('#srList li[data-slot="' + s.dataset.slot + '"]');
         if (li) {
-          li.classList.toggle('ok', ada_);
+          li.classList.toggle('ok', ada_ && nomorOk);
           var ket = $('[data-ket]', li);
-          if (ket) ket.textContent = ada_ ? '' : 'Belum diunggah · ' + (wj ? 'Wajib' : 'Opsional');
+          if (ket) ket.textContent = ada_ ? (nomorOk ? '' : 'Nomor surat belum diisi') : 'Belum diunggah · ' + (wj ? 'Wajib' : 'Opsional');
         }
       });
 
-      var lengkap = wajibOk === wajib;
+      var lengkap = wajibOk === wajib && tanpaNomor === 0;
       $('#srCount').textContent = n + ' surat · Total ' + (total ? fmt(total) : '0 KB');
       $('#srBar').style.width = (wajib ? Math.round(wajibOk / wajib * 100) : 100) + '%';
-      $('#srBarLabel').textContent = lengkap ? 'Surat wajib lengkap' : 'Surat wajib belum lengkap (' + wajibOk + '/' + wajib + ')';
+      $('#srBarLabel').textContent = wajibOk === wajib ? 'Surat wajib lengkap' : 'Surat wajib belum lengkap (' + wajibOk + '/' + wajib + ')';
       $('#srSiap').classList.toggle('is-belum', !lengkap);
       $('#srSiapChip').textContent = lengkap ? 'Siap dikirim' : 'Belum lengkap';
-      $('#srSiapTeks').textContent = lengkap ? 'Surat sudah siap dikirim' : 'Unggah ' + (wajib - wajibOk) + ' surat wajib lagi';
+      $('#srSiapTeks').textContent = lengkap ? 'Surat sudah siap dikirim' : (wajibOk < wajib ? 'Lengkapi ' + (wajib - wajibOk) + ' surat wajib (berkas dan nomor surat)' : 'Isi nomor surat pada setiap berkas');
       $('#srFooterJudul').textContent = lengkap ? 'Siap mengirim ' + n + ' surat ke User INTRAM' : 'Lengkapi surat wajib untuk mengirim';
       $('#btnKirim').disabled = !lengkap;
     };
@@ -358,6 +501,7 @@
       if (v === 'kirim' && !window.confirm('Kirim surat ke User INTRAM? Surat yang sudah dikirim tidak dapat diubah.')) e.preventDefault();
     });
 
+    $$('.sr-nomor input', fs).forEach(function (el) { el.addEventListener('input', hitung); });
     slots.forEach(perbaruiSlot);
     hitung();
   }
@@ -374,13 +518,43 @@
     f.addEventListener('change', function () {
       var label = $('.upload-name[data-for="' + f.id + '"]');
       var file = f.files[0];
-      if (file && file.size > MAX) {
-        alert('Ukuran file maksimal 5 MB.');
+      var maksMb = parseInt(f.dataset.maksMb, 10) || 5;
+      if (file && f.hasAttribute('data-pdf') && !/\.pdf$/i.test(file.name)) {
+        alert('Berkas harus berformat PDF.');
+        f.value = '';
+        label.value = '';
+        return;
+      }
+      if (file && file.size > maksMb * 1024 * 1024) {
+        alert('Ukuran file maksimal ' + maksMb + ' MB.');
         f.value = '';
         label.value = '';
         return;
       }
       label.value = file ? file.name : '';
+    });
+  });
+
+  /* ---------- Notifikasi (lonceng) ---------- */
+  (function () {
+    var btn = $('#notifBtn'), panel = $('#notifPanel');
+    if (!btn || !panel) return;
+    function tutup() { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var buka = panel.hidden;
+      panel.hidden = !buka;
+      btn.setAttribute('aria-expanded', buka ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) { if (!panel.contains(e.target)) tutup(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') tutup(); });
+  })();
+
+  /* ---------- Konfirmasi lewat tombol submit (data-konfirmasi) ---------- */
+  $$('form').forEach(function (f) {
+    f.addEventListener('submit', function (e) {
+      var pesan = e.submitter && e.submitter.dataset ? e.submitter.dataset.konfirmasi : '';
+      if (pesan && !window.confirm(pesan)) e.preventDefault();
     });
   });
 
@@ -403,6 +577,7 @@
     });
     window.addEventListener('pageshow', function () {
       if (btn) { btn.disabled = false; btn.textContent = 'Tambah Data'; }
+      batasiModa();
     });
   }
 })();

@@ -3,8 +3,11 @@ namespace App\Http\Controllers;
 
 use App\Models\DokumenSurat;
 use App\Models\PengajuanSurat;
+use App\Models\RuteSubsidi;
 use App\Support\Paginasi;
+use App\Support\Permohonan;
 use App\Support\PeranUser;
+use App\Support\StatusPengajuan;
 use App\Support\SuratOptions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,27 +16,56 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Surat CHR: Moda mengunggah surat lalu mengirimkannya ke user INTRAM.
- * Setiap akun hanya melihat pengajuannya sendiri.
+ * Surat CHR: Moda mengunggah Surat Catatan Hasil Review untuk SATU laporan Pemda yang sudah
+ * disetujui, lalu mengirimkannya ke INTRAM. Surat dikelola per moda: semua akun Moda dengan moda
+ * yang sama melihat dan mengelola surat yang sama, sehingga tidak ada CHR ganda untuk satu laporan.
  */
 class SuratController extends Controller
 {
     private const PER_HALAMAN = 10;
+    private const PER_LAPORAN = 5;
+
+    /** Status surat yang mengunci laporan: CHR sudah dikirim dan tidak boleh dibuat lagi. */
+    private const STATUS_TERKUNCI = [SuratOptions::TERKIRIM, SuratOptions::DALAM_REVIEW, SuratOptions::DISETUJUI];
 
     public function index(Request $request)
     {
         $user = $request->user();
 
-        $draf = PengajuanSurat::with('dokumen')
-            ->where('id_user', $user->id_user)->where('status', SuratOptions::DRAF)
-            ->latest('id_pengajuan_surat')->first();
+        // ---- Permohonan yang sudah disetujui ----
+        $lstatus = (string) $request->query('lstatus', '');
+        $lf = [
+            'q'      => trim((string) $request->query('lq', '')),
+            'status' => array_key_exists($lstatus, SuratOptions::STATUS_LAPORAN_OPSI) ? $lstatus : null,
+        ];
 
-        $berkasDraf = $draf ? $draf->dokumen->keyBy('jenis') : collect();
-        $slot = [];
-        foreach (SuratOptions::JENIS as $kode => $j) {
-            $slot[] = ['kode' => $kode, 'nama' => $j['nama'], 'wajib' => $j['wajib'], 'dokumen' => $berkasDraf->get($kode)];
-        }
+        $laporan = Permohonan::untukModa($user)
+            ->whereIn('status_pengajuan', StatusPengajuan::GRUP['disetujui'])
+            ->with('kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'pemda.user', 'verifikasi', 'pengajuanSurat')
+            ->when($lf['q'] !== '', function ($q) use ($lf) {
+                $like = '%' . addcslashes($lf['q'], '\\%_') . '%';
+                $q->where(function ($w) use ($lf, $like) {
+                    $w->whereHas('kabKotaAsal', function ($k) use ($like) {
+                        $k->where('nama_kab_kota', 'like', $like)
+                          ->orWhereHas('provinsi', fn ($p) => $p->where('nama_provinsi', 'like', $like));
+                    })->orWhereHas('pemda.user', fn ($u) => $u->where('instansi', 'like', $like));
+                    if (preg_match('/^(?:LP-?)?(?:\d{4}-?)?(\d{1,9})$/i', $lf['q'], $m)) {
+                        $w->orWhere('id_rute_subsidi', (int) $m[1]);
+                    }
+                });
+            })
+            ->when($lf['status'] === 'belum', fn ($q) => $q->whereDoesntHave('pengajuanSurat'))
+            ->when($lf['status'] && $lf['status'] !== 'belum', function ($q) use ($lf) {
+                // status SURAT TERBARU pada laporan itu
+                $q->whereRaw(
+                    '(SELECT ps.status FROM pengajuan_surat ps WHERE ps.id_rute_subsidi = rute_subsidi.id_rute_subsidi ORDER BY ps.id_pengajuan_surat DESC LIMIT 1) = ?',
+                    [SuratOptions::STATUS_OPSI[$lf['status']]]
+                );
+            })
+            ->orderByDesc('updated_at')->orderByDesc('id_rute_subsidi')
+            ->paginate(self::PER_LAPORAN, ['*'], 'lpage')->withQueryString();
 
+        // ---- Riwayat surat ----
         $status = (string) $request->query('status', '');
         $filter = [
             'q'      => trim((string) $request->query('q', '')),
@@ -41,9 +73,9 @@ class SuratController extends Controller
         ];
 
         $riwayat = DokumenSurat::query()
-            ->with('pengajuan')
+            ->with('pengajuan.rute.kabKotaAsal')
             ->whereHas('pengajuan', function ($p) use ($user, $filter) {
-                $p->where('id_user', $user->id_user);
+                $p->where('id_moda', $user->id_moda ?? 0);
                 if ($filter['status']) {
                     $p->where('status', SuratOptions::STATUS_OPSI[$filter['status']]);
                 }
@@ -62,35 +94,67 @@ class SuratController extends Controller
             ->orderByDesc('created_at')->orderByDesc('id_dokumen_surat')
             ->paginate(self::PER_HALAMAN)->withQueryString();
 
-        $terlampir = $berkasDraf->count();
-
         return view('surat.index', [
-            'draf'          => $draf,
-            'slot'          => $slot,
-            'jumlahWajib'   => SuratOptions::jumlahWajib(),
-            'jumlahOpsional' => SuratOptions::jumlahOpsional(),
-            'terlampir'     => $terlampir,
-            'totalUkuran'   => (int) $berkasDraf->sum('ukuran'),
-            'bisaUnggah'    => $user->bisa('chr.unggah'),
-            'maksMb'        => intdiv(SuratOptions::MAKS_KB, 1024),
-            'riwayat'       => $riwayat,
-            'filter'        => $filter,
-            'statusOpsi'    => SuratOptions::STATUS_OPSI,
-            'halaman'       => Paginasi::nomor($riwayat->currentPage(), $riwayat->lastPage()),
+            'laporan'        => $laporan,
+            'lf'             => $lf,
+            'laporanOpsi'    => SuratOptions::STATUS_LAPORAN_OPSI,
+            'halamanLaporan' => Paginasi::nomor($laporan->currentPage(), $laporan->lastPage()),
+            'riwayat'        => $riwayat,
+            'filter'         => $filter,
+            'statusOpsi'     => SuratOptions::STATUS_OPSI,
+            'halaman'        => Paginasi::nomor($riwayat->currentPage(), $riwayat->lastPage()),
+            'jumlahWajib'    => SuratOptions::jumlahWajib(),
         ]);
     }
 
-    /** Simpan draf (aksi=draf) atau kirim ke INTRAM (aksi=kirim). */
-    public function simpan(Request $request)
+    /** Detail laporan yang sudah disetujui + form unggah Surat CHR untuk laporan itu. */
+    public function laporan(Request $request, RuteSubsidi $rute)
     {
         $user = $request->user();
+        $this->pastikanLaporan($user, $rute);
+
+        $semua = PengajuanSurat::with('dokumen', 'user')
+            ->where('id_rute_subsidi', $rute->id_rute_subsidi)->where('id_moda', $user->id_moda)
+            ->orderByDesc('id_pengajuan_surat')->get();
+
+        $draf = $semua->firstWhere('status', SuratOptions::DRAF);
+        $terkunci = $semua->first(fn ($p) => in_array($p->status, self::STATUS_TERKUNCI, true));
+
+        $berkasDraf = $draf ? $draf->dokumen->keyBy('jenis') : collect();
+        $slot = [];
+        foreach (SuratOptions::JENIS as $kode => $j) {
+            $slot[] = ['kode' => $kode, 'nama' => $j['nama'], 'wajib' => $j['wajib'], 'dokumen' => $berkasDraf->get($kode)];
+        }
+
+        return view('surat.laporan', Permohonan::detail($rute) + [
+            'draf'           => $draf,
+            'terkunci'       => $terkunci,
+            'perbaikan'      => $draf ? null : $semua->first(fn ($p) => in_array($p->status, [SuratOptions::PERLU_PERBAIKAN, SuratOptions::DITOLAK], true)),
+            'slot'           => $slot,
+            'jumlahWajib'    => SuratOptions::jumlahWajib(),
+            'terlampir'      => $berkasDraf->count(),
+            'totalUkuran'    => (int) $berkasDraf->sum('ukuran'),
+            'bisaUnggah'     => $user->bisa('chr.unggah'),
+            'maksMb'         => intdiv(SuratOptions::MAKS_KB, 1024),
+            'riwayatSurat'   => $semua->flatMap(fn ($p) => $p->dokumen->map(fn ($d) => $d->setRelation('pengajuan', $p)))->sortByDesc('id_dokumen_surat')->values(),
+        ]);
+    }
+
+    /** Simpan draf (aksi=draf) atau kirim ke INTRAM (aksi=kirim) untuk satu laporan. */
+    public function simpan(Request $request, RuteSubsidi $rute)
+    {
+        $user = $request->user();
+        $this->pastikanLaporan($user, $rute);
 
         $data = $request->validate([
             'aksi'      => ['required', Rule::in(['draf', 'kirim'])],
             'catatan'   => ['nullable', 'string', 'max:1000'],
             'berkas'    => ['nullable', 'array'],
             'berkas.*'  => ['file', 'mimes:pdf', 'max:' . SuratOptions::MAKS_KB],
+            'nomor'     => ['nullable', 'array'],
+            'nomor.*'   => ['nullable', 'string', 'max:100'],
         ], [
+            'nomor.*.max'       => 'Nomor surat maksimal :max karakter.',
             'catatan.max'       => 'Catatan maksimal :max karakter.',
             'berkas.*.mimes'    => 'Berkas harus berformat PDF.',
             'berkas.*.max'      => 'Ukuran berkas maksimal ' . intdiv(SuratOptions::MAKS_KB, 1024) . ' MB.',
@@ -106,29 +170,57 @@ class SuratController extends Controller
         $nomor = '';
 
         try {
-            DB::transaction(function () use ($user, $data, $berkas, &$tersimpan, &$usang, &$nomor) {
-                $draf = PengajuanSurat::where('id_user', $user->id_user)->where('status', SuratOptions::DRAF)->lockForUpdate()->first()
+            DB::transaction(function () use ($user, $rute, $data, $berkas, &$tersimpan, &$usang, &$nomor) {
+                // Satu laporan hanya boleh punya satu CHR yang sudah dikirim
+                if (PengajuanSurat::where('id_rute_subsidi', $rute->id_rute_subsidi)->whereIn('status', self::STATUS_TERKUNCI)->exists()) {
+                    throw ValidationException::withMessages(['berkas' => 'Surat CHR untuk laporan ini sudah dikirim.']);
+                }
+
+                $draf = PengajuanSurat::where('id_rute_subsidi', $rute->id_rute_subsidi)->where('id_moda', $user->id_moda)
+                        ->where('status', SuratOptions::DRAF)->lockForUpdate()->first()
                     ?? PengajuanSurat::create([
-                        'id_user' => $user->id_user,
-                        'id_moda' => $user->id_moda,
-                        'tujuan'  => PeranUser::INTRAM,
-                        'status'  => SuratOptions::DRAF,
+                        'id_user'         => $user->id_user,
+                        'id_moda'         => $user->id_moda,
+                        'id_rute_subsidi' => $rute->id_rute_subsidi,
+                        'tujuan'          => PeranUser::INTRAM,
+                        'status'          => SuratOptions::DRAF,
                     ]);
 
                 $catatan = trim((string) ($data['catatan'] ?? ''));
                 $draf->catatan_pengiriman = $catatan !== '' ? $catatan : null;
 
+                // Nomor surat diisi manual; wajib untuk setiap surat yang ada (baru diunggah atau sudah tersimpan pada draf)
+                $nomor = fn (string $kode): string => trim((string) ($data['nomor'][$kode] ?? ''));
+                $wajibNomor = fn (string $kode) => ValidationException::withMessages(['nomor.' . $kode => 'Nomor surat wajib diisi untuk ' . SuratOptions::JENIS[$kode]['nama'] . '.']);
+
                 foreach ($berkas as $jenis => $file) {
+                    if ($nomor($jenis) === '') {
+                        throw $wajibNomor($jenis);
+                    }
                     $path = $file->store("surat_chr/{$draf->id_pengajuan_surat}", 'local');
                     $tersimpan[] = $path;
 
-                    $atribut = ['nama_file' => $file->getClientOriginalName(), 'path_file' => $path, 'ukuran' => $file->getSize()];
+                    $atribut = ['nama_file' => $file->getClientOriginalName(), 'nomor_surat' => $nomor($jenis), 'path_file' => $path, 'ukuran' => $file->getSize()];
                     $lama = $draf->dokumen()->where('jenis', $jenis)->first();
                     if ($lama) {
                         $usang[] = $lama->path_file;
                         $lama->update($atribut);
                     } else {
                         DokumenSurat::create($atribut + ['id_pengajuan_surat' => $draf->id_pengajuan_surat, 'jenis' => $jenis]);
+                    }
+                }
+
+                // Surat yang sudah ada pada draf (tanpa berkas baru): nomor surat tetap harus terisi dan boleh diperbarui
+                foreach ($draf->dokumen()->get() as $ada) {
+                    if (array_key_exists($ada->jenis, $berkas)) {
+                        continue;
+                    }
+                    $n = $nomor($ada->jenis);
+                    if ($n === '') {
+                        throw $wajibNomor($ada->jenis);
+                    }
+                    if ($n !== $ada->nomor_surat) {
+                        $ada->update(['nomor_surat' => $n]);
                     }
                 }
 
@@ -158,19 +250,19 @@ class SuratController extends Controller
 
         Storage::disk('local')->delete($usang);
 
-        return redirect()->route('surat.index')->with(
+        return redirect()->route('surat.laporan', $rute->id_rute_subsidi)->with(
             'success',
             $data['aksi'] === 'kirim'
-                ? 'Surat ' . $nomor . ' berhasil dikirim ke User INTRAM.'
+                ? 'Surat ' . $nomor . ' untuk ' . $rute->nomor_laporan . ' berhasil dikirim ke User INTRAM.'
                 : 'Draf ' . $nomor . ' berhasil disimpan.'
         );
     }
 
-    /** Hapus berkas pada draf milik sendiri. */
+    /** Hapus berkas pada draf milik moda sendiri. */
     public function hapus(Request $request, DokumenSurat $dokumen)
     {
         $pengajuan = $dokumen->pengajuan;
-        abort_unless((int) $pengajuan->id_user === (int) $request->user()->id_user, 404);
+        abort_unless($this->milikModa($request->user(), $pengajuan), 404);
         abort_unless($pengajuan->status === SuratOptions::DRAF, 403, 'Surat yang sudah dikirim tidak dapat dihapus.');
 
         $path = $dokumen->path_file;
@@ -178,16 +270,20 @@ class SuratController extends Controller
         $dokumen->delete();
         Storage::disk('local')->delete($path);
 
-        return redirect()->route('surat.index')->with('success', 'Berkas ' . $nama . ' dihapus dari draf.');
+        $tujuan = $pengajuan->id_rute_subsidi
+            ? route('surat.laporan', $pengajuan->id_rute_subsidi)
+            : route('surat.index');
+
+        return redirect($tujuan)->with('success', 'Berkas ' . $nama . ' dihapus dari draf.');
     }
 
-    /** Pratinjau (default) atau unduh (?unduh=1). Pemilik, atau INTRAM/Super Admin untuk surat yang sudah dikirim. */
+    /** Pratinjau (default) atau unduh (?unduh=1). Moda pemilik; INTRAM/Super Admin hanya untuk surat yang sudah dikirim. */
     public function dokumen(Request $request, DokumenSurat $dokumen)
     {
         $user = $request->user();
         $pengajuan = $dokumen->pengajuan;
 
-        $pemilik = (int) $pengajuan->id_user === (int) $user->id_user;
+        $pemilik = $user->isModa() && $this->milikModa($user, $pengajuan);
         $penerima = $pengajuan->sudah_dikirim && ($user->isSuperAdmin() || ($user->isIntram() && $user->bisa('chr.tinjau')));
         abort_unless($pemilik || $penerima, 404);
         abort_unless(Storage::disk('local')->exists($dokumen->path_file), 404);
@@ -195,5 +291,19 @@ class SuratController extends Controller
         return $request->boolean('unduh')
             ? Storage::disk('local')->download($dokumen->path_file, $dokumen->nama_file)
             : Storage::disk('local')->response($dokumen->path_file, $dokumen->nama_file);
+    }
+
+    // ------------------------------------------------------------------
+
+    /** Laporan harus milik moda akun (404 bila bukan) dan sudah disetujui (403 bila belum). */
+    private function pastikanLaporan($user, RuteSubsidi $rute): void
+    {
+        abort_unless($user->id_moda !== null && (int) $rute->id_moda === (int) $user->id_moda, 404);
+        abort_unless($rute->grup_status === 'disetujui', 403, 'Surat CHR hanya dapat dibuat untuk laporan yang sudah disetujui.');
+    }
+
+    private function milikModa($user, PengajuanSurat $pengajuan): bool
+    {
+        return $user->id_moda !== null && (int) $pengajuan->id_moda === (int) $user->id_moda;
     }
 }

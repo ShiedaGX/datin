@@ -24,13 +24,19 @@ class StoreWilayahRequest extends FormRequest
             'keterangan'             => ['nullable', 'array'],
             'keterangan.*'           => ['string', Rule::in(array_keys(FormOptions::KETERANGAN))],
             'potensi'                => ['required', 'array', 'max:5'],
-            'potensi.*'              => ['nullable', 'string', 'max:200', 'not_regex:/[,;\r\n]/'],   // satu potensi per kolom
+            'potensi.*'              => ['nullable', 'string', 'max:200', function ($attribute, $value, $fail) {
+                // satu potensi per kolom; pengecualian: nama sektor dari daftar saran yang memang memuat koma
+                if ($value !== null && preg_match('/[,;\r\n]/', (string) $value) && ! in_array(trim((string) $value), \App\Support\Sektor::daftar(), true)) {
+                    $fail('Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).');
+                }
+            }],
             'id_moda'                => ['required', 'integer', 'exists:moda,id_moda'],
             'kebutuhan_konektivitas' => ['nullable', 'string', 'max:2000'],
         ];
 
         foreach (array_keys(FormOptions::DOKUMEN) as $field) {
             $rules[$field] = ['required', 'file', 'mimes:pdf,doc,docx', 'max:5120']; // 5 MB
+            $rules['nomor.' . $field] = ['required', 'string', 'max:100'];          // nomor surat diisi manual
         }
 
         return $rules;
@@ -49,11 +55,13 @@ class StoreWilayahRequest extends FormRequest
 
             // Kab/Kota harus berada di provinsi yang dipilih dan masih tersedia
             if (! $v->errors()->hasAny(['id_provinsi', 'id_kab_kota'])) {
-                $kab = KabKota::with('dataPemda.ruteSubsidi')->find($this->input('id_kab_kota'));
+                $kab = KabKota::with('dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi')->find($this->input('id_kab_kota'));
                 if ($kab && (int) $kab->id_provinsi !== (int) $this->input('id_provinsi')) {
                     $v->errors()->add('id_kab_kota', 'Kabupaten/Kota tidak berada pada provinsi yang dipilih.');
-                } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user()))) {
-                    $v->errors()->add('id_kab_kota', 'Kabupaten/Kota ini ' . $alasan . '.');
+                } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user(), $this->filled('id_moda') ? (int) $this->input('id_moda') : null))) {
+                    $v->errors()->add('id_kab_kota', $alasan === 'sudah diajukan'
+                        ? 'Kabupaten/Kota ini sudah diajukan untuk moda tersebut. Pengajuan ulang hanya dapat dilakukan setelah INTRAM meminta revisi.'
+                        : 'Kabupaten/Kota ini ' . $alasan . '.');
                 }
             }
 
@@ -67,7 +75,12 @@ class StoreWilayahRequest extends FormRequest
 
     public function attributes(): array
     {
-        return [
+        $nomor = [];
+        foreach (FormOptions::DOKUMEN as $field => $label) {
+            $nomor['nomor.' . $field] = 'Nomor ' . mb_strtolower($label);
+        }
+
+        return $nomor + [
             'id_provinsi'            => 'Provinsi',
             'id_wilayah'             => 'Wilayah regional',
             'id_kab_kota'            => 'Kabupaten/Kota',

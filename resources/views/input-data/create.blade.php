@@ -6,6 +6,15 @@
 @section('content')
 <form class="card form" id="formInput" method="POST" action="{{ route('input-data.store') }}" enctype="multipart/form-data">
     @csrf
+        @if ($sumber ?? null)
+            <div class="alert alert-info form-prefill" role="status">
+                <div>
+                    <strong>Pengajuan ulang atas permintaan revisi INTRAM</strong>
+                    <p>Data diisi otomatis dari pengajuan sebelumnya ({{ $sumber->nomor_laporan }}). Periksa dan ubah bila perlu, lalu unggah dokumen pengajuan untuk moda yang diminta. Pengajuan moda sebelumnya tidak berubah.</p>
+                </div>
+            </div>
+        @endif
+
 
     <div class="card-head">
         <h2>Sistem Formulir Digital Pengajuan Subsidi</h2>
@@ -24,25 +33,25 @@
 
         <div class="grid-2">
             <div class="field">
-                <label for="id_provinsi">Provinsi</label>
-                <select id="id_provinsi" name="id_provinsi" required class="@error('id_provinsi') is-invalid @enderror">
-                    <option value="">Pilih Provinsi...</option>
-                    @foreach ($provinsi as $p)
-                        <option value="{{ $p->id_provinsi }}" data-wilayah="{{ $p->id_wilayah }}" @selected(old('id_provinsi') == $p->id_provinsi)>{{ $p->nama_provinsi }}</option>
-                    @endforeach
-                </select>
-                @error('id_provinsi')<p class="error">{{ $message }}</p>@enderror
-            </div>
-
-            <div class="field">
                 <label for="id_wilayah">Wilayah Regional</label>
                 <select id="id_wilayah" name="id_wilayah" required class="@error('id_wilayah') is-invalid @enderror">
                     <option value="">Pilih Wilayah Regional (Papua/Sulawesi/Maluku/etc)...</option>
                     @foreach ($wilayah as $w)
-                        <option value="{{ $w->id_wilayah }}" @selected(old('id_wilayah') == $w->id_wilayah)>{{ $w->nama_wilayah }}</option>
+                        <option value="{{ $w->id_wilayah }}" @selected(old('id_wilayah', $isian['id_wilayah'] ?? null) == $w->id_wilayah)>{{ $w->nama_wilayah }}</option>
                     @endforeach
                 </select>
                 @error('id_wilayah')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                <label for="id_provinsi">Provinsi</label>
+                <select id="id_provinsi" name="id_provinsi" required class="@error('id_provinsi') is-invalid @enderror">
+                    <option value="">Pilih Provinsi...</option>
+                    @foreach ($provinsi as $p)
+                        <option value="{{ $p->id_provinsi }}" data-wilayah="{{ $p->id_wilayah }}" @selected(old('id_provinsi', $isian['id_provinsi'] ?? null) == $p->id_provinsi)>{{ $p->nama_provinsi }}</option>
+                    @endforeach
+                </select>
+                @error('id_provinsi')<p class="error">{{ $message }}</p>@enderror
             </div>
 
             <div class="field">
@@ -52,7 +61,9 @@
                     @foreach ($kabKota as $k)
                         <option value="{{ $k['id'] }}" data-provinsi="{{ $k['id_provinsi'] }}"
                                 @if ($k['alasan']) disabled data-terkunci="1" @endif
-                                @selected((string) old('id_kab_kota') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@endif</option>
+                                @if (count($k['revisi'])) data-revisi="{{ implode(',', $k['revisi']) }}" data-isi="{{ route('input-data.create', ['kab' => $k['id']]) }}" @endif
+                                @if (count($k['sudah'])) data-sudah="{{ implode(',', $k['sudah']) }}" @endif
+                                @selected((string) old('id_kab_kota', $isian['id_kab_kota'] ?? '') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@elseif (count($k['revisi'])) (revisi diminta: {{ implode(', ', $k['revisiNama']) }})@elseif (count($k['sudah'])) (sudah diajukan: {{ implode(', ', $k['sudahNama']) }})@endif</option>
                     @endforeach
                 </select>
                 @error('id_kab_kota')<p class="error">{{ $message }}</p>@enderror
@@ -63,7 +74,7 @@
                 <select id="klasifikasi_pemda" name="klasifikasi_pemda" required class="@error('klasifikasi_pemda') is-invalid @enderror">
                     <option value="">Pilih Klasifikasi...</option>
                     @foreach ($klasifikasi as $k)
-                        <option value="{{ $k }}" @selected(old('klasifikasi_pemda') === $k)>{{ $k }}</option>
+                        <option value="{{ $k }}" @selected(old('klasifikasi_pemda', $isian['klasifikasi_pemda'] ?? '') === $k)>{{ $k }}</option>
                     @endforeach
                 </select>
                 @error('klasifikasi_pemda')<p class="error">{{ $message }}</p>@enderror
@@ -80,7 +91,7 @@
             <div class="chips">
                 @foreach ($keterangan as $key => $item)
                     <label class="chip">
-                        <input type="checkbox" name="keterangan[]" value="{{ $key }}" @checked(in_array($key, old('keterangan', [])))>
+                        <input type="checkbox" name="keterangan[]" value="{{ $key }}" @checked(in_array($key, old('keterangan', $isian['keterangan'] ?? [])))>
                         <span>{{ $item['label'] }}</span>
                     </label>
                 @endforeach
@@ -95,12 +106,14 @@
                     <input type="text" name="potensi[]" maxlength="200" autocomplete="off"
                            aria-label="Potensi unggulan {{ $i + 1 }}"
                            placeholder="{{ $i < 4 ? 'Masukkan Potensi Unggulan Daerah' : 'Lainnya' }}"
-                           value="{{ old('potensi.' . $i) }}">
+                           value="{{ old('potensi.' . $i, $isian['potensi'][$i] ?? '') }}">
                 @endfor
+                <ul class="ac-list sektor-list" id="sektorList" role="listbox" aria-label="Saran sektor potensi" hidden></ul>
             </div>
-            <p class="hint" id="potensiHint" aria-live="polite">Isi satu potensi pada setiap kolom.</p>
+            <p class="hint" id="potensiHint" aria-live="polite">Isi satu potensi pada setiap kolom. Ketik atau klik kolom untuk melihat saran sektor.</p>
             @error('potensi')<p class="error">{{ $message }}</p>@enderror
             @error('potensi.*')<p class="error">{{ $message }}</p>@enderror
+        <script type="application/json" id="data-sektor">@json($sektor)</script>
         </fieldset>
 
         <fieldset class="field">
@@ -108,11 +121,12 @@
             <div class="chips">
                 @foreach ($moda as $m)
                     <label class="chip">
-                        <input type="radio" name="id_moda" value="{{ $m->id_moda }}" required @checked((string) old('id_moda') === (string) $m->id_moda)>
+                        <input type="radio" name="id_moda" value="{{ $m->id_moda }}" required @checked((string) old('id_moda', $isian['id_moda'] ?? '') === (string) $m->id_moda)>
                         <span>{{ $m->nama_moda }}</span>
                     </label>
                 @endforeach
             </div>
+            <p class="hint is-warn" id="modaHint" hidden></p>
             @error('id_moda')<p class="error">{{ $message }}</p>@enderror
         </fieldset>
 
@@ -122,7 +136,7 @@
                 <textarea id="kebutuhan_konektivitas" name="kebutuhan_konektivitas" rows="4" maxlength="2000"
                           placeholder="masukkan kebutuhan konektivitas daerah" autocomplete="off"
                           role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acList"
-                          class="@error('kebutuhan_konektivitas') is-invalid @enderror">{{ old('kebutuhan_konektivitas') }}</textarea>
+                          class="@error('kebutuhan_konektivitas') is-invalid @enderror">{{ old('kebutuhan_konektivitas', $isian['kebutuhan_konektivitas'] ?? '') }}</textarea>
                 <ul class="ac-list" id="acList" role="listbox" hidden></ul>
             </div>
             <p class="hint">Ketik nama kabupaten/kota, lalu klik saran yang muncul. Bisa memilih lebih dari satu; pisahkan dengan koma.</p>
@@ -144,6 +158,11 @@
             @foreach ($dokumen as $field => $label)
                 <div class="field">
                     <label for="{{ $field }}_name">{{ $label }}</label>
+                    <div class="nomor-surat">
+                        <label for="nomor_{{ $field }}" class="sub">Nomor surat <span class="wajib">*</span></label>
+                        <input type="text" id="nomor_{{ $field }}" name="nomor[{{ $field }}]" value="{{ old('nomor.' . $field) }}" maxlength="100" required placeholder="Contoh: 045/123/DISHUB/2026" autocomplete="off" class="@error('nomor.' . $field) is-invalid @enderror">
+                        @error('nomor.' . $field)<p class="error">{{ $message }}</p>@enderror
+                    </div>
                     <div class="upload-box @error($field) is-invalid @enderror">
                         <input type="text" id="{{ $field }}_name" class="upload-name" data-for="{{ $field }}" readonly
                                placeholder="upload {{ strtolower($label) }}">

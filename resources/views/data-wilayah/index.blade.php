@@ -32,6 +32,7 @@
 
     <noscript><button type="submit" class="btn btn-outline">Terapkan</button></noscript>
 
+    @if ($lingkup)<span class="scope-note">{{ $lingkup }}</span>@endif
     <span class="count">Menampilkan {{ $data->count() }} dari {{ number_format($data->total(), 0, ',', '.') }} entri</span>
     @if ($adaFilter)
         <a class="reset" href="{{ route('data-wilayah.index') }}">Reset</a>
@@ -72,7 +73,7 @@
                         <td data-label="Potensi Unggulan Daerah" class="soft"><div class="trunc" title="{{ $row->potensi_ringkas }}">{{ $row->potensi_ringkas !== '' ? $row->potensi_ringkas : '-' }}</div></td>
                         <td data-label="Jml Tujuan" class="num"><strong>{{ $row->jumlah_tujuan ?? '-' }}</strong></td>
                         <td data-label="Jml Sektor" class="num"><strong>{{ $row->jumlah_sektor }}</strong></td>
-                        <td data-label="Status"><span class="badge {{ $row->status_kelas }}">{{ $row->status_label }}</span></td>
+                        <td data-label="Status"><span class="badge {{ $row->status_kelas }}">{{ $row->status_label }}</span>@if ($row->permintaan_terbuka->isNotEmpty())<small class="rev-note">INTRAM meminta moda {{ $row->permintaan_terbuka->pluck('moda.nama_moda')->implode(', ') }}</small>@endif</td>
                         <td class="td-aksi">
                             <div class="acts">
                                 @if ($row->bisaDiubahOleh(auth()->user()))

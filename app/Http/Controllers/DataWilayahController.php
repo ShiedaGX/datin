@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\DataPemda;
 use App\Models\DokumenPengajuan;
 use App\Models\RuteSubsidi;
+use App\Models\User;
 use App\Models\Wilayah;
 use App\Support\XlsxExporter;
 use Illuminate\Http\Request;
@@ -23,8 +24,10 @@ class DataWilayahController extends Controller
 
     public function index(Request $request)
     {
+        $user = $request->user();
         $filter = $this->filter($request);
-        $data = $this->query($filter)->paginate(self::PER_HALAMAN)->withQueryString();
+        $data = $this->query($filter, $user)->paginate(self::PER_HALAMAN)->withQueryString();
+        $this->sesuaikanUntukRole($data->getCollection(), $user);
 
         return view('data-wilayah.index', [
             'data'        => $data,
@@ -33,12 +36,22 @@ class DataWilayahController extends Controller
             'klasifikasi' => self::KLASIFIKASI,
             'halaman'     => $this->nomorHalaman($data->currentPage(), $data->lastPage()),
             'adaFilter'   => $filter['wilayah'] !== null || $filter['klasifikasi'] !== null || $filter['q'] !== '',
+            'lingkup'     => $this->lingkup($user),
         ]);
     }
 
     public function show(DataPemda $pemda)
     {
-        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator');
+        $user = auth()->user();
+        abort_unless(DataPemda::terlihatOleh($user)->whereKey($pemda->id_pemda)->exists(), 404);
+
+        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator', 'ruteSubsidi.pengajuanSurat', 'ruteSubsidi.rekomendasi', 'permintaanRevisi.moda', 'permintaanRevisi.peminta');
+
+        // Moda hanya melihat pengajuan untuk modanya sendiri
+        if ($user->isModa()) {
+            $pemda->setRelation('ruteSubsidi', $pemda->ruteSubsidi->where('id_moda', $user->id_moda)->values());
+            $pemda->setRelation('permintaanRevisi', collect());
+        }
 
         return view('data-wilayah.show', [
             'pemda'      => $pemda,
@@ -54,7 +67,9 @@ class DataWilayahController extends Controller
         }
 
         $rows = [];
-        foreach ($this->query($this->filter($request))->reorder('id_pemda')->get() as $i => $p) {
+        $koleksi = $this->query($this->filter($request), $request->user())->reorder('id_pemda')->get();
+        $this->sesuaikanUntukRole($koleksi, $request->user());
+        foreach ($koleksi as $i => $p) {
             $rows[] = [
                 $i + 1,
                 $p->kabKota->provinsi->nama_provinsi,
@@ -112,15 +127,38 @@ class DataWilayahController extends Controller
         return redirect()->route('data-wilayah.index')->with('success', 'Pengajuan "' . $nama . '" berhasil dihapus. Data wilayah tetap tersimpan.');
     }
 
-    public function unduh(DokumenPengajuan $dokumen)
+    public function unduh(Request $request, DokumenPengajuan $dokumen)
     {
         abort_unless($dokumen->bisaDiunduhOleh(auth()->user()), 403);
         abort_unless(Storage::disk('local')->exists($dokumen->path_file), 404);
 
-        return Storage::disk('local')->download($dokumen->path_file, $dokumen->nama_file);
+        return $request->boolean('lihat')
+            ? Storage::disk('local')->response($dokumen->path_file, $dokumen->nama_file)
+            : Storage::disk('local')->download($dokumen->path_file, $dokumen->nama_file);
     }
 
     // ------------------------------------------------------------------
+
+    /** Moda tidak perlu melihat permintaan revisi INTRAM kepada Pemda. */
+    private function sesuaikanUntukRole($koleksi, User $user): void
+    {
+        if ($user->isModa()) {
+            $koleksi->each(fn ($d) => $d->setRelation('permintaanRevisi', collect()));
+        }
+    }
+
+    /** Keterangan ruang lingkup data yang tampil, untuk role yang dibatasi. */
+    private function lingkup(User $user): ?string
+    {
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return null;
+        }
+        if ($user->isModa()) {
+            return 'Menampilkan data pemda yang ditujukan ke moda ' . ($user->moda->nama_moda ?? '-');
+        }
+
+        return 'Menampilkan data yang Anda unggah';
+    }
 
     private function filter(Request $r): array
     {
@@ -134,10 +172,15 @@ class DataWilayahController extends Controller
         ];
     }
 
-    private function query(array $f)
+    private function query(array $f, User $user)
     {
         return DataPemda::query()
-            ->with('kabKota.provinsi', 'kabKota.wilayah', 'ruteSubsidi')
+            ->terlihatOleh($user)
+            ->with([
+                'kabKota.provinsi', 'kabKota.wilayah', 'permintaanRevisi.moda',
+                // Moda hanya memuat pengajuan untuk modanya sendiri, sehingga status yang tampil adalah status pengajuannya
+                'ruteSubsidi' => fn ($q) => $user->isModa() ? $q->where('id_moda', $user->id_moda ?? 0) : $q,
+            ])
             ->when($f['q'] !== '', function ($q) use ($f) {
                 $like = '%' . addcslashes($f['q'], '\\%_') . '%';
                 $q->whereHas('kabKota', function ($k) use ($like) {

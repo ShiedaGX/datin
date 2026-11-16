@@ -8,23 +8,27 @@ namespace App\Support;
  *   Setujui      -> "Verifikasi 1"  (ditampilkan "Disetujui" pada halaman Permohonan Moda)
  *   Minta Revisi -> "Perlu Revisi"
  *   Tolak        -> "Ditolak"
- * "Verifikasi Final" disiapkan untuk tahap peninjauan berikutnya (Intram).
+ * Peninjauan INTRAM atas Surat CHR moda:
+ *   CHR disetujui                       -> "Verifikasi 2"
+ *   Surat Rekomendasi Teknis diunggah     -> "Verifikasi Final"
  */
 class StatusPengajuan
 {
     public const MENUNGGU = 'Menunggu Persetujuan';
     public const REVISI   = 'Perlu Revisi';
     public const V1       = 'Verifikasi 1';
+    public const V2       = 'Verifikasi 2';
     public const FINAL    = 'Verifikasi Final';
     public const DITOLAK  = 'Ditolak';
     public const BELUM    = 'Belum Diajukan';   // daerah yang belum punya pengajuan (mis. hasil impor Excel)
 
-    public const TAHAP_MODA = 'Moda';
+    public const TAHAP_MODA   = 'Moda';
+    public const TAHAP_INTRAM = 'INTRAM';
 
     /** Pengelompokan untuk halaman Permohonan: kunci => status yang termasuk. */
     public const GRUP = [
         'menunggu'  => [self::MENUNGGU, 'Diajukan'],   // 'Diajukan' = nilai awal versi lama
-        'disetujui' => [self::V1, self::FINAL, 'Disetujui'],
+        'disetujui' => [self::V1, self::V2, self::FINAL, 'Disetujui'],
         'revisi'    => [self::REVISI],
         'ditolak'   => [self::DITOLAK],
     ];
@@ -40,6 +44,7 @@ class StatusPengajuan
         self::MENUNGGU => 'status-menunggu',
         self::REVISI   => 'status-revisi',
         self::V1       => 'status-v1',
+        self::V2       => 'status-v2',
         self::FINAL    => 'status-final',
         self::DITOLAK  => 'status-ditolak',
         self::BELUM    => 'status-belum',

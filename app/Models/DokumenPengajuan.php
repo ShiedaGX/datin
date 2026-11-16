@@ -12,7 +12,7 @@ class DokumenPengajuan extends Model
     protected $primaryKey = 'id_dokumen_pengajuan';
     public $timestamps = true;
     protected $casts = ['tanggal_upload' => 'datetime'];
-    protected $fillable = ['id_rute_subsidi', 'id_user', 'jenis_dokumen', 'nama_file', 'path_file', 'versi_dokumen', 'tanggal_upload'];
+    protected $fillable = ['id_rute_subsidi', 'id_user', 'jenis_dokumen', 'nama_file', 'nomor_surat', 'path_file', 'versi_dokumen', 'tanggal_upload'];
 
     public function rute(): BelongsTo { return $this->belongsTo(RuteSubsidi::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
     public function pengunggah(): BelongsTo { return $this->belongsTo(User::class, 'id_user', 'id_user'); }

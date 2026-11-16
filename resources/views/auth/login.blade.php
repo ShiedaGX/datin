@@ -45,7 +45,7 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </button>
 
-    <p class="register">Belum memiliki akun? <a class="link" href="{{ route('register') }}">Daftar akun instansi</a></p>
+    <p class="register">Belum memiliki akun? Akun dibuat oleh administrator. <a class="link" href="#">Hubungi administrator</a></p>
 
     <p class="secure">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/><circle cx="12" cy="15.5" r="1"/></svg>
