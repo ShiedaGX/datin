@@ -11,6 +11,7 @@ use App\Support\Paginasi;
 use App\Support\PeranUser;
 use App\Support\XlsxExporter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -59,10 +60,10 @@ class UserController extends Controller
         $user->load('role.hakAkses', 'moda', 'wilayah');
 
         return view('admin.users.show', [
-            'user'         => $user,
-            'jumlahData'   => $user->dataPemda()->count(),
+            'user'          => $user,
+            'jumlahData'    => $user->dataPemda()->count(),
             'jumlahDokumen' => $user->dokumen()->count(),
-            'cakupan'      => PeranUser::CAKUPAN,
+            'cakupan'       => PeranUser::CAKUPAN,
         ]);
     }
 
@@ -156,6 +157,42 @@ class UserController extends Controller
         )->deleteFileAfterSend(true);
     }
 
+    /** Saran isian "Instansi / organisasi" dari tabel kab_kota (JSON, dipakai autocomplete di form user). */
+    public function saranInstansi(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        // "Pemda Musi" / "Pemkab Musi" tetap dicari sebagai "Musi"
+        $q = trim(preg_replace('/^\s*(pemda|pemkab|pemkot)\s+/i', '', $q));
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $esc = addcslashes($q, '\\%_');
+
+        $rows = DB::table('kab_kota as k')
+            ->join('provinsi as p', 'p.id_provinsi', '=', 'k.id_provinsi')
+            ->where('k.nama_kab_kota', 'like', '%' . $esc . '%')
+            ->orderByRaw('CASE WHEN k.nama_kab_kota LIKE ? THEN 0 ELSE 1 END', [$esc . '%'])
+            ->orderBy('k.nama_kab_kota')
+            ->limit(8)
+            ->get(['k.nama_kab_kota', 'k.jenis', 'k.id_wilayah', 'p.nama_provinsi']);
+
+        return response()->json($rows->map(function ($r) {
+            $nama = $r->nama_kab_kota;
+            // hindari dobel: "Kabupaten Kabupaten Musi ..."
+            $lengkap = ($r->jenis && ! str_starts_with(mb_strtolower($nama), mb_strtolower($r->jenis)))
+                ? $r->jenis . ' ' . $nama
+                : $nama;
+
+            return [
+                'value'      => 'Pemda ' . $lengkap,
+                'provinsi'   => $r->nama_provinsi,
+                'id_wilayah' => $r->id_wilayah,
+            ];
+        })->values());
+    }
+
     // ------------------------------------------------------------------
 
     private function filter(Request $r): array
@@ -196,7 +233,8 @@ class UserController extends Controller
             'username'        => $d['username'],
             'email'           => $d['email'],
             'id_role'         => $role->id_role,
-            'instansi'        => $d['instansi'] ?? null,
+            // instansi hanya dipakai role Pemda; role lain dikosongkan
+            'instansi'        => $role->nama_role === PeranUser::PEMDA ? ($d['instansi'] ?? null) : null,
             'id_wilayah'      => in_array('wilayah', $syarat, true) ? ($d['id_wilayah'] ?? null) : null,
             'id_moda'         => in_array('moda', $syarat, true) ? ($d['id_moda'] ?? null) : null,
             'diverifikasi_at' => ! empty($d['aktif']) ? now() : null,

@@ -27,15 +27,19 @@ class UserRequest extends FormRequest
     {
         $user = $this->route('user');                       // null saat menambah akun
         $id = $user?->id_user;
-        $syarat = PeranUser::syarat(Role::find($this->input('id_role'))?->nama_role);
+        $namaRole = Role::find($this->input('id_role'))?->nama_role;
+        $syarat = PeranUser::syarat($namaRole);
         $wajib = fn (string $kunci) => in_array($kunci, $syarat, true) ? 'required' : 'nullable';
+
+        // Instansi / organisasi: wajib untuk role Pemda, role lain boleh kosong (kolom dinonaktifkan di form)
+        $instansiWajib = $namaRole === PeranUser::PEMDA ? 'required' : 'nullable';
 
         return [
             'full_name'  => ['required', 'string', 'max:150'],
             'username'   => ['required', 'string', 'max:50', 'regex:/^[a-z0-9._-]+$/', Rule::unique('users', 'username')->ignore($id, 'id_user')],
             'email'      => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($id, 'id_user')],
             'id_role'    => ['required', 'integer', 'exists:role,id_role'],
-            'instansi'   => [$wajib('instansi'), 'string', 'max:150'],
+            'instansi'   => [$instansiWajib, 'string', 'max:150'],
             'id_wilayah' => [$wajib('wilayah'), 'integer', 'exists:wilayah,id_wilayah'],
             'id_moda'    => [$wajib('moda'), 'integer', 'exists:moda,id_moda'],
             'password'   => [$user ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
