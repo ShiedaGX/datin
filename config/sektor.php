@@ -1,10 +1,13 @@
 <?php
 
 /**
- * Kamus sektor potensi. Sektor suatu daerah ditentukan dari teks "potensi_pemda":
- * sektor dihitung 1 bila minimal satu kata kunci ditemukan (tanpa membedakan huruf besar/kecil).
- * Daftar ini disalin dari rumus kolom sektor pada file Excel sumber (format_data_lengkap_web.xlsx).
- * Tambah/ubah kata kunci di sini bila ada sektor atau istilah baru.
+ * Kamus sektor potensi. Dipakai untuk:
+ *  - saran (hint) saat Pemda mengisi "Potensi Unggulan Daerah" pada halaman Input Data, dan
+ *  - mendeteksi sektor suatu daerah dari teks potensinya: sektor dihitung 1 bila minimal satu
+ *    kata kunci ditemukan (tanpa membedakan huruf besar/kecil).
+ *
+ * Format: 'Nama Sektor' => ['kata kunci', ...]. Menambah sektor cukup menambah satu baris.
+ * (Daftar nama saja juga didukung, tetapi deteksi otomatis hanya memakai kata dari nama sektornya.)
  */
 return [
     'Perikanan & Kelautan'       => ['perikanan', 'kelautan', 'udang', 'kepiting', 'rumput laut', 'tct', 'tuna', 'cakalang', 'teri', 'roa', 'kembung', 'akuatik', 'patin', 'ekonomi biru'],
@@ -17,5 +20,5 @@ return [
     'Garam'                      => ['garam'],
     'Konstruksi'                 => ['konstruksi'],
     'Perbatasan & Pertahanan'    => ['perbatasan', 'plbn', 'pksn', 'pertahanan'],
-    'Tanaman Hias & Obat'        => ['tanaman hias', 'tanaman obat'],
+    'Tanaman Hias & Obat'        => ['tanaman hias', 'anggrek', 'bunga potong', 'tanaman obat', 'biofarmaka', 'herbal', 'jamu'],
 ];

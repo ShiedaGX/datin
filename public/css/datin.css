@@ -767,3 +767,7 @@ a.pm-nav:hover{color:var(--teal)}
 .sr-nomor input[type=text]{max-width:none;height:42px}
 .sr-nomor .error,.nomor-surat .error{margin-top:4px}
 .ap-rt-form input[type=text]#rt_nomor{max-width:620px}
+
+/* ===== Saran sektor pada Potensi Unggulan Daerah ===== */
+.stack{position:relative}
+.sektor-list{max-height:260px}

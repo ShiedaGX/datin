@@ -109,6 +109,9 @@
 
   /* ---------- Potensi: satu potensi per kolom ---------- */
   var potensi = $$('input[name="potensi[]"]');
+  var dataSektor = [];
+  try { dataSektor = JSON.parse(($('#data-sektor') || {}).textContent || '[]'); } catch (e) { dataSektor = []; }
+  var namaSektor = dataSektor.map(function (x) { return x.nama; });
   var hint = $('#potensiHint');
   var hintAsli = hint ? hint.textContent : '';
   var hintTimer;
@@ -122,6 +125,7 @@
   potensi.forEach(function (el, i) {
     el.addEventListener('input', function () {
       if (!/[,;\n\r]/.test(el.value)) return;
+      if (namaSektor.indexOf(el.value.trim()) !== -1) return;   // nama sektor yang memuat koma jangan dipecah
       // Dipaste/diketik berisi beberapa butir: sisakan satu di kolom ini, sebar sisanya ke kolom kosong berikutnya
       var bagian = el.value.split(/[,;\n\r]+/).map(function (x) { return x.trim(); }).filter(Boolean);
       el.value = bagian.shift() || '';
@@ -139,6 +143,90 @@
       }
     });
   });
+
+  /* ---------- Potensi: saran sektor ---------- */
+  var sektorList = $('#sektorList');
+  if (sektorList && potensi.length && dataSektor.length) {
+    var sAktif = -1, sHasil = [], sInput = null;
+    var sNorm = function (t) { return String(t).toLowerCase(); };
+
+    var sTutup = function () {
+      sektorList.hidden = true; sektorList.innerHTML = ''; sAktif = -1;
+      if (sInput) { sInput.setAttribute('aria-expanded', 'false'); sInput.removeAttribute('aria-activedescendant'); }
+    };
+    var sCari = function (el) {
+      var q = sNorm(el.value).trim();
+      var dipakai = potensi.filter(function (o) { return o !== el; }).map(function (o) { return sNorm(o.value).trim(); });
+      var out = [], kataCari = q === '' ? [] : q.split(/\s+/);
+      dataSektor.forEach(function (d) {
+        if (dipakai.indexOf(sNorm(d.nama)) !== -1) return;          // sektor yang sudah dipilih pada kolom lain
+        var nama = sNorm(d.nama), kata = '', cocok = true;
+        // setiap kata yang diketik harus cocok dengan nama sektor atau salah satu kata kuncinya
+        kataCari.forEach(function (t) {
+          if (nama.indexOf(t) !== -1) return;
+          var k = d.kunci.filter(function (x) { return x.indexOf(t) !== -1; })[0];
+          if (k) { kata = kata || k; } else { cocok = false; }
+        });
+        if (!cocok) return;
+        out.push({ nama: d.nama, kata: kata, skor: nama.indexOf(q) === 0 ? 0 : (kata ? 2 : 1) });
+      });
+      if (q !== '') out.sort(function (a, b) { return a.skor - b.skor; });
+      return out;
+    };
+    var sSelesaiAt = 0;
+    var sPilih = function (item) {
+      sSelesaiAt = Date.now();
+      sInput.value = item.nama;
+      sTutup();
+      var berikut = potensi[potensi.indexOf(sInput) + 1];
+      if (berikut && berikut.value.trim() === '') berikut.focus();
+    };
+    var sGambar = function (el) {
+      sInput = el; sektorList.innerHTML = '';
+      sHasil.forEach(function (it, i) {
+        var li = document.createElement('li');
+        li.id = 'sektor-opt-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+        var a = document.createElement('span'); a.textContent = it.nama;
+        var b = document.createElement('small'); b.textContent = it.kata ? 'cocok: ' + it.kata : 'Sektor';
+        li.appendChild(a); li.appendChild(b);
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); sPilih(it); });
+        sektorList.appendChild(li);
+      });
+      // posisikan tepat di bawah kolom yang sedang diisi
+      sektorList.style.top = (el.offsetTop + el.offsetHeight + 4) + 'px';
+      sektorList.style.left = el.offsetLeft + 'px';
+      sektorList.style.right = 'auto';
+      sektorList.style.width = el.offsetWidth + 'px';
+      sektorList.hidden = false; el.setAttribute('aria-expanded', 'true');
+    };
+    var sPerbarui = function (el) {
+      sHasil = sCari(el);
+      if (!sHasil.length) { sTutup(); return; }
+      sAktif = -1; sGambar(el);
+    };
+    var sSorot = function () {
+      Array.prototype.forEach.call(sektorList.children, function (li, i) {
+        li.setAttribute('aria-selected', String(i === sAktif));
+        if (i === sAktif) { sInput.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+      });
+    };
+
+    potensi.forEach(function (el) {
+      el.setAttribute('role', 'combobox'); el.setAttribute('aria-autocomplete', 'list');
+      el.setAttribute('aria-expanded', 'false'); el.setAttribute('aria-controls', 'sektorList');
+      el.addEventListener('focus', function () { sPerbarui(el); });
+      el.addEventListener('click', function () { if (Date.now() - sSelesaiAt > 400) sPerbarui(el); });   // abaikan click susulan setelah memilih saran
+      el.addEventListener('input', function () { sPerbarui(el); });
+      el.addEventListener('blur', function () { setTimeout(function () { if (document.activeElement !== el && sInput === el) sTutup(); }, 120); });   // jangan tutup daftar yang sudah berpindah ke kolom lain
+      el.addEventListener('keydown', function (e) {
+        if (sektorList.hidden || sInput !== el) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); sAktif = (sAktif + 1) % sHasil.length; sSorot(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); sAktif = (sAktif - 1 + sHasil.length) % sHasil.length; sSorot(); }
+        else if (e.key === 'Enter' && sAktif >= 0) { e.preventDefault(); sPilih(sHasil[sAktif]); }
+        else if (e.key === 'Escape') { e.stopPropagation(); sTutup(); }
+      });
+    });
+  }
 
   /* ---------- Kebutuhan konektivitas: saran nama kabupaten/kota ---------- */
   var ta = $('#kebutuhan_konektivitas'), list = $('#acList'), dataEl = $('#data-kabkota');

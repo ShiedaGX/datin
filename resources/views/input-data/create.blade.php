@@ -108,10 +108,12 @@
                            placeholder="{{ $i < 4 ? 'Masukkan Potensi Unggulan Daerah' : 'Lainnya' }}"
                            value="{{ old('potensi.' . $i, $isian['potensi'][$i] ?? '') }}">
                 @endfor
+                <ul class="ac-list sektor-list" id="sektorList" role="listbox" aria-label="Saran sektor potensi" hidden></ul>
             </div>
-            <p class="hint" id="potensiHint" aria-live="polite">Isi satu potensi pada setiap kolom.</p>
+            <p class="hint" id="potensiHint" aria-live="polite">Isi satu potensi pada setiap kolom. Ketik atau klik kolom untuk melihat saran sektor.</p>
             @error('potensi')<p class="error">{{ $message }}</p>@enderror
             @error('potensi.*')<p class="error">{{ $message }}</p>@enderror
+        <script type="application/json" id="data-sektor">@json($sektor)</script>
         </fieldset>
 
         <fieldset class="field">

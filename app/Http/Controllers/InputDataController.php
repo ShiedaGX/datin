@@ -31,6 +31,8 @@ class InputDataController extends Controller
         return view('input-data.create', [
             'isian'       => $isian,           // data pengajuan sebelumnya (revisi INTRAM), kosong untuk pengajuan baru
             'sumber'      => $sumber,
+            // saran sektor pada kolom Potensi Unggulan Daerah (nama + kata kunci untuk pencarian)
+            'sektor'      => collect(\App\Support\Sektor::peta())->map(fn ($kunci, $nama) => ['nama' => $nama, 'kunci' => $kunci])->values(),
             'provinsi'    => Provinsi::orderBy('nama_provinsi')->get(),
             'wilayah'     => Wilayah::orderBy('nama_wilayah')->get(),
             'moda'        => Moda::orderBy('id_moda')->get(),

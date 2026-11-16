@@ -24,7 +24,12 @@ class StoreWilayahRequest extends FormRequest
             'keterangan'             => ['nullable', 'array'],
             'keterangan.*'           => ['string', Rule::in(array_keys(FormOptions::KETERANGAN))],
             'potensi'                => ['required', 'array', 'max:5'],
-            'potensi.*'              => ['nullable', 'string', 'max:200', 'not_regex:/[,;\r\n]/'],   // satu potensi per kolom
+            'potensi.*'              => ['nullable', 'string', 'max:200', function ($attribute, $value, $fail) {
+                // satu potensi per kolom; pengecualian: nama sektor dari daftar saran yang memang memuat koma
+                if ($value !== null && preg_match('/[,;\r\n]/', (string) $value) && ! in_array(trim((string) $value), \App\Support\Sektor::daftar(), true)) {
+                    $fail('Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).');
+                }
+            }],
             'id_moda'                => ['required', 'integer', 'exists:moda,id_moda'],
             'kebutuhan_konektivitas' => ['nullable', 'string', 'max:2000'],
         ];

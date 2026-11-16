@@ -38,15 +38,7 @@ trait DataDaerah
 
     public function getSektorTerdeteksiAttribute(): array
     {
-        $teks = mb_strtolower((string) $this->potensi_pemda);
-        if ($teks === '') {
-            return [];
-        }
-
-        return collect(config('sektor'))
-            ->filter(fn ($kataKunci) => collect($kataKunci)->contains(fn ($k) => str_contains($teks, $k)))
-            ->keys()
-            ->all();
+        return \App\Support\Sektor::deteksi((string) $this->potensi_pemda);
     }
 
     public function getJumlahSektorAttribute(): int
