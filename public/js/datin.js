@@ -88,6 +88,7 @@
 
   /* ---------- Wilayah -> Provinsi -> Kabupaten/Kota (dropdown bertingkat) ---------- */
   var prov = $('#id_provinsi'), wil = $('#id_wilayah'), kab = $('#id_kab_kota');
+  if (kab && kab.tagName !== 'SELECT') kab = null;   // form user: #id_kab_kota berupa input hidden (hasil saran Instansi), bukan dropdown
 
   /* ---------- Revisi dari INTRAM: moda dibatasi pada moda yang diminta ---------- */
   var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false, btnKirim = $('#formInput button[type=submit]');
@@ -391,6 +392,70 @@
       else if (e.key === 'Enter' && aktif >= 0) { e.preventDefault(); pilih(hasil[aktif]); }
       else if (e.key === 'Escape') { e.stopPropagation(); tutup(); }
     });
+  }
+
+  /* ---------- Form user: saran Instansi (kab/kota) dari server ---------- */
+  var inInst = $('#instansi'), listInst = $('#instansiList'), idKab = $('#id_kab_kota');
+  if (inInst && listInst && idKab && inInst.dataset.url) {
+    var instHasil = [], instAktif = -1, instTimer = null, instSeq = 0;
+
+    var tutupInst = function () {
+      listInst.hidden = true; listInst.innerHTML = ''; instAktif = -1;
+      inInst.setAttribute('aria-expanded', 'false'); inInst.removeAttribute('aria-activedescendant');
+    };
+    var tandaiInst = function (i) {
+      var li = $$('li', listInst);
+      li.forEach(function (el, n) { el.setAttribute('aria-selected', n === i ? 'true' : 'false'); });
+      instAktif = i;
+      if (li[i]) { inInst.setAttribute('aria-activedescendant', li[i].id); li[i].scrollIntoView({ block: 'nearest' }); }
+    };
+    var pilihInst = function (s) {
+      inInst.value = s.value;
+      idKab.value = s.id_kab_kota;                         // ID inilah yang dikirim & divalidasi server
+      var w = $('#id_wilayah'); if (w && s.id_wilayah) w.value = s.id_wilayah;
+      inInst.classList.remove('is-invalid');
+      tutupInst();
+    };
+    var gambarInst = function () {
+      listInst.innerHTML = '';
+      if (!instHasil.length) { tutupInst(); return; }
+      instHasil.forEach(function (s, i) {
+        var li = document.createElement('li');
+        li.id = 'instansi-opt-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+        var a = document.createElement('span'); a.textContent = s.value;
+        var b = document.createElement('small'); b.textContent = s.provinsi;
+        li.appendChild(a); li.appendChild(b);
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); pilihInst(s); });
+        listInst.appendChild(li);
+      });
+      listInst.hidden = false;
+      inInst.setAttribute('aria-expanded', 'true');
+    };
+
+    inInst.addEventListener('input', function () {
+      idKab.value = '';                                    // teks diubah: pilihan sebelumnya tidak berlaku lagi
+      clearTimeout(instTimer);
+      var q = inInst.value.trim();
+      if (q.length < 2) { instSeq++; tutupInst(); return; }
+      instTimer = setTimeout(function () {
+        var n = ++instSeq;
+        fetch(inInst.dataset.url + '?q=' + encodeURIComponent(q), {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (r) { return r.ok ? r.json() : []; }).then(function (d) {
+          if (n !== instSeq) return;                       // abaikan respons yang sudah usang
+          instHasil = Array.isArray(d) ? d : []; instAktif = -1; gambarInst();
+        }).catch(tutupInst);
+      }, 200);
+    });
+    inInst.addEventListener('keydown', function (e) {
+      if (listInst.hidden || !instHasil.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); tandaiInst((instAktif + 1) % instHasil.length); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); tandaiInst((instAktif - 1 + instHasil.length) % instHasil.length); }
+      else if (e.key === 'Enter' && instAktif >= 0) { e.preventDefault(); pilihInst(instHasil[instAktif]); }
+      else if (e.key === 'Escape') { tutupInst(); }
+    });
+    inInst.addEventListener('blur', function () { setTimeout(tutupInst, 150); });
   }
 
   /* ---------- Form user: cakupan & hak akses menyesuaikan role ---------- */

@@ -80,6 +80,7 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
 
     // Khusus Super Admin
     Route::prefix('admin')->name('admin.')->middleware(HanyaSuperAdmin::class)->group(function () {
+        Route::get('kabkota/saran', [UserController::class, 'saranInstansi'])->name('kabkota.saran');   // autocomplete Instansi pada form user
         Route::get('user/export', [UserController::class, 'export'])->name('user.export');
         Route::get('user', [UserController::class, 'index'])->name('user.index');
         Route::get('user/create', [UserController::class, 'create'])->name('user.create');

@@ -288,11 +288,12 @@ a.pg:hover{border-color:var(--teal-line);color:var(--teal)}
 /* ===== Input Data: dropdown bertingkat & saran otomatis ===== */
 select:disabled{background-color:#f8fafc;color:#94a3b8;cursor:not-allowed}
 .ac{position:relative}
-.ac-list{position:absolute;z-index:30;left:0;right:0;top:100%;margin:4px 0 0;padding:6px;list-style:none;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,.14);max-height:280px;overflow:auto}
-.ac-list[hidden]{display:none}
-.ac-list li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:14.5px}
-.ac-list li small{color:var(--muted);font-size:12.5px;white-space:nowrap}
-.ac-list li:hover,.ac-list li[aria-selected="true"]{background:#e6f6f3}
+.field-suggest{position:relative}
+.ac-list,.suggest{position:absolute;z-index:30;left:0;right:0;top:100%;margin:4px 0 0;padding:6px;list-style:none;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,.14);max-height:280px;overflow:auto}
+.ac-list[hidden],.suggest[hidden]{display:none}
+.ac-list li,.suggest li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:14.5px}
+.ac-list li small,.suggest li small{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.ac-list li:hover,.ac-list li[aria-selected="true"],.suggest li:hover,.suggest li[aria-selected="true"]{background:#e6f6f3}
 .hint.is-warn{color:#b45309}
 
 /* ===== Manajemen user (Super Admin) ===== */
