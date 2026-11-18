@@ -103,10 +103,13 @@
 
         <div class="sidebar-user">
             <span class="avatar" aria-hidden="true"></span>
-            <span class="who">
+            <a class="who" href="{{ route('akun.password') }}" title="Akun saya">
                 <strong>{{ auth()->user()->full_name }}</strong>
                 <small>{{ auth()->user()->role->nama_role ?? '-' }}</small>
-            </span>
+            </a>
+            <a class="logout" href="{{ route('akun.password') }}" title="Ubah kata sandi" aria-label="Ubah kata sandi">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/><circle cx="12" cy="15.5" r="1"/></svg>
+            </a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" class="logout" title="Keluar" aria-label="Keluar">

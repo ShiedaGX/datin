@@ -21,9 +21,10 @@ class KabKota extends Model
 
     /**
      * Alasan kab/kota tidak bisa dipilih pada form Input Data, atau null bila tersedia.
-     * Tidak tersedia bila sudah punya pengajuan atau datanya dikelola akun lain.
+     * Tidak tersedia hanya bila datanya dikelola akun lain. Daerah milik akun ini boleh
+     * diajukan berkali-kali (satu pengajuan = satu laporan/rute_subsidi baru).
      */
-    public function alasanTidakTersedia(User $user, ?int $idModa = null): ?string
+    public function alasanTidakTersedia(User $user): ?string
     {
         $this->loadMissing('dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi');
 
@@ -37,11 +38,6 @@ class KabKota extends Model
                 return 'dikelola akun lain';
             }
 
-            // Milik akun ini: tetap bisa DIPILIH (untuk pengajuan ulang), tetapi saat menyimpan moda yang dipilih
-            // harus sedang diminta INTRAM untuk diajukan lagi.
-            if ($idModa !== null && ! $pemda->permintaan_terbuka->contains(fn ($p) => (int) $p->id_moda === $idModa)) {
-                return 'sudah diajukan';
-            }
         }
         foreach ($this->dataPemda as $pemda) {
             if ($pemda->id_user !== null && (int) $pemda->id_user !== (int) $user->id_user) {

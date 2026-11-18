@@ -22,8 +22,14 @@ class InputDataController extends Controller
     {
         $user = auth()->user();
 
-        $semua = KabKota::with('provinsi:id_provinsi,nama_provinsi', 'dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi')
+        // id_wilayah pada provinsi ikut diambil supaya Wilayah Regional bisa terisi otomatis
+        $semua = KabKota::with('provinsi:id_provinsi,id_wilayah,nama_provinsi', 'dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi')
             ->orderBy('nama_kab_kota')->get();
+
+        // Kab/kota milik akun (Pemda): wilayah, provinsi, dan kab/kota terisi otomatis & terkunci
+        $kabSaya = $user->id_kab_kota ? $semua->firstWhere('id_kab_kota', (int) $user->id_kab_kota) : null;
+        $terkunci = $kabSaya !== null;
+        $akunBelumTerhubung = ! $terkunci && ! $user->isSuperAdmin();
 
         [$isian, $sumber] = $this->isianDariPengajuanSebelumnya($request, $semua, $user);
         $namaModa = Moda::pluck('nama_moda', 'id_moda');
@@ -31,6 +37,10 @@ class InputDataController extends Controller
         return view('input-data.create', [
             'isian'       => $isian,           // data pengajuan sebelumnya (revisi INTRAM), kosong untuk pengajuan baru
             'sumber'      => $sumber,
+            'terkunci'    => $terkunci,
+            'kabSaya'     => $kabSaya,
+            'alasanSaya'  => $kabSaya?->alasanTidakTersedia($user),
+            'akunBelumTerhubung' => $akunBelumTerhubung,
             // saran sektor pada kolom Potensi Unggulan Daerah (nama + kata kunci untuk pencarian)
             'sektor'      => collect(\App\Support\Sektor::peta())->map(fn ($kunci, $nama) => ['nama' => $nama, 'kunci' => $kunci])->values(),
             'provinsi'    => Provinsi::orderBy('nama_provinsi')->get(),
@@ -39,7 +49,7 @@ class InputDataController extends Controller
             'klasifikasi' => FormOptions::KLASIFIKASI,
             'keterangan'  => FormOptions::KETERANGAN,
             'dokumen'     => FormOptions::DOKUMEN,
-            // pilihan dropdown Kabupaten/Kota (yang sudah diajukan ditandai & dinonaktifkan)
+            // pilihan dropdown Kabupaten/Kota
             'kabKota'     => $semua->map(fn ($k) => [
                 'id'          => $k->id_kab_kota,
                 'id_provinsi' => $k->id_provinsi,
@@ -68,6 +78,12 @@ class InputDataController extends Controller
     private function isianDariPengajuanSebelumnya(Request $request, $semuaKabKota, $user): array
     {
         $idKab = (int) $request->query('kab');
+
+        // Akun yang terhubung ke satu kab/kota hanya boleh memakai kab/kota miliknya
+        if ($idKab && $user->id_kab_kota && (int) $user->id_kab_kota !== $idKab) {
+            return [[], null];
+        }
+
         $kab = $idKab ? $semuaKabKota->firstWhere('id_kab_kota', $idKab) : null;
         if (! $kab) {
             return [[], null];
@@ -97,6 +113,16 @@ class InputDataController extends Controller
     {
         $data = $request->validated();
         $user = $request->user();
+
+        // Pengaman: kab/kota harus milik akun (readonly di browser bisa diakali lewat DevTools)
+        if ($user->id_kab_kota) {
+            if ((int) $data['id_kab_kota'] !== (int) $user->id_kab_kota) {
+                throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota harus sesuai dengan akun Anda.']);
+            }
+        } elseif (! $user->isSuperAdmin()) {
+            throw ValidationException::withMessages(['id_kab_kota' => 'Akun Anda belum terhubung ke kabupaten/kota. Hubungi Super Admin.']);
+        }
+
         $kab = KabKota::findOrFail($data['id_kab_kota']);
 
         // Format sama dengan data Excel: "1. A; 2. B; 3. C"
@@ -123,17 +149,16 @@ class InputDataController extends Controller
                 $pemda = DataPemda::where('id_kab_kota', $kab->id_kab_kota)->lockForUpdate()->first()
                     ?? new DataPemda(['id_kab_kota' => $kab->id_kab_kota]);
 
+                // Pemda boleh mengajukan berkali-kali (pengajuan lama tidak diubah); data milik akun lain tetap ditolak.
                 $permintaan = null;
-                if ($pemda->exists && $pemda->ruteSubsidi()->exists()) {
-                    // Sudah ada pengajuan: hanya boleh mengajukan lagi untuk moda yang DIMINTA INTRAM (pengajuan lama tidak diubah)
+                if ($pemda->exists) {
+                    if (! $pemda->bisaDiajukanOleh($user)) {
+                        throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan atau dikelola akun lain.']);
+                    }
+                    // Bila INTRAM sedang meminta revisi untuk moda ini, pengajuan ini otomatis memenuhinya
                     $permintaan = PermintaanRevisi::where('id_pemda', $pemda->id_pemda)
                         ->where('id_moda', $data['id_moda'])->where('status', PermintaanRevisi::MENUNGGU)
                         ->lockForUpdate()->first();
-                    if (! $permintaan || (int) $pemda->id_user !== (int) $user->id_user) {
-                        throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan untuk moda tersebut.']);
-                    }
-                } elseif ($pemda->exists && ! $pemda->bisaDiklaimOleh($user)) {
-                    throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan atau dikelola akun lain.']);
                 }
 
                 $isian = [

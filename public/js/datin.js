@@ -3,6 +3,77 @@
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
+
+  /* ---------- Dialog konfirmasi (pengganti window.confirm) ---------- */
+  var dlgAktif = null;
+  function tampilKonfirmasi(o, ok) {
+    if (dlgAktif) return;
+    var ikon = {
+      primary: '<path d="M5 12l4.5 4.5L19 7"/>',
+      danger: '<path d="M12 8v5M12 16.5v.01"/><path d="M10.3 4.2L2.8 17.5A2 2 0 004.5 20.5h15a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z"/>',
+      warning: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>'
+    };
+    var nada = o.nada || 'primary';
+    var tpl = document.createElement('div');
+    tpl.className = 'dlg-backdrop';
+    tpl.innerHTML =
+      '<div class="dlg dlg-' + nada + '" role="alertdialog" aria-modal="true" aria-labelledby="dlgJudul" aria-describedby="dlgPesan">' +
+        '<div class="dlg-ikon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ikon[nada] || ikon.primary) + '</svg></div>' +
+        '<h2 class="dlg-judul" id="dlgJudul"></h2>' +
+        '<p class="dlg-pesan" id="dlgPesan"></p>' +
+        (o.catatan ? '<p class="dlg-catatan"></p>' : '') +
+        '<div class="dlg-aksi">' +
+          '<button type="button" class="btn btn-light dlg-batal"></button>' +
+          '<button type="button" class="btn dlg-ok ' + (nada === 'danger' ? 'btn-danger' : 'btn-primary') + '"></button>' +
+        '</div>' +
+      '</div>';
+    $('.dlg-judul', tpl).textContent = o.judul || 'Konfirmasi';
+    $('.dlg-pesan', tpl).textContent = o.pesan || '';
+    if (o.catatan) $('.dlg-catatan', tpl).textContent = o.catatan;
+    $('.dlg-batal', tpl).textContent = o.batal || 'Batal';
+    $('.dlg-ok', tpl).textContent = o.ok || 'Ya, lanjutkan';
+
+    var fokusSebelum = document.activeElement;
+    function tutup(hasil) {
+      document.removeEventListener('keydown', tombol, true);
+      tpl.classList.remove('show');
+      document.body.classList.remove('dlg-terbuka');
+      setTimeout(function () { if (tpl.parentNode) tpl.parentNode.removeChild(tpl); }, 150);
+      dlgAktif = null;
+      if (fokusSebelum && fokusSebelum.focus) fokusSebelum.focus();
+      if (hasil) ok();
+    }
+    function tombol(e) {
+      if (e.key === 'Escape') { e.preventDefault(); tutup(false); }
+      else if (e.key === 'Tab') {
+        var f = $$('button', tpl);
+        var i = f.indexOf(document.activeElement);
+        e.preventDefault();
+        f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+      }
+    }
+    tpl.addEventListener('mousedown', function (e) { if (e.target === tpl) tutup(false); });
+    $('.dlg-batal', tpl).addEventListener('click', function () { tutup(false); });
+    $('.dlg-ok', tpl).addEventListener('click', function () { tutup(true); });
+    document.addEventListener('keydown', tombol, true);
+    document.body.appendChild(tpl);
+    document.body.classList.add('dlg-terbuka');
+    dlgAktif = tpl;
+    requestAnimationFrame(function () { tpl.classList.add('show'); $('.dlg-ok', tpl).focus(); });
+  }
+
+  /* Tahan submit sampai pengguna menyetujui di dialog, lalu kirim ulang formulir yang sama */
+  function konfirmasiSubmit(e, form, opsi) {
+    if (form.__konfirmasiLolos) { form.__konfirmasiLolos = false; return true; }
+    e.preventDefault();
+    var pengirim = e.submitter || null;
+    tampilKonfirmasi(opsi, function () {
+      form.__konfirmasiLolos = true;
+      if (form.requestSubmit) form.requestSubmit(pengirim); else form.submit();
+    });
+    return false;
+  }
+
   /* ---------- Sidebar (mobile) ---------- */
   var sidebar = $('#sidebar'), backdrop = $('#backdrop'), menuBtn = $('#menuBtn');
   function toggleMenu(open) {
@@ -18,40 +89,30 @@
   /* ---------- Wilayah -> Provinsi -> Kabupaten/Kota (dropdown bertingkat) ---------- */
   var prov = $('#id_provinsi'), wil = $('#id_wilayah'), kab = $('#id_kab_kota');
 
-  /* ---------- Revisi dari INTRAM: moda dibatasi pada moda yang diminta ---------- */
-  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false, btnKirim = $('#formInput button[type=submit]');
+  /* ---------- Revisi dari INTRAM: moda yang diminta disarankan, moda lain tetap boleh diajukan ---------- */
+  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false;
   function batasiModa() {
     if (!kab || !modaRadios.length) return;
     var o = kab.options[kab.selectedIndex];
     var diminta = o && o.dataset && o.dataset.revisi ? o.dataset.revisi.split(',') : [];
     var sudah = o && o.dataset && o.dataset.sudah ? o.dataset.sudah.split(',') : [];
-    var terkunciUlang = !diminta.length && sudah.length > 0;   // sudah diajukan dan belum ada permintaan revisi INTRAM
-    if (btnKirim) btnKirim.disabled = terkunciUlang;
-    modaRadios.forEach(function (r) {
-      var boleh = terkunciUlang ? false : (!diminta.length || diminta.indexOf(r.value) !== -1);
-      r.disabled = !boleh;
-      r.closest('.chip').classList.toggle('is-off', !boleh);
-      if (!boleh && r.checked) r.checked = false;
-    });
-    if (terkunciUlang) {
-      if (modaHint) {
-        modaHint.textContent = 'Daerah ini sudah diajukan untuk moda ' + modaRadios.filter(function (r) { return sudah.indexOf(r.value) !== -1; })
-          .map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ') + '. Pengajuan ulang dapat dilakukan setelah INTRAM meminta revisi.';
-        modaHint.hidden = false;
-      }
-      modaAuto = false;
-      return;
-    }
+    var namaModa = function (ids) {
+      return modaRadios.filter(function (r) { return ids.indexOf(r.value) !== -1; })
+        .map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ');
+    };
+    modaRadios.forEach(function (r) { r.disabled = false; r.closest('.chip').classList.remove('is-off'); });
     if (!diminta.length) {
-      if (modaHint) modaHint.hidden = true;
       if (modaAuto) { modaRadios.forEach(function (r) { r.checked = false; }); modaAuto = false; }  // batalkan pilihan otomatis
+      if (modaHint) {
+        modaHint.hidden = !sudah.length;
+        if (sudah.length) modaHint.textContent = 'Daerah ini pernah diajukan untuk moda ' + namaModa(sudah) + '. Anda dapat mengajukan lagi; pengajuan sebelumnya tidak berubah.';
+      }
       return;
     }
-    var aktif = modaRadios.filter(function (r) { return !r.disabled; });
-    if (aktif.length && !modaRadios.some(function (r) { return r.checked; })) { aktif[0].checked = true; modaAuto = true; }
+    var saran = modaRadios.filter(function (r) { return diminta.indexOf(r.value) !== -1; });
+    if (saran.length && !modaRadios.some(function (r) { return r.checked; })) { saran[0].checked = true; modaAuto = true; }
     if (modaHint) {
-      modaHint.textContent = 'INTRAM meminta Anda mengajukan untuk moda ' + aktif.map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ')
-        + '. Pengajuan moda sebelumnya tidak berubah.';
+      modaHint.textContent = 'INTRAM meminta Anda mengajukan untuk moda ' + namaModa(diminta) + '. Pengajuan moda sebelumnya tidak berubah.';
       modaHint.hidden = false;
     }
   }
@@ -390,8 +451,16 @@
 
     fk.addEventListener('submit', function (e) {
       var v = e.submitter ? e.submitter.value : '';
-      var pesan = { setuju: 'Setujui laporan ini?', revisi: 'Kembalikan laporan ini untuk direvisi?', perbaikan: 'Kembalikan surat ini untuk diperbaiki?', tolak: 'Tolak laporan ini?' }[v];
-      if (pesan && !window.confirm(pesan + ' Keputusan akan tercatat permanen.')) e.preventDefault();
+      var opsi = {
+        setuju:    { judul: 'Setujui laporan ini?', pesan: 'Laporan akan ditandai disetujui dan diteruskan ke tahap berikutnya.', ok: 'Ya, setujui', nada: 'primary' },
+        revisi:    { judul: 'Minta revisi laporan?', pesan: 'Laporan dikembalikan kepada pengirim untuk diperbaiki sesuai catatan Anda.', ok: 'Ya, minta revisi', nada: 'warning' },
+        perbaikan: { judul: 'Kembalikan surat?', pesan: 'Surat dikembalikan untuk diperbaiki sesuai catatan Anda.', ok: 'Ya, kembalikan', nada: 'warning' },
+        tolak:     { judul: 'Tolak laporan ini?', pesan: 'Laporan akan ditolak dan pengirim diberi tahu.', ok: 'Ya, tolak', nada: 'danger' }
+      }[v];
+      if (opsi) {
+        opsi.catatan = 'Keputusan akan tercatat permanen pada riwayat persetujuan.';
+        konfirmasiSubmit(e, fk, opsi);
+      }
     });
   }
 
@@ -498,7 +567,7 @@
 
     fs.addEventListener('submit', function (e) {
       var v = e.submitter ? e.submitter.value : '';
-      if (v === 'kirim' && !window.confirm('Kirim surat ke User INTRAM? Surat yang sudah dikirim tidak dapat diubah.')) e.preventDefault();
+      if (v === 'kirim') konfirmasiSubmit(e, fs, { judul: 'Kirim surat ke User INTRAM?', pesan: 'Surat yang sudah dikirim tidak dapat diubah lagi.', ok: 'Ya, kirim', nada: 'primary' });
     });
 
     $$('.sr-nomor input', fs).forEach(function (el) { el.addEventListener('input', hitung); });
@@ -535,6 +604,23 @@
     });
   });
 
+  /* ---------- Ubah kata sandi: tampilkan sandi & cek konfirmasi ---------- */
+  (function () {
+    var tampil = $('#tampilSandi'), baru = $('#password'), konfirm = $('#password_confirmation'), pesan = $('#sandiBeda');
+    if (!tampil || !baru || !konfirm) return;
+    var kolom = [$('#password_lama'), baru, konfirm];
+    tampil.addEventListener('change', function () {
+      kolom.forEach(function (k) { if (k) k.type = tampil.checked ? 'text' : 'password'; });
+    });
+    var cek = function () {
+      var beda = konfirm.value !== '' && baru.value !== konfirm.value;
+      konfirm.setCustomValidity(beda ? 'Konfirmasi kata sandi baru tidak sama.' : '');
+      if (pesan) pesan.hidden = !beda;
+    };
+    baru.addEventListener('input', cek);
+    konfirm.addEventListener('input', cek);
+  })();
+
   /* ---------- Notifikasi (lonceng) ---------- */
   (function () {
     var btn = $('#notifBtn'), panel = $('#notifPanel');
@@ -554,7 +640,7 @@
   $$('form').forEach(function (f) {
     f.addEventListener('submit', function (e) {
       var pesan = e.submitter && e.submitter.dataset ? e.submitter.dataset.konfirmasi : '';
-      if (pesan && !window.confirm(pesan)) e.preventDefault();
+      if (pesan) konfirmasiSubmit(e, f, { judul: 'Konfirmasi', pesan: pesan, ok: 'Ya, lanjutkan', nada: 'warning' });
     });
   });
 
@@ -564,7 +650,7 @@
   });
   $$('form[data-confirm]').forEach(function (f) {
     f.addEventListener('submit', function (e) {
-      if (!window.confirm(f.dataset.confirm)) e.preventDefault();
+      konfirmasiSubmit(e, f, { judul: 'Hapus data?', pesan: f.dataset.confirm, ok: 'Ya, hapus', nada: 'danger' });
     });
   });
 

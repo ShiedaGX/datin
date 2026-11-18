@@ -771,3 +771,34 @@ a.pm-nav:hover{color:var(--teal)}
 /* ===== Saran sektor pada Potensi Unggulan Daerah ===== */
 .stack{position:relative}
 .sektor-list{max-height:260px}
+
+/* ===== Akun saya: ubah kata sandi ===== */
+a.who{text-decoration:none;color:inherit}
+a.who:hover strong{text-decoration:underline}
+.akun-form{max-width:640px}
+.akun-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 24px;margin:0 0 24px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+.akun-info dt{font-size:12.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#94a3b8}
+.akun-info dd{margin:2px 0 0;font-weight:600;overflow-wrap:anywhere}
+.akun-form .field input[type=password],.akun-form .field input[type=text]{max-width:none}
+.akun-tampil{margin:4px 0 8px}
+
+/* ---------- Dialog konfirmasi (pengganti window.confirm) ---------- */
+.dlg-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(11,20,38,.55);backdrop-filter:blur(2px);opacity:0;transition:opacity .15s}
+.dlg-backdrop.show{opacity:1}
+.dlg-terbuka{overflow:hidden}
+.dlg{width:100%;max-width:440px;background:#fff;border-radius:16px;padding:28px 28px 22px;box-shadow:0 24px 60px rgba(11,20,38,.35);transform:translateY(8px) scale(.98);transition:transform .15s}
+.dlg-backdrop.show .dlg{transform:none}
+.dlg-ikon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;background:var(--teal-tint);color:var(--teal)}
+.dlg-warning .dlg-ikon{background:#fef3c7;color:#b45309}
+.dlg-danger .dlg-ikon{background:#fee2e2;color:var(--danger)}
+.dlg-judul{margin:0 0 6px;font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.dlg-pesan{margin:0;font-size:14.5px;line-height:1.55;color:var(--muted)}
+.dlg-catatan{margin:14px 0 0;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid var(--line);font-size:13px;color:#475569}
+.dlg-aksi{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+.dlg-aksi .btn{height:42px;padding:0 20px}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.dlg .btn:focus-visible{outline:3px solid rgba(15,118,110,.35);outline-offset:2px}
+.dlg .btn-danger:focus-visible{outline-color:rgba(220,38,38,.35)}
+@media (max-width:480px){ .dlg{padding:22px 20px 18px} .dlg-aksi{flex-direction:column-reverse} .dlg-aksi .btn{width:100%} }
+@media (prefers-reduced-motion:reduce){ .dlg-backdrop,.dlg{transition:none} }

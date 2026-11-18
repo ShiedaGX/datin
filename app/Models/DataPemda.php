@@ -182,11 +182,16 @@ class DataPemda extends Model
             ->orderByDesc('id_pemda');
     }
 
-    /** Data wilayah boleh diisi pengajuan bila belum punya pengajuan dan tidak dikelola akun lain. */
-    public function bisaDiklaimOleh(User $user): bool
+    /**
+     * Pemilik data boleh mengajukan berkali-kali. Data tanpa pemilik hanya bisa diambil alih
+     * bila belum punya pengajuan; data milik akun lain tidak boleh diajukan.
+     */
+    public function bisaDiajukanOleh(User $user): bool
     {
-        $milikLain = $this->id_user !== null && (int) $this->id_user !== (int) $user->id_user;
+        if ($this->id_user !== null) {
+            return (int) $this->id_user === (int) $user->id_user;
+        }
 
-        return ! $milikLain && ! $this->ruteSubsidi()->exists();
+        return ! $this->ruteSubsidi()->exists();
     }
 }

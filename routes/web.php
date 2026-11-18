@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\HakAksesController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AkunController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -91,6 +92,10 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
         Route::get('role/{role}/hak-akses', [HakAksesController::class, 'edit'])->whereNumber('role')->name('role.hak-akses.edit');
         Route::put('role/{role}/hak-akses', [HakAksesController::class, 'update'])->whereNumber('role')->name('role.hak-akses.update');
     });
+
+    // Akun saya: semua role dapat mengganti kata sandinya sendiri
+    Route::get('/akun/password', [AkunController::class, 'password'])->name('akun.password');
+    Route::put('/akun/password', [AkunController::class, 'ubahPassword'])->middleware('throttle:6,1')->name('akun.password.update');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
