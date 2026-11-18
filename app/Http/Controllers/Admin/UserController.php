@@ -176,24 +176,28 @@ class UserController extends Controller
             ->orderByRaw('CASE WHEN k.nama_kab_kota LIKE ? THEN 0 ELSE 1 END', [$esc . '%'])
             ->orderBy('k.nama_kab_kota')
             ->limit(8)
-            ->get(['k.nama_kab_kota', 'k.jenis', 'k.id_wilayah', 'p.nama_provinsi']);
+            ->get(['k.id_kab_kota', 'k.nama_kab_kota', 'k.jenis', 'k.id_wilayah', 'p.nama_provinsi']);
 
-        return response()->json($rows->map(function ($r) {
-            $nama = $r->nama_kab_kota;
-            // hindari dobel: "Kabupaten Kabupaten Musi ..."
-            $lengkap = ($r->jenis && ! str_starts_with(mb_strtolower($nama), mb_strtolower($r->jenis)))
-                ? $r->jenis . ' ' . $nama
-                : $nama;
-
-            return [
-                'value'      => 'Pemda ' . $lengkap,
-                'provinsi'   => $r->nama_provinsi,
-                'id_wilayah' => $r->id_wilayah,
-            ];
-        })->values());
+        return response()->json($rows->map(fn ($r) => [
+            'value'       => $this->labelInstansi($r->jenis, $r->nama_kab_kota),
+            'provinsi'    => $r->nama_provinsi,
+            'id_wilayah'  => $r->id_wilayah,
+            'id_kab_kota' => $r->id_kab_kota,
+        ])->values());
     }
 
     // ------------------------------------------------------------------
+
+    /** Teks instansi baku, mis. "Pemda Kabupaten Musi Banyuasin". */
+    private function labelInstansi(?string $jenis, string $nama): string
+    {
+        // hindari dobel: "Kabupaten Kabupaten Musi ..."
+        $lengkap = ($jenis && ! str_starts_with(mb_strtolower($nama), mb_strtolower($jenis)))
+            ? $jenis . ' ' . $nama
+            : $nama;
+
+        return 'Pemda ' . $lengkap;
+    }
 
     private function filter(Request $r): array
     {
@@ -222,20 +226,30 @@ class UserController extends Controller
             ->orderBy('id_user');
     }
 
-    /** Atribut akun sesuai role: cakupan yang tidak dipakai role itu dikosongkan. */
+    /**
+     * Atribut akun sesuai role. Untuk Pemda, kab/kota adalah sumber kebenaran:
+     * teks instansi dan cakupan wilayah diisi otomatis dari tabel kab_kota.
+     */
     private function atribut(array $d): array
     {
         $role = Role::findOrFail($d['id_role']);
         $syarat = PeranUser::syarat($role->nama_role);
+
+        $kab = null;
+        if ($role->nama_role === PeranUser::PEMDA && ! empty($d['id_kab_kota'])) {
+            $kab = DB::table('kab_kota')->where('id_kab_kota', $d['id_kab_kota'])->first();
+        }
 
         return [
             'full_name'       => $d['full_name'],
             'username'        => $d['username'],
             'email'           => $d['email'],
             'id_role'         => $role->id_role,
-            // instansi hanya dipakai role Pemda; role lain dikosongkan
-            'instansi'        => $role->nama_role === PeranUser::PEMDA ? ($d['instansi'] ?? null) : null,
-            'id_wilayah'      => in_array('wilayah', $syarat, true) ? ($d['id_wilayah'] ?? null) : null,
+            'id_kab_kota'     => $kab?->id_kab_kota,
+            'instansi'        => $kab ? $this->labelInstansi($kab->jenis, $kab->nama_kab_kota) : null,
+            'id_wilayah'      => $kab
+                ? $kab->id_wilayah
+                : (in_array('wilayah', $syarat, true) ? ($d['id_wilayah'] ?? null) : null),
             'id_moda'         => in_array('moda', $syarat, true) ? ($d['id_moda'] ?? null) : null,
             'diverifikasi_at' => ! empty($d['aktif']) ? now() : null,
         ];

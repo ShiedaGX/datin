@@ -58,12 +58,13 @@
 
             <div class="field field-suggest">
                 <label for="instansi">Instansi / organisasi <span class="wajib" id="wajibInstansi" hidden>*</span></label>
-                <input type="text" id="instansi" name="instansi" value="{{ old('instansi', $user->instansi) }}" maxlength="150"
+                <input type="text" id="instansi" name="instansi_teks" value="{{ old('instansi_teks', $user->instansi) }}" maxlength="150"
                        data-url="{{ route('admin.kabkota.saran') }}"
                        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="instansiList"
-                       placeholder="Contoh: Pemda Sumatera Selatan" class="@error('instansi') is-invalid @enderror">
+                       placeholder="Ketik nama kabupaten/kota, lalu pilih saran" class="@error('id_kab_kota') is-invalid @enderror">
+                <input type="hidden" id="id_kab_kota" name="id_kab_kota" value="{{ old('id_kab_kota', $user->id_kab_kota) }}">
                 <ul id="instansiList" class="suggest" role="listbox" hidden></ul>
-                @error('instansi')<p class="error">{{ $message }}</p>@enderror
+                @error('id_kab_kota')<p class="error">{{ $message }}</p>@enderror
             </div>
 
             <div class="field" data-butuh="wilayah" hidden>
@@ -226,7 +227,7 @@ document.querySelectorAll('.pw-toggle').forEach((btn) => {
 
         const cocok = pw.value === conf.value;
         pesan.hidden = false;
-        pesan.textContent = cocok ? 'Kata sandi cocok.' : 'Kata sandi tidak sama.';
+        pesan.textContent = cocok ? 'Kata sandi cocok.' : 'Kata sandi belum sama.';
         pesan.classList.add(cocok ? 'ok' : 'bad');
         conf.classList.add(cocok ? 'is-match-ok' : 'is-match-bad');
     };
@@ -252,6 +253,7 @@ document.querySelectorAll('.pw-toggle').forEach((btn) => {
 (function () {
     const roleSel = document.getElementById('id_role');
     const input   = document.getElementById('instansi');
+    const idKab   = document.getElementById('id_kab_kota');
     const list    = document.getElementById('instansiList');
     const bintang = document.getElementById('wajibInstansi');
     if (!input || !list) return;
@@ -277,6 +279,7 @@ document.querySelectorAll('.pw-toggle').forEach((btn) => {
             input.placeholder = placeholderAwal;
         } else {
             input.value = '';
+            if (idKab) idKab.value = '';
             input.placeholder = 'Hanya untuk role Pemda';
             items = [];
             tutup();
@@ -299,6 +302,7 @@ document.querySelectorAll('.pw-toggle').forEach((btn) => {
     const pilih = (i) => {
         if (!items[i]) return;
         input.value = items[i].value;
+        if (idKab) idKab.value = items[i].id_kab_kota ?? '';
 
         // otomatis pilih "Cakupan wilayah" sesuai kab/kota yang dipilih
         const wil = document.getElementById('id_wilayah');
@@ -344,10 +348,15 @@ document.querySelectorAll('.pw-toggle').forEach((btn) => {
             if (!res.ok) return tutup();
             items = await res.json();
             render();
-        } catch (e) { /* dibatalkan / gagal: abaikan, input tetap bisa diketik manual */ }
+        } catch (e) { /* dibatalkan / gagal: abaikan */ }
     };
 
-    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(cari, 250); });
+    input.addEventListener('input', () => {
+        // teks diketik manual: pilihan kab/kota sebelumnya tidak berlaku lagi
+        if (idKab) idKab.value = '';
+        clearTimeout(timer);
+        timer = setTimeout(cari, 250);
+    });
     input.addEventListener('focus', () => { if (input.value.trim().length >= 2 && !items.length) cari(); });
     input.addEventListener('blur', () => setTimeout(tutup, 120));
 

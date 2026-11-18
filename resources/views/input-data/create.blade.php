@@ -31,41 +31,89 @@
     <section class="step">
         <h3><span class="step-no">1</span> Informasi Administrasi &amp; Wilayah</h3>
 
+        @if ($akunBelumTerhubung)
+            <div class="alert alert-error" role="alert">
+                <strong>Akun Anda belum terhubung ke kabupaten/kota.</strong> Hubungi Super Admin untuk melengkapi data akun sebelum mengisi formulir ini.
+            </div>
+        @elseif ($terkunci && $alasanSaya)
+            <div class="alert alert-info" role="status">
+                <strong>Kabupaten/Kota Anda saat ini tidak dapat diajukan:</strong> {{ $alasanSaya }}.
+            </div>
+        @endif
+
+        @if ($terkunci)
+            @php
+                $idWilayahSaya = $kabSaya->provinsi->id_wilayah ?? $kabSaya->id_wilayah;
+                $wilayahSaya   = $wilayah->firstWhere('id_wilayah', $idWilayahSaya);
+                $provinsiSaya  = $provinsi->firstWhere('id_provinsi', $kabSaya->id_provinsi);
+                $kabSayaData   = collect($kabKota)->firstWhere('id', $kabSaya->id_kab_kota);
+            @endphp
+
+            {{-- Select tersembunyi: menjaga nilai yang dikirim & JS halaman ini tetap bekerja --}}
+            <select id="id_wilayah" name="id_wilayah" hidden aria-hidden="true" tabindex="-1">
+                <option value="{{ $idWilayahSaya }}" selected>{{ $wilayahSaya->nama_wilayah ?? '' }}</option>
+            </select>
+            <select id="id_provinsi" name="id_provinsi" hidden aria-hidden="true" tabindex="-1">
+                <option value="{{ $kabSaya->id_provinsi }}" data-wilayah="{{ $idWilayahSaya }}" selected>{{ $provinsiSaya->nama_provinsi ?? '' }}</option>
+            </select>
+            <select id="id_kab_kota" name="id_kab_kota" hidden aria-hidden="true" tabindex="-1">
+                <option value="{{ $kabSaya->id_kab_kota }}" data-provinsi="{{ $kabSaya->id_provinsi }}"
+                        @if ($kabSayaData && count($kabSayaData['revisi'])) data-revisi="{{ implode(',', $kabSayaData['revisi']) }}" data-isi="{{ route('input-data.create', ['kab' => $kabSaya->id_kab_kota]) }}" @endif
+                        @if ($kabSayaData && count($kabSayaData['sudah'])) data-sudah="{{ implode(',', $kabSayaData['sudah']) }}" @endif
+                        selected>{{ $kabSaya->nama_kab_kota }}</option>
+            </select>
+        @endif
+
         <div class="grid-2">
             <div class="field">
-                <label for="id_wilayah">Wilayah Regional</label>
-                <select id="id_wilayah" name="id_wilayah" required class="@error('id_wilayah') is-invalid @enderror">
-                    <option value="">Pilih Wilayah Regional (Papua/Sulawesi/Maluku/etc)...</option>
-                    @foreach ($wilayah as $w)
-                        <option value="{{ $w->id_wilayah }}" @selected(old('id_wilayah', $isian['id_wilayah'] ?? null) == $w->id_wilayah)>{{ $w->nama_wilayah }}</option>
-                    @endforeach
-                </select>
+                @if ($terkunci)
+                    <label for="tampil_wilayah">Wilayah Regional</label>
+                    <input type="text" id="tampil_wilayah" class="is-locked" value="{{ $wilayahSaya->nama_wilayah ?? '' }}" readonly tabindex="-1">
+                @else
+                    <label for="id_wilayah">Wilayah Regional</label>
+                    <select id="id_wilayah" name="id_wilayah" required class="@error('id_wilayah') is-invalid @enderror">
+                        <option value="">Pilih Wilayah Regional (Papua/Sulawesi/Maluku/etc)...</option>
+                        @foreach ($wilayah as $w)
+                            <option value="{{ $w->id_wilayah }}" @selected(old('id_wilayah', $isian['id_wilayah'] ?? null) == $w->id_wilayah)>{{ $w->nama_wilayah }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 @error('id_wilayah')<p class="error">{{ $message }}</p>@enderror
             </div>
 
             <div class="field">
-                <label for="id_provinsi">Provinsi</label>
-                <select id="id_provinsi" name="id_provinsi" required class="@error('id_provinsi') is-invalid @enderror">
-                    <option value="">Pilih Provinsi...</option>
-                    @foreach ($provinsi as $p)
-                        <option value="{{ $p->id_provinsi }}" data-wilayah="{{ $p->id_wilayah }}" @selected(old('id_provinsi', $isian['id_provinsi'] ?? null) == $p->id_provinsi)>{{ $p->nama_provinsi }}</option>
-                    @endforeach
-                </select>
+                @if ($terkunci)
+                    <label for="tampil_provinsi">Provinsi</label>
+                    <input type="text" id="tampil_provinsi" class="is-locked" value="{{ $provinsiSaya->nama_provinsi ?? '' }}" readonly tabindex="-1">
+                @else
+                    <label for="id_provinsi">Provinsi</label>
+                    <select id="id_provinsi" name="id_provinsi" required class="@error('id_provinsi') is-invalid @enderror">
+                        <option value="">Pilih Provinsi...</option>
+                        @foreach ($provinsi as $p)
+                            <option value="{{ $p->id_provinsi }}" data-wilayah="{{ $p->id_wilayah }}" @selected(old('id_provinsi', $isian['id_provinsi'] ?? null) == $p->id_provinsi)>{{ $p->nama_provinsi }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 @error('id_provinsi')<p class="error">{{ $message }}</p>@enderror
             </div>
 
             <div class="field">
-                <label for="id_kab_kota">Kabupaten / Kota</label>
-                <select id="id_kab_kota" name="id_kab_kota" required class="@error('id_kab_kota') is-invalid @enderror">
-                    <option value="">Pilih Kabupaten / Kota</option>
-                    @foreach ($kabKota as $k)
-                        <option value="{{ $k['id'] }}" data-provinsi="{{ $k['id_provinsi'] }}"
-                                @if ($k['alasan']) disabled data-terkunci="1" @endif
-                                @if (count($k['revisi'])) data-revisi="{{ implode(',', $k['revisi']) }}" data-isi="{{ route('input-data.create', ['kab' => $k['id']]) }}" @endif
-                                @if (count($k['sudah'])) data-sudah="{{ implode(',', $k['sudah']) }}" @endif
-                                @selected((string) old('id_kab_kota', $isian['id_kab_kota'] ?? '') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@elseif (count($k['revisi'])) (revisi diminta: {{ implode(', ', $k['revisiNama']) }})@elseif (count($k['sudah'])) (sudah diajukan: {{ implode(', ', $k['sudahNama']) }})@endif</option>
-                    @endforeach
-                </select>
+                @if ($terkunci)
+                    <label for="tampil_kab_kota">Kabupaten / Kota</label>
+                    <input type="text" id="tampil_kab_kota" class="is-locked" value="{{ $kabSaya->nama_kab_kota }}" readonly tabindex="-1">
+                @else
+                    <label for="id_kab_kota">Kabupaten / Kota</label>
+                    <select id="id_kab_kota" name="id_kab_kota" required class="@error('id_kab_kota') is-invalid @enderror">
+                        <option value="">Pilih Kabupaten / Kota</option>
+                        @foreach ($kabKota as $k)
+                            <option value="{{ $k['id'] }}" data-provinsi="{{ $k['id_provinsi'] }}"
+                                    @if ($k['alasan']) disabled data-terkunci="1" @endif
+                                    @if (count($k['revisi'])) data-revisi="{{ implode(',', $k['revisi']) }}" data-isi="{{ route('input-data.create', ['kab' => $k['id']]) }}" @endif
+                                    @if (count($k['sudah'])) data-sudah="{{ implode(',', $k['sudah']) }}" @endif
+                                    @selected((string) old('id_kab_kota', $isian['id_kab_kota'] ?? '') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@elseif (count($k['revisi'])) (revisi diminta: {{ implode(', ', $k['revisiNama']) }})@elseif (count($k['sudah'])) (sudah diajukan: {{ implode(', ', $k['sudahNama']) }})@endif</option>
+                        @endforeach
+                    </select>
+                @endif
                 @error('id_kab_kota')<p class="error">{{ $message }}</p>@enderror
             </div>
 
@@ -181,4 +229,13 @@
         <button type="submit" class="btn btn-primary">Tambah Data</button>
     </div>
 </form>
+
+<style>
+    /* Wilayah / provinsi / kab-kota: terisi otomatis dari akun, hanya baca */
+    input.is-locked {
+        background-color: #f1f5f9;
+        color: #475569;
+        cursor: default;
+    }
+</style>
 @endsection
