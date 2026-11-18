@@ -149,17 +149,16 @@ class InputDataController extends Controller
                 $pemda = DataPemda::where('id_kab_kota', $kab->id_kab_kota)->lockForUpdate()->first()
                     ?? new DataPemda(['id_kab_kota' => $kab->id_kab_kota]);
 
+                // Pemda boleh mengajukan berkali-kali (pengajuan lama tidak diubah); data milik akun lain tetap ditolak.
                 $permintaan = null;
-                if ($pemda->exists && $pemda->ruteSubsidi()->exists()) {
-                    // Sudah ada pengajuan: hanya boleh mengajukan lagi untuk moda yang DIMINTA INTRAM (pengajuan lama tidak diubah)
+                if ($pemda->exists) {
+                    if (! $pemda->bisaDiajukanOleh($user)) {
+                        throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan atau dikelola akun lain.']);
+                    }
+                    // Bila INTRAM sedang meminta revisi untuk moda ini, pengajuan ini otomatis memenuhinya
                     $permintaan = PermintaanRevisi::where('id_pemda', $pemda->id_pemda)
                         ->where('id_moda', $data['id_moda'])->where('status', PermintaanRevisi::MENUNGGU)
                         ->lockForUpdate()->first();
-                    if (! $permintaan || (int) $pemda->id_user !== (int) $user->id_user) {
-                        throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan untuk moda tersebut.']);
-                    }
-                } elseif ($pemda->exists && ! $pemda->bisaDiklaimOleh($user)) {
-                    throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan atau dikelola akun lain.']);
                 }
 
                 $isian = [

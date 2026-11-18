@@ -110,7 +110,7 @@
                                     @if ($k['alasan']) disabled data-terkunci="1" @endif
                                     @if (count($k['revisi'])) data-revisi="{{ implode(',', $k['revisi']) }}" data-isi="{{ route('input-data.create', ['kab' => $k['id']]) }}" @endif
                                     @if (count($k['sudah'])) data-sudah="{{ implode(',', $k['sudah']) }}" @endif
-                                    @selected((string) old('id_kab_kota', $isian['id_kab_kota'] ?? '') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@elseif (count($k['revisi'])) (revisi diminta: {{ implode(', ', $k['revisiNama']) }})@elseif (count($k['sudah'])) (sudah diajukan: {{ implode(', ', $k['sudahNama']) }})@endif</option>
+                                    @selected((string) old('id_kab_kota', $isian['id_kab_kota'] ?? '') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@elseif (count($k['revisi'])) (revisi diminta: {{ implode(', ', $k['revisiNama']) }})@elseif (count($k['sudah'])) (pernah diajukan: {{ implode(', ', $k['sudahNama']) }})@endif</option>
                         @endforeach
                     </select>
                 @endif

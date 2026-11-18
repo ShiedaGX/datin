@@ -90,40 +90,30 @@
   var prov = $('#id_provinsi'), wil = $('#id_wilayah'), kab = $('#id_kab_kota');
   if (kab && kab.tagName !== 'SELECT') kab = null;   // form user: #id_kab_kota berupa input hidden (hasil saran Instansi), bukan dropdown
 
-  /* ---------- Revisi dari INTRAM: moda dibatasi pada moda yang diminta ---------- */
-  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false, btnKirim = $('#formInput button[type=submit]');
+  /* ---------- Revisi dari INTRAM: moda yang diminta disarankan, moda lain tetap boleh diajukan ---------- */
+  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false;
   function batasiModa() {
     if (!kab || !modaRadios.length) return;
     var o = kab.options[kab.selectedIndex];
     var diminta = o && o.dataset && o.dataset.revisi ? o.dataset.revisi.split(',') : [];
     var sudah = o && o.dataset && o.dataset.sudah ? o.dataset.sudah.split(',') : [];
-    var terkunciUlang = !diminta.length && sudah.length > 0;   // sudah diajukan dan belum ada permintaan revisi INTRAM
-    if (btnKirim) btnKirim.disabled = terkunciUlang;
-    modaRadios.forEach(function (r) {
-      var boleh = terkunciUlang ? false : (!diminta.length || diminta.indexOf(r.value) !== -1);
-      r.disabled = !boleh;
-      r.closest('.chip').classList.toggle('is-off', !boleh);
-      if (!boleh && r.checked) r.checked = false;
-    });
-    if (terkunciUlang) {
-      if (modaHint) {
-        modaHint.textContent = 'Daerah ini sudah diajukan untuk moda ' + modaRadios.filter(function (r) { return sudah.indexOf(r.value) !== -1; })
-          .map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ') + '. Pengajuan ulang dapat dilakukan setelah INTRAM meminta revisi.';
-        modaHint.hidden = false;
-      }
-      modaAuto = false;
-      return;
-    }
+    var namaModa = function (ids) {
+      return modaRadios.filter(function (r) { return ids.indexOf(r.value) !== -1; })
+        .map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ');
+    };
+    modaRadios.forEach(function (r) { r.disabled = false; r.closest('.chip').classList.remove('is-off'); });
     if (!diminta.length) {
-      if (modaHint) modaHint.hidden = true;
       if (modaAuto) { modaRadios.forEach(function (r) { r.checked = false; }); modaAuto = false; }  // batalkan pilihan otomatis
+      if (modaHint) {
+        modaHint.hidden = !sudah.length;
+        if (sudah.length) modaHint.textContent = 'Daerah ini pernah diajukan untuk moda ' + namaModa(sudah) + '. Anda dapat mengajukan lagi; pengajuan sebelumnya tidak berubah.';
+      }
       return;
     }
-    var aktif = modaRadios.filter(function (r) { return !r.disabled; });
-    if (aktif.length && !modaRadios.some(function (r) { return r.checked; })) { aktif[0].checked = true; modaAuto = true; }
+    var saran = modaRadios.filter(function (r) { return diminta.indexOf(r.value) !== -1; });
+    if (saran.length && !modaRadios.some(function (r) { return r.checked; })) { saran[0].checked = true; modaAuto = true; }
     if (modaHint) {
-      modaHint.textContent = 'INTRAM meminta Anda mengajukan untuk moda ' + aktif.map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ')
-        + '. Pengajuan moda sebelumnya tidak berubah.';
+      modaHint.textContent = 'INTRAM meminta Anda mengajukan untuk moda ' + namaModa(diminta) + '. Pengajuan moda sebelumnya tidak berubah.';
       modaHint.hidden = false;
     }
   }
