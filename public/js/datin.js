@@ -535,6 +535,23 @@
     });
   });
 
+  /* ---------- Ubah kata sandi: tampilkan sandi & cek konfirmasi ---------- */
+  (function () {
+    var tampil = $('#tampilSandi'), baru = $('#password'), konfirm = $('#password_confirmation'), pesan = $('#sandiBeda');
+    if (!tampil || !baru || !konfirm) return;
+    var kolom = [$('#password_lama'), baru, konfirm];
+    tampil.addEventListener('change', function () {
+      kolom.forEach(function (k) { if (k) k.type = tampil.checked ? 'text' : 'password'; });
+    });
+    var cek = function () {
+      var beda = konfirm.value !== '' && baru.value !== konfirm.value;
+      konfirm.setCustomValidity(beda ? 'Konfirmasi kata sandi baru tidak sama.' : '');
+      if (pesan) pesan.hidden = !beda;
+    };
+    baru.addEventListener('input', cek);
+    konfirm.addEventListener('input', cek);
+  })();
+
   /* ---------- Notifikasi (lonceng) ---------- */
   (function () {
     var btn = $('#notifBtn'), panel = $('#notifPanel');
