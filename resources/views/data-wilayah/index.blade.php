@@ -54,6 +54,7 @@
                     <th>Provinsi</th>
                     <th>Wilayah</th>
                     <th>Kabupaten / Kota</th>
+                    <th>Moda</th>
                     <th>Klasifikasi Wilayah</th>
                     <th>Potensi Unggulan Daerah</th>
                     <th class="num">Jml Tujuan</th>
@@ -64,35 +65,44 @@
             </thead>
             <tbody>
                 @forelse ($data as $row)
+                    @php
+                        $pemda = $row->pemda;
+                        $rute = $row->rute;
+                        $isi = $rute ?? $pemda;
+                        $nama = $pemda->kabKota->nama_kab_kota;
+                        $tautan = $rute ? route('data-wilayah.show', [$pemda->id_pemda, 'pengajuan' => $rute->id_rute_subsidi]) : route('data-wilayah.show', $pemda->id_pemda);
+                    @endphp
                     <tr>
                         <td data-label="No">{{ $data->firstItem() + $loop->index }}</td>
-                        <td data-label="Provinsi"><strong>{{ $row->kabKota->provinsi->nama_provinsi }}</strong></td>
-                        <td data-label="Wilayah" class="soft">{{ $row->kabKota->wilayah->nama_wilayah }}</td>
-                        <td data-label="Kabupaten / Kota"><strong>{{ $row->kabKota->nama_kab_kota }}</strong></td>
-                        <td data-label="Klasifikasi Wilayah"><span class="badge badge-{{ \Illuminate\Support\Str::slug($row->klasifikasi_label) }}">{{ $row->klasifikasi_label }}</span></td>
-                        <td data-label="Potensi Unggulan Daerah" class="soft"><div class="trunc" title="{{ $row->potensi_ringkas }}">{{ $row->potensi_ringkas !== '' ? $row->potensi_ringkas : '-' }}</div></td>
-                        <td data-label="Jml Tujuan" class="num"><strong>{{ $row->jumlah_tujuan ?? '-' }}</strong></td>
-                        <td data-label="Jml Sektor" class="num"><strong>{{ $row->jumlah_sektor }}</strong></td>
-                        <td data-label="Status"><span class="badge {{ $row->status_kelas }}">{{ $row->status_label }}</span>@if ($row->permintaan_terbuka->isNotEmpty())<small class="rev-note">INTRAM meminta moda {{ $row->permintaan_terbuka->pluck('moda.nama_moda')->implode(', ') }}</small>@endif</td>
+                        <td data-label="Provinsi"><strong>{{ $pemda->kabKota->provinsi->nama_provinsi }}</strong></td>
+                        <td data-label="Wilayah" class="soft">{{ $pemda->kabKota->wilayah->nama_wilayah }}</td>
+                        <td data-label="Kabupaten / Kota"><strong>{{ $nama }}</strong>@if ($rute)<small class="nomor-lap">{{ $rute->nomor_laporan }}</small>@endif</td>
+                        <td data-label="Moda" class="soft">{{ $rute?->moda?->nama_moda ?? '-' }}</td>
+                        <td data-label="Klasifikasi Wilayah"><span class="badge badge-{{ \Illuminate\Support\Str::slug($isi->klasifikasi_label) }}">{{ $isi->klasifikasi_label }}</span></td>
+                        <td data-label="Potensi Unggulan Daerah" class="soft"><div class="trunc" title="{{ $isi->potensi_ringkas }}">{{ $isi->potensi_ringkas !== '' ? $isi->potensi_ringkas : '-' }}</div></td>
+                        <td data-label="Jml Tujuan" class="num"><strong>{{ $isi->jumlah_tujuan ?? '-' }}</strong></td>
+                        <td data-label="Jml Sektor" class="num"><strong>{{ $isi->jumlah_sektor }}</strong></td>
+                        <td data-label="Status"><span class="badge {{ $row->kelas }}">{{ $row->status }}</span>@if ($row->revisi->isNotEmpty())<small class="rev-note">INTRAM meminta moda {{ $row->revisi->pluck('moda.nama_moda')->implode(', ') }}</small>@endif</td>
                         <td class="td-aksi">
                             <div class="acts">
-                                @if ($row->bisaDiubahOleh(auth()->user()))
-                                    <form method="POST" action="{{ route('data-wilayah.destroy', $row->id_pemda) }}" data-confirm="Hapus pengajuan {{ $row->kabKota->nama_kab_kota }}? Dokumen yang sudah diunggah akan dihapus. Data wilayah tetap tersimpan.">
+                                @if ($rute && $pemda->bisaDibatalkanOleh(auth()->user(), $rute))
+                                    <form method="POST" action="{{ route('data-wilayah.destroy', $pemda->id_pemda) }}" data-confirm="Hapus pengajuan {{ $nama }} ({{ $rute->moda->nama_moda ?? 'moda' }})? Dokumen yang sudah diunggah akan dihapus. Pengajuan lain dan data wilayah tetap tersimpan.">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="act act-del" title="Hapus pengajuan" aria-label="Hapus pengajuan {{ $row->kabKota->nama_kab_kota }}">
+                                        <input type="hidden" name="pengajuan" value="{{ $rute->id_rute_subsidi }}">
+                                        <button type="submit" class="act act-del" title="Hapus pengajuan" aria-label="Hapus pengajuan {{ $nama }}">
                                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>
                                         </button>
                                     </form>
                                 @endif
-                                <a class="act act-view" href="{{ route('data-wilayah.show', $row->id_pemda) }}" title="Lihat detail" aria-label="Lihat detail {{ $row->kabKota->nama_kab_kota }}">
+                                <a class="act act-view" href="{{ $tautan }}" title="Lihat detail" aria-label="Lihat detail {{ $nama }}">
                                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="empty">Tidak ada data yang cocok.@if ($adaFilter) <a class="link-teal" href="{{ route('data-wilayah.index') }}">Reset filter</a>@endif</td></tr>
+                    <tr><td colspan="11" class="empty">Tidak ada data yang cocok.@if ($adaFilter) <a class="link-teal" href="{{ route('data-wilayah.index') }}">Reset filter</a>@endif</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -101,9 +111,9 @@
     <div class="table-foot">
         <p class="muted">
             @if ($data->total() > 0)
-                Menampilkan {{ $data->firstItem() }}-{{ $data->lastItem() }} dari {{ number_format($data->total(), 0, ',', '.') }} data wilayah
+                Menampilkan {{ $data->firstItem() }}-{{ $data->lastItem() }} dari {{ number_format($data->total(), 0, ',', '.') }} pengajuan
             @else
-                Tidak ada data wilayah
+                Tidak ada pengajuan
             @endif
         </p>
 

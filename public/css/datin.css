@@ -803,3 +803,9 @@ a.who:hover strong{text-decoration:underline}
 .dlg .btn-danger:focus-visible{outline-color:rgba(220,38,38,.35)}
 @media (max-width:480px){ .dlg{padding:22px 20px 18px} .dlg-aksi{flex-direction:column-reverse} .dlg-aksi .btn{width:100%} }
 @media (prefers-reduced-motion:reduce){ .dlg-backdrop,.dlg{transition:none} }
+
+.nomor-lap{display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted,#64748b)}
+.doc-links{display:flex;flex-direction:column;gap:6px}
+.doc-links .acts{align-items:center}
+.doc-links small{color:var(--muted,#64748b)}
+.table tr.row-aktif td{background:#f0fdfa}

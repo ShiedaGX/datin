@@ -137,6 +137,15 @@ class DataPemda extends Model
             && ! $adaYangDisetujui;
     }
 
+    /** Pemilik boleh membatalkan satu pengajuan selama pengajuan itu belum disetujui Moda. */
+    public function bisaDibatalkanOleh(User $user, RuteSubsidi $rute): bool
+    {
+        return $this->id_user !== null
+            && (int) $this->id_user === (int) $user->id_user
+            && (int) $rute->id_pemda === (int) $this->id_pemda
+            && StatusPengajuan::grup($rute->status_pengajuan) !== 'disetujui';
+    }
+
     /**
      * Dokumen pengajuan hanya untuk pemilik data, Super Admin, Intram, dan Moda yang menjadi
      * tujuan salah satu pengajuan daerah ini.

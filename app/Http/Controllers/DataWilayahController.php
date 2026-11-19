@@ -6,6 +6,7 @@ use App\Models\DokumenPengajuan;
 use App\Models\RuteSubsidi;
 use App\Models\User;
 use App\Models\Wilayah;
+use App\Support\StatusPengajuan;
 use App\Support\XlsxExporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,7 @@ class DataWilayahController extends Controller
         $user = $request->user();
         $filter = $this->filter($request);
         $data = $this->query($filter, $user)->paginate(self::PER_HALAMAN)->withQueryString();
-        $this->sesuaikanUntukRole($data->getCollection(), $user);
+        $this->isiBaris($data, $user);
 
         return view('data-wilayah.index', [
             'data'        => $data,
@@ -40,12 +41,12 @@ class DataWilayahController extends Controller
         ]);
     }
 
-    public function show(DataPemda $pemda)
+    public function show(Request $request, DataPemda $pemda)
     {
         $user = auth()->user();
         abort_unless(DataPemda::terlihatOleh($user)->whereKey($pemda->id_pemda)->exists(), 404);
 
-        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator', 'ruteSubsidi.pengajuanSurat', 'ruteSubsidi.rekomendasi', 'permintaanRevisi.moda', 'permintaanRevisi.peminta');
+        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator', 'ruteSubsidi.pengajuanSurat.dokumen', 'ruteSubsidi.rekomendasi', 'ruteSubsidi.tujuan', 'permintaanRevisi.moda', 'permintaanRevisi.peminta');
 
         // Moda hanya melihat pengajuan untuk modanya sendiri
         if ($user->isModa()) {
@@ -53,10 +54,13 @@ class DataWilayahController extends Controller
             $pemda->setRelation('permintaanRevisi', collect());
         }
 
+        // ?pengajuan=ID memilih pengajuan yang dirinci; tanpa itu (atau ID tidak dikenal) dipakai pengajuan terbaru
+        $rute = $pemda->ruteSubsidi->firstWhere('id_rute_subsidi', (int) $request->query('pengajuan')) ?? $pemda->pengajuan_terbaru;
+
         return view('data-wilayah.show', [
             'pemda'      => $pemda,
-            'rute'       => $pemda->pengajuan_terbaru,
-            'bisaUnduh'  => $pemda->dokumenBisaDiunduhOleh(auth()->user()),
+            'rute'       => $rute,
+            'bisaUnduh'  => $pemda->dokumenBisaDiunduhOleh($user),
         ]);
     }
 
@@ -67,26 +71,31 @@ class DataWilayahController extends Controller
         }
 
         $rows = [];
-        $koleksi = $this->query($this->filter($request), $request->user())->reorder('id_pemda')->get();
-        $this->sesuaikanUntukRole($koleksi, $request->user());
-        foreach ($koleksi as $i => $p) {
+        $user = $request->user();
+        $koleksi = $this->query($this->filter($request), $user)->get();
+        $this->isiBaris($koleksi, $user);
+        foreach ($koleksi as $i => $b) {
+            $p = $b->pemda;
+            $isi = $b->rute ?? $p;
             $rows[] = [
                 $i + 1,
+                $b->rute?->nomor_laporan ?? '-',
                 $p->kabKota->provinsi->nama_provinsi,
                 $p->kabKota->wilayah->nama_wilayah,
                 $p->kabKota->nama_kab_kota,
-                $p->klasifikasi_label,
-                $p->keterangan_pemda,
-                $p->potensi_ringkas,
-                $p->kebutuhan_konektivitas,
-                $p->jumlah_tujuan,
-                $p->jumlah_sektor,
-                implode(', ', $p->sektor_terdeteksi),
-                $p->status_label,
+                $b->rute?->moda->nama_moda ?? '-',
+                $isi->klasifikasi_label,
+                $isi->keterangan_pemda,
+                $isi->potensi_ringkas,
+                $isi->kebutuhan_konektivitas,
+                $isi->jumlah_tujuan,
+                $isi->jumlah_sektor,
+                implode(', ', $isi->sektor_terdeteksi),
+                $b->status,
             ];
         }
 
-        $header = ['No', 'Provinsi', 'Wilayah', 'Kabupaten/Kota', 'Klasifikasi Wilayah', 'Keterangan Daerah',
+        $header = ['No', 'Nomor Laporan', 'Provinsi', 'Wilayah', 'Kabupaten/Kota', 'Moda', 'Klasifikasi Wilayah', 'Keterangan Daerah',
                    'Potensi Unggulan Daerah', 'Kebutuhan Konektivitas', 'Jumlah Tujuan', 'Jumlah Sektor', 'Sektor Potensi', 'Status'];
 
         $path = XlsxExporter::buat($header, $rows, 'Data Wilayah');
@@ -98,21 +107,33 @@ class DataWilayahController extends Controller
         )->deleteFileAfterSend(true);
     }
 
-    /** Menghapus PENGAJUAN (rute, dokumen, verifikasi) dan melepas kepemilikan. Data wilayah (kab/kota & data pemda) tetap tersimpan. */
+    /**
+     * Menghapus satu PENGAJUAN (?pengajuan=ID: rute, dokumen, verifikasi) atau, tanpa parameter itu, semua pengajuan daerah.
+     * Kepemilikan dilepas hanya bila tidak ada pengajuan tersisa. Data wilayah (kab/kota & data pemda) tetap tersimpan.
+     */
     public function destroy(Request $request, DataPemda $pemda)
     {
-        abort_unless($pemda->bisaDiubahOleh($request->user()), 403);
+        $user = $request->user();
+        $pemda->load('ruteSubsidi');
+
+        $idRute = (int) $request->input('pengajuan');
+        $target = $idRute ? $pemda->ruteSubsidi->firstWhere('id_rute_subsidi', $idRute) : null;
+        abort_if($idRute && ! $target, 404);
+
+        abort_unless($target ? $pemda->bisaDibatalkanOleh($user, $target) : $pemda->bisaDiubahOleh($user), 403);
 
         $nama = $pemda->kabKota->nama_kab_kota;
         $folder = [];
 
         try {
-            DB::transaction(function () use ($pemda, &$folder) {
-                foreach ($pemda->ruteSubsidi as $rute) {
+            DB::transaction(function () use ($pemda, $target, &$folder) {
+                foreach ($target ? [$target] : $pemda->ruteSubsidi as $rute) {
                     $folder[] = "dokumen_pengajuan/{$rute->id_rute_subsidi}";
                     $rute->delete();   // dokumen & verifikasi ikut terhapus (cascade)
                 }
-                $pemda->update(['id_user' => null]);
+                if ($pemda->ruteSubsidi()->count() === 0) {
+                    $pemda->update(['id_user' => null]);
+                }
             });
         } catch (\Throwable $e) {
             report($e);
@@ -139,11 +160,44 @@ class DataWilayahController extends Controller
 
     // ------------------------------------------------------------------
 
-    /** Moda tidak perlu melihat permintaan revisi INTRAM kepada Pemda. */
-    private function sesuaikanUntukRole($koleksi, User $user): void
+    /**
+     * Mengubah hasil query (id_pemda + id_rute) menjadi baris tampilan: satu baris = satu pengajuan.
+     * Daerah yang belum punya pengajuan (mis. hasil impor Excel) tetap satu baris dengan rute null.
+     * Tiap baris: ->pemda (DataPemda), ->rute (RuteSubsidi|null), ->status, ->kelas.
+     */
+    private function isiBaris($koleksi, User $user): void
     {
-        if ($user->isModa()) {
-            $koleksi->each(fn ($d) => $d->setRelation('permintaanRevisi', collect()));
+        $isPaginator = $koleksi instanceof \Illuminate\Contracts\Pagination\Paginator;
+        $baris = $isPaginator ? $koleksi->getCollection() : $koleksi;
+
+        $pemda = DataPemda::with('kabKota.provinsi', 'kabKota.wilayah', 'permintaanRevisi.moda', 'ruteSubsidi')
+            ->whereIn('id_pemda', $baris->pluck('id_pemda')->unique())->get()->keyBy('id_pemda');
+        $rute = RuteSubsidi::with('moda')
+            ->whereIn('id_rute_subsidi', $baris->pluck('id_rute')->filter()->unique())->get()->keyBy('id_rute_subsidi');
+
+        $hasil = $baris->map(function ($r) use ($pemda, $rute, $user) {
+            $p = $pemda[$r->id_pemda];
+            $ru = $r->id_rute ? ($rute[$r->id_rute] ?? null) : null;
+            // Moda tidak perlu melihat permintaan revisi INTRAM kepada Pemda
+            if ($user->isModa()) {
+                $p->setRelation('permintaanRevisi', collect());
+            }
+            $status = StatusPengajuan::normalisasi($ru?->status_pengajuan);
+
+            return (object) [
+                'pemda'  => $p,
+                'rute'   => $ru,
+                'status' => $status,
+                'kelas'  => StatusPengajuan::kelas($status),
+                // permintaan INTRAM yang masih terbuka untuk moda pengajuan ini
+                'revisi' => $ru ? $p->permintaan_terbuka->where('id_moda', $ru->id_moda)->values() : collect(),
+            ];
+        })->values();
+
+        if ($isPaginator) {
+            $koleksi->setCollection($hasil);
+        } else {
+            $koleksi->splice(0, $koleksi->count(), $hasil->all());
         }
     }
 
@@ -172,15 +226,22 @@ class DataWilayahController extends Controller
         ];
     }
 
+    /** Satu baris per pengajuan (rute_subsidi); daerah tanpa pengajuan tetap muncul satu baris. */
     private function query(array $f, User $user)
     {
+        // klasifikasi per pengajuan; data lama/impor memakai klasifikasi data_pemda
+        $klas = 'COALESCE(rs.klasifikasi_pemda, data_pemda.klasifikasi_pemda)';
+
         return DataPemda::query()
             ->terlihatOleh($user)
-            ->with([
-                'kabKota.provinsi', 'kabKota.wilayah', 'permintaanRevisi.moda',
-                // Moda hanya memuat pengajuan untuk modanya sendiri, sehingga status yang tampil adalah status pengajuannya
-                'ruteSubsidi' => fn ($q) => $user->isModa() ? $q->where('id_moda', $user->id_moda ?? 0) : $q,
-            ])
+            ->leftJoin('rute_subsidi as rs', function ($j) use ($user) {
+                $j->on('rs.id_pemda', '=', 'data_pemda.id_pemda');
+                // Moda hanya melihat pengajuan untuk modanya sendiri
+                if ($user->isModa()) {
+                    $j->where('rs.id_moda', '=', $user->id_moda ?? 0);
+                }
+            })
+            ->select('data_pemda.id_pemda', 'rs.id_rute_subsidi as id_rute')
             ->when($f['q'] !== '', function ($q) use ($f) {
                 $like = '%' . addcslashes($f['q'], '\\%_') . '%';
                 $q->whereHas('kabKota', function ($k) use ($like) {
@@ -189,16 +250,19 @@ class DataWilayahController extends Controller
                 });
             })
             ->when($f['wilayah'], fn ($q, $w) => $q->whereHas('kabKota', fn ($k) => $k->where('id_wilayah', $w)))
-            ->when($f['klasifikasi'], function ($q, $kl) {
+            ->when($f['klasifikasi'], function ($q, $kl) use ($klas) {
                 if ($kl === 'prioritas-strategis') {
-                    $q->where('klasifikasi_pemda', 'like', '%prioritas%')->where('klasifikasi_pemda', 'like', '%strategis%');
+                    $q->whereRaw("$klas like '%prioritas%'")->whereRaw("$klas like '%strategis%'");
                 } elseif ($kl === 'prioritas') {
-                    $q->where('klasifikasi_pemda', 'like', '%prioritas%')->where('klasifikasi_pemda', 'not like', '%strategis%');
+                    $q->whereRaw("$klas like '%prioritas%'")->whereRaw("$klas not like '%strategis%'");
                 } else {
-                    $q->where('klasifikasi_pemda', 'like', '%strategis%')->where('klasifikasi_pemda', 'not like', '%prioritas%');
+                    $q->whereRaw("$klas like '%strategis%'")->whereRaw("$klas not like '%prioritas%'");
                 }
             })
-            ->terbaru();
+            // pengajuan terbaru di atas; daerah tanpa pengajuan menyusul
+            ->orderByDesc('rs.created_at')
+            ->orderByDesc('rs.id_rute_subsidi')
+            ->orderByDesc('data_pemda.id_pemda');
     }
 
     /** Contoh: [1, 2, 3, '...', 24] */

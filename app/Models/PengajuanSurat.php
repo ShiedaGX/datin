@@ -36,4 +36,26 @@ class PengajuanSurat extends Model
     {
         return $this->status !== SuratOptions::DRAF;
     }
+
+    /**
+     * Siapa yang boleh melihat/mengunduh berkas Surat CHR ini:
+     * - Moda pemilik surat (kapan pun, termasuk draf);
+     * - Pemda pemilik laporan, setelah surat dikirim (Moda sudah menyetujui laporan dan mengunggah CHR);
+     * - Super Admin dan INTRAM yang berhak meninjau, setelah surat dikirim.
+     */
+    public function bisaDiaksesOleh(User $user): bool
+    {
+        if ($user->isModa()) {
+            return $user->id_moda !== null && (int) $this->id_moda === (int) $user->id_moda;
+        }
+        if (! $this->sudah_dikirim) {
+            return false;
+        }
+        if ($user->isSuperAdmin() || ($user->isIntram() && $user->bisa('chr.tinjau'))) {
+            return true;
+        }
+        $pemda = $this->rute?->pemda;
+
+        return $pemda !== null && $pemda->id_user !== null && (int) $pemda->id_user === (int) $user->id_user;
+    }
 }

@@ -277,15 +277,13 @@ class SuratController extends Controller
         return redirect($tujuan)->with('success', 'Berkas ' . $nama . ' dihapus dari draf.');
     }
 
-    /** Pratinjau (default) atau unduh (?unduh=1). Moda pemilik; INTRAM/Super Admin hanya untuk surat yang sudah dikirim. */
+    /** Pratinjau (default) atau unduh (?unduh=1). Moda pemilik; Pemda pemilik laporan, INTRAM, dan Super Admin hanya untuk surat yang sudah dikirim. */
     public function dokumen(Request $request, DokumenSurat $dokumen)
     {
         $user = $request->user();
         $pengajuan = $dokumen->pengajuan;
 
-        $pemilik = $user->isModa() && $this->milikModa($user, $pengajuan);
-        $penerima = $pengajuan->sudah_dikirim && ($user->isSuperAdmin() || ($user->isIntram() && $user->bisa('chr.tinjau')));
-        abort_unless($pemilik || $penerima, 404);
+        abort_unless($pengajuan->bisaDiaksesOleh($user), 404);
         abort_unless(Storage::disk('local')->exists($dokumen->path_file), 404);
 
         return $request->boolean('unduh')

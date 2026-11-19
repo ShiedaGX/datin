@@ -4,7 +4,10 @@
 @section('heading', 'Detail Data Wilayah')
 
 @section('content')
-@php($isi = $rute ?? $pemda)
+@php
+    $isi = $rute ?? $pemda;
+    $statusUtama = $rute ? \App\Support\StatusPengajuan::normalisasi($rute->status_pengajuan) : $pemda->status_label;
+@endphp
 @foreach ($pemda->permintaan_terbuka as $pr)
     <div class="alert alert-revisi" role="status">
         <div>
@@ -22,11 +25,11 @@
     <div class="box-head row-between">
         <div>
             <h2>{{ $pemda->kabKota->nama_kab_kota }}</h2>
-            <p class="muted">{{ $pemda->kabKota->provinsi->nama_provinsi }} &middot; {{ $pemda->kabKota->wilayah->nama_wilayah }}</p>
+            <p class="muted">{{ $pemda->kabKota->provinsi->nama_provinsi }} &middot; {{ $pemda->kabKota->wilayah->nama_wilayah }}@if ($rute) &middot; {{ $rute->nomor_laporan }}@endif</p>
         </div>
         <div class="acts">
             <span class="badge badge-{{ \Illuminate\Support\Str::slug($isi->klasifikasi_label) }}">{{ $isi->klasifikasi_label }}</span>
-            <span class="badge {{ $pemda->status_kelas }}">{{ $pemda->status_label }}</span>
+            <span class="badge {{ \App\Support\StatusPengajuan::kelas($statusUtama) }}">{{ $statusUtama }}</span>
         </div>
     </div>
 
@@ -78,26 +81,73 @@
     </dl>
 </section>
 
+@if ($rute && $rute->tujuan->isNotEmpty())
 <section class="box">
     <div class="box-head">
-        <h2>Pengajuan per Moda</h2>
-        <p class="muted">Setiap moda diajukan dan ditinjau secara terpisah.</p>
+        <h2>Rute Tujuan</h2>
+        <p class="muted">Pengajuan {{ $rute->nomor_laporan }} &middot; moda {{ $rute->moda->nama_moda ?? '-' }}</p>
+    </div>
+    <div class="table-box">
+        <table class="table table-data">
+            <thead><tr><th>Tujuan</th><th>Komoditas</th><th class="num">Berat (ton)</th></tr></thead>
+            <tbody>
+                @foreach ($rute->tujuan as $t)
+                    <tr>
+                        <td data-label="Tujuan"><strong>{{ $t->nama_kab_kota }}</strong></td>
+                        <td data-label="Komoditas" class="soft">{{ trim((string) $t->pivot->komoditas) !== '' ? $t->pivot->komoditas : '-' }}</td>
+                        <td data-label="Berat (ton)" class="num">{{ $t->pivot->berat !== null ? rtrim(rtrim(number_format((float) $t->pivot->berat, 2, ',', '.'), '0'), ',') : '-' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</section>
+@endif
+
+<section class="box">
+    <div class="box-head">
+        <h2>Semua Pengajuan Daerah Ini</h2>
+        <p class="muted">Setiap pengajuan (satu moda) ditinjau secara terpisah. Pilih "Rincian" untuk melihat dokumen dan riwayatnya.</p>
     </div>
     <div class="table-box">
         <table class="table table-data">
             <thead>
-                <tr><th>Nomor laporan</th><th>Moda</th><th>Status</th><th>Surat CHR</th><th>Surat Rekomendasi Teknis</th></tr>
+                <tr><th>Nomor laporan</th><th>Moda</th><th>Status</th><th>Surat CHR</th><th>Surat Rekomendasi Teknis</th><th></th></tr>
             </thead>
             <tbody>
-                @forelse ($pemda->ruteSubsidi->sortBy('id_rute_subsidi') as $r)
-                    @php($st = \App\Support\StatusPengajuan::normalisasi($r->status_pengajuan))
-                    <tr>
+                @forelse ($pemda->ruteSubsidi->sortByDesc('id_rute_subsidi') as $r)
+                    @php
+                        $st = \App\Support\StatusPengajuan::normalisasi($r->status_pengajuan);
+                        $chr = $r->chr_terbaru;
+                        $rt = $r->rekomendasi_terbaru;
+                        $aktif = $rute && $rute->id_rute_subsidi === $r->id_rute_subsidi;
+                    @endphp
+                    <tr @class(['row-aktif' => $aktif])>
                         <td data-label="Nomor laporan"><strong>{{ $r->nomor_laporan }}</strong></td>
                         <td data-label="Moda">{{ $r->moda->nama_moda ?? '-' }}</td>
                         <td data-label="Status"><span class="badge {{ \App\Support\StatusPengajuan::kelas($st) }}">{{ $st }}</span></td>
-                        <td data-label="Surat CHR">{{ $r->chr_terbaru->status ?? '-' }}</td>
+                        <td data-label="Surat CHR">
+                            @if (! $chr)
+                                -
+                            @elseif ($chr->bisaDiaksesOleh(auth()->user()) && $chr->dokumen->isNotEmpty())
+                                <div class="doc-links">
+                                    <span>{{ $chr->status }}</span>
+                                    @foreach ($chr->dokumen as $d)
+                                        <div class="acts">
+                                            <a class="sr-lihat" target="_blank" rel="noopener" href="{{ route('surat.dokumen', $d->id_dokumen_surat) }}">Lihat</a>
+                                            <a class="icon-act" href="{{ route('surat.dokumen', [$d->id_dokumen_surat, 'unduh' => 1]) }}" title="Unduh {{ $d->nama_jenis }}" aria-label="Unduh {{ $d->nama_jenis }}">
+                                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></svg>
+                                            </a>
+                                        </div>
+                                        <small>{{ $d->nama_jenis }}</small>
+                                    @endforeach
+                                </div>
+                            @else
+                                {{ $chr->status }}
+                            @endif
+                        </td>
                         <td data-label="Surat Rekomendasi Teknis">
-                            @if ($rt = $r->rekomendasi_terbaru)
+                            @if ($rt)
                                 <div class="acts">
                                     <a class="sr-lihat" target="_blank" rel="noopener" href="{{ route('rekomendasi.dokumen', $rt->id_rekomendasi_teknis) }}">Lihat</a>
                                     <a class="icon-act" href="{{ route('rekomendasi.dokumen', [$rt->id_rekomendasi_teknis, 'unduh' => 1]) }}" title="Unduh" aria-label="Unduh Surat Rekomendasi Teknis">
@@ -108,9 +158,16 @@
                                 <span class="muted">Belum diunggah</span>
                             @endif
                         </td>
+                        <td class="td-aksi">
+                            @if ($aktif)
+                                <span class="muted">Ditampilkan</span>
+                            @else
+                                <a class="btn btn-soft" href="{{ route('data-wilayah.show', [$pemda->id_pemda, 'pengajuan' => $r->id_rute_subsidi]) }}">Rincian</a>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="empty">Belum ada pengajuan.</td></tr>
+                    <tr><td colspan="6" class="empty">Belum ada pengajuan.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -118,7 +175,7 @@
 </section>
 
 <section class="box">
-    <div class="box-head"><h2>Dokumen Pengajuan</h2></div>
+    <div class="box-head"><h2>Dokumen Pengajuan</h2>@if ($rute)<p class="muted">{{ $rute->nomor_laporan }} &middot; moda {{ $rute->moda->nama_moda ?? '-' }}</p>@endif</div>
     @if ($rute && $rute->dokumen->isNotEmpty())
         <div class="table-box">
             <table class="table table-data">
@@ -148,7 +205,7 @@
 
 @if ($rute && $rute->verifikasi->isNotEmpty())
 <section class="box">
-    <div class="box-head"><h2>Riwayat Peninjauan</h2></div>
+    <div class="box-head"><h2>Riwayat Peninjauan</h2><p class="muted">{{ $rute->nomor_laporan }}</p></div>
     <ol class="rv-timeline">
         @foreach ($rute->verifikasi->sortBy('id_verifikasi_pengajuan') as $v)
             <li class="done s-{{ \App\Support\StatusPengajuan::grup($v->status_verifikasi) }}">
