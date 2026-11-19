@@ -809,3 +809,15 @@ a.who:hover strong{text-decoration:underline}
 .doc-links .acts{align-items:center}
 .doc-links small{color:var(--muted,#64748b)}
 .table tr.row-aktif td{background:#f0fdfa}
+
+/* ---- Master sektor & komoditas (Super Admin) ---- */
+.sektor-form{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+.sektor-form .field{margin:0;flex:1 1 280px}
+.sektor-form .field-kecil{flex:0 0 120px}
+.sektor-aksi{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+.sektor-box{margin-top:24px}
+.baris-form{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.baris-form input{flex:1 1 240px;max-width:420px}
+.btn-hapus{color:#b91c1c;border-color:#fca5a5}
+.btn-hapus:hover{background:#fef2f2}
+.baris-tambah td{background:#f8fafc}

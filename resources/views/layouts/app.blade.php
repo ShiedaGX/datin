@@ -39,9 +39,13 @@
                 </a>
             @endif
             @if ($pengguna->isSuperAdmin())
-                <a href="{{ route('admin.user.index') }}" class="nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.user.index') }}" class="nav-link {{ request()->routeIs('admin.user.*', 'admin.role.*') ? 'active' : '' }}">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
                     <span>Data User</span>
+                </a>
+                <a href="{{ route('admin.sektor.index') }}" class="nav-link {{ request()->routeIs('admin.sektor.*', 'admin.komoditas.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+                    <span>Master Sektor</span>
                 </a>
             @elseif ($pengguna->bisa('pemda.unggah'))
                 <a href="{{ route('input-data.create') }}" class="nav-link {{ request()->routeIs('input-data.*') ? 'active' : '' }}">

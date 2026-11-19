@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\HakAksesController;
+use App\Http\Controllers\Admin\SektorController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AkunController;
 use App\Http\Controllers\ApprovalController;
@@ -89,6 +90,15 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
         Route::get('user/{user}/edit', [UserController::class, 'edit'])->whereNumber('user')->name('user.edit');
         Route::put('user/{user}', [UserController::class, 'update'])->whereNumber('user')->name('user.update');
         Route::delete('user/{user}', [UserController::class, 'destroy'])->whereNumber('user')->name('user.destroy');
+
+        // Master sektor & komoditas (master_sektor, master_komoditas)
+        Route::get('sektor', [SektorController::class, 'index'])->name('sektor.index');
+        Route::post('sektor', [SektorController::class, 'simpanSektor'])->name('sektor.store');
+        Route::put('sektor/{sektor}', [SektorController::class, 'ubahSektor'])->whereNumber('sektor')->name('sektor.update');
+        Route::delete('sektor/{sektor}', [SektorController::class, 'hapusSektor'])->whereNumber('sektor')->name('sektor.destroy');
+        Route::post('sektor/{sektor}/komoditas', [SektorController::class, 'simpanKomoditas'])->whereNumber('sektor')->name('sektor.komoditas.store');
+        Route::put('komoditas/{komoditas}', [SektorController::class, 'ubahKomoditas'])->whereNumber('komoditas')->name('komoditas.update');
+        Route::delete('komoditas/{komoditas}', [SektorController::class, 'hapusKomoditas'])->whereNumber('komoditas')->name('komoditas.destroy');
 
         Route::get('role/{role}/hak-akses', [HakAksesController::class, 'edit'])->whereNumber('role')->name('role.hak-akses.edit');
         Route::put('role/{role}/hak-akses', [HakAksesController::class, 'update'])->whereNumber('role')->name('role.hak-akses.update');
