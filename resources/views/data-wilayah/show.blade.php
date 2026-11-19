@@ -82,6 +82,11 @@
 </section>
 
 @if ($rute && $rute->tujuan->isNotEmpty())
+@php
+    // komoditas per tujuan (tabel rute_subsidi_tujuan_komoditas)
+    $komPerTujuan = $rute->detailKomoditasTujuan->groupBy('id_kab_kota_tujuan');
+    $fmtBerat = fn ($b) => rtrim(rtrim(number_format((float) $b, 2, ',', '.'), '0'), ',');
+@endphp
 <section class="box">
     <div class="box-head">
         <h2>Rute Tujuan</h2>
@@ -92,11 +97,33 @@
             <thead><tr><th>Tujuan</th><th>Komoditas</th><th class="num">Berat (ton)</th></tr></thead>
             <tbody>
                 @foreach ($rute->tujuan as $t)
-                    <tr>
-                        <td data-label="Tujuan"><strong>{{ $t->nama_kab_kota }}</strong></td>
-                        <td data-label="Komoditas" class="soft">{{ trim((string) $t->pivot->komoditas) !== '' ? $t->pivot->komoditas : '-' }}</td>
-                        <td data-label="Berat (ton)" class="num">{{ $t->pivot->berat !== null ? rtrim(rtrim(number_format((float) $t->pivot->berat, 2, ',', '.'), '0'), ',') : '-' }}</td>
-                    </tr>
+                    @php
+                        $daftar = $komPerTujuan->get($t->id_kab_kota, collect());
+                        // data lama: komoditas/berat masih di tabel pivot
+                        if ($daftar->isEmpty() && trim((string) $t->pivot->komoditas) !== '') {
+                            $daftar = collect([(object) ['nama_komoditas' => $t->pivot->komoditas, 'berat' => $t->pivot->berat]]);
+                        }
+                        $total = $daftar->sum(fn ($k) => (float) $k->berat);
+                    @endphp
+
+                    @forelse ($daftar as $k)
+                        <tr>
+                            <td data-label="Tujuan">
+                                @if ($loop->first)
+                                    <strong>{{ $t->nama_kab_kota }}</strong>
+                                    @if ($daftar->count() > 1)<small class="muted" style="display:block">Total {{ $fmtBerat($total) }} ton</small>@endif
+                                @endif
+                            </td>
+                            <td data-label="Komoditas" class="soft">{{ $k->nama_komoditas }}</td>
+                            <td data-label="Berat (ton)" class="num">{{ $k->berat !== null ? $fmtBerat($k->berat) : '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td data-label="Tujuan"><strong>{{ $t->nama_kab_kota }}</strong></td>
+                            <td data-label="Komoditas" class="soft">-</td>
+                            <td data-label="Berat (ton)" class="num">-</td>
+                        </tr>
+                    @endforelse
                 @endforeach
             </tbody>
         </table>

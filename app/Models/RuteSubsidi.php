@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
+
 class RuteSubsidi extends Model
 {
     use DataDaerah;
@@ -132,5 +133,14 @@ class RuteSubsidi extends Model
         $chr = $this->chr_terbaru;
 
         return $chr ? ['CHR ' . $chr->status, 'sr-draf'] : ['Belum ada CHR', 'sr-belum'];
+    }
+
+    public function detailKomoditasTujuan(): HasMany
+    {
+        return $this->hasMany(
+            \App\Models\RuteSubsidiTujuanKomoditas::class,
+            'id_rute_subsidi',
+            'id_rute_subsidi'
+        );
     }
 }

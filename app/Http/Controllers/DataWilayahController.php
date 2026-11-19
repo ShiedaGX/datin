@@ -46,7 +46,7 @@ class DataWilayahController extends Controller
         $user = auth()->user();
         abort_unless(DataPemda::terlihatOleh($user)->whereKey($pemda->id_pemda)->exists(), 404);
 
-        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator', 'ruteSubsidi.pengajuanSurat.dokumen', 'ruteSubsidi.rekomendasi', 'ruteSubsidi.tujuan', 'permintaanRevisi.moda', 'permintaanRevisi.peminta');
+        $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator', 'ruteSubsidi.pengajuanSurat.dokumen', 'ruteSubsidi.rekomendasi', 'ruteSubsidi.tujuan', 'ruteSubsidi.detailKomoditasTujuan', 'permintaanRevisi.moda', 'permintaanRevisi.peminta');
 
         // Moda hanya melihat pengajuan untuk modanya sendiri
         if ($user->isModa()) {
