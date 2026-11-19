@@ -6,6 +6,7 @@ use App\Http\Requests\StoreWilayahRequest;
 use App\Models\DataPemda;
 use App\Models\DokumenPengajuan;
 use App\Models\KabKota;
+use App\Models\MasterSatuanData;
 use App\Models\Moda;
 use App\Models\PermintaanRevisi;
 use App\Models\Provinsi;
@@ -24,7 +25,6 @@ class InputDataController extends Controller
     {
         $user = auth()->user();
 
-        // Ambil seluruh kabupaten/kota beserta relasinya.
         $semua = KabKota::with(
             'provinsi:id_provinsi,id_wilayah,nama_provinsi',
             'dataPemda.ruteSubsidi',
@@ -33,7 +33,6 @@ class InputDataController extends Controller
             ->orderBy('nama_kab_kota')
             ->get();
 
-        // Kabupaten/kota milik akun Pemda.
         $kabSaya = $user->id_kab_kota
             ? $semua->firstWhere(
                 'id_kab_kota',
@@ -46,7 +45,6 @@ class InputDataController extends Controller
         $akunBelumTerhubung = ! $terkunci
             && ! $user->isSuperAdmin();
 
-        // Ambil data sebelumnya jika merupakan revisi INTRAM.
         [$isian, $sumber] = $this->isianDariPengajuanSebelumnya(
             $request,
             $semua,
@@ -66,7 +64,6 @@ class InputDataController extends Controller
 
             'akunBelumTerhubung' => $akunBelumTerhubung,
 
-            // Pilihan sektor potensi unggulan daerah.
             'sektor' => collect(\App\Support\Sektor::peta())
                 ->map(fn ($kunci, $nama) => [
                     'nama' => $nama,
@@ -74,7 +71,6 @@ class InputDataController extends Controller
                 ])
                 ->values(),
 
-            // Daftar komoditas beserta sektor.
             'komoditasSektor' => \App\Support\Sektor::komoditas(),
 
             'provinsi' => Provinsi::orderBy(
@@ -93,23 +89,22 @@ class InputDataController extends Controller
             'keterangan' => FormOptions::KETERANGAN,
             'dokumen' => FormOptions::DOKUMEN,
 
+            // Pilihan satuan data dari master satuan aktif.
+            'pilihanSatuan' => MasterSatuanData::aktif()
+                ->orderBy('nama_satuan')
+                ->pluck('nama_satuan'),
+
             // Pilihan kabupaten/kota.
             'kabKota' => $semua->map(fn ($k) => [
                 'id' => $k->id_kab_kota,
                 'id_provinsi' => $k->id_provinsi,
                 'nama' => $k->nama_kab_kota,
 
-                'alasan' => $k->alasanTidakTersedia(
-                    $user
-                ),
+                'alasan' => $k->alasanTidakTersedia($user),
 
-                'revisi' => $k->modaRevisiTerbuka(
-                    $user
-                ),
+                'revisi' => $k->modaRevisiTerbuka($user),
 
-                'sudah' => $k->modaDiajukan(
-                    $user
-                ),
+                'sudah' => $k->modaDiajukan($user),
 
                 'sudahNama' => collect(
                     $k->modaDiajukan($user)
@@ -140,10 +135,10 @@ class InputDataController extends Controller
     /**
      * Mengambil data pengajuan sebelumnya untuk revisi INTRAM.
      *
-     * Setiap tujuan dapat memiliki satu atau lebih komoditas.
+     * Setiap tujuan dapat memiliki beberapa komoditas.
+     * Setiap komoditas memiliki jumlah dan satuan data.
      *
-     * Data lama yang masih tersimpan pada pivot juga
-     * tetap dapat dimuat melalui mekanisme fallback.
+     * Data lama tetap didukung melalui fallback pivot.
      *
      * @return array{0: array, 1: ?RuteSubsidi}
      */
@@ -191,7 +186,6 @@ class InputDataController extends Controller
             return [[], null];
         }
 
-        // Pemetaan keterangan.
         $kunciKeterangan = collect(
             FormOptions::KETERANGAN
         )->mapWithKeys(
@@ -200,7 +194,7 @@ class InputDataController extends Controller
             ]
         );
 
-        // Ambil semua komoditas untuk rute ini sekaligus.
+        // Ambil seluruh komoditas untuk pengajuan ini.
         $komoditasPerTujuan = RuteSubsidiTujuanKomoditas::where(
             'id_rute_subsidi',
             $sumber->id_rute_subsidi
@@ -208,9 +202,10 @@ class InputDataController extends Controller
             ->get()
             ->groupBy('id_kab_kota_tujuan');
 
-        // Setiap tujuan berisi array komoditas.
+        // Bentuk ulang tujuan beserta komoditasnya.
         $tujuan = $sumber->tujuan->map(
             function ($k) use ($komoditasPerTujuan) {
+
                 $komoditas = $komoditasPerTujuan->get(
                     $k->id_kab_kota,
                     collect()
@@ -226,8 +221,10 @@ class InputDataController extends Controller
                             'nama_komoditas' =>
                                 $k->pivot->komoditas,
 
-                            'berat' =>
+                            'jumlah' =>
                                 $k->pivot->berat,
+
+                            'satuan_data' => null,
                         ],
                     ]);
                 }
@@ -238,11 +235,13 @@ class InputDataController extends Controller
 
                     'komoditas' => $komoditas
                         ->map(fn ($item) => [
-                            'nama' =>
-                                $item->nama_komoditas,
+                            'nama' => $item->nama_komoditas,
 
-                            'berat' =>
-                                $item->berat,
+                            'jumlah' => $item->jumlah
+                                ?? $item->berat,
+
+                            'satuan_data' => $item->satuan_data
+                                ?? null,
                         ])
                         ->values()
                         ->all(),
@@ -282,7 +281,6 @@ class InputDataController extends Controller
                 5
             ),
 
-            // Format baru: tujuan dengan banyak komoditas.
             'tujuan' => $tujuan,
 
             'id_moda' => count($modaDiminta) === 1
@@ -297,7 +295,7 @@ class InputDataController extends Controller
      *
      * Satu pengajuan memiliki satu moda.
      * Satu pengajuan dapat memiliki beberapa tujuan.
-     * Setiap tujuan wajib memiliki minimal satu komoditas.
+     * Setiap tujuan dapat memiliki beberapa komoditas.
      */
     public function store(StoreWilayahRequest $request)
     {
@@ -351,24 +349,19 @@ class InputDataController extends Controller
          * Pengolahan tujuan.
          *
          * Format:
-         *
          * tujuan => [
-         *     [
-         *         'id' => 101,
-         *         'komoditas' => [
-         *             [
-         *                 'nama' => 'Beras',
-         *                 'berat' => 100,
-         *             ],
-         *             [
-         *                 'nama' => 'Jagung',
-         *                 'berat' => 50,
-         *             ],
-         *         ],
+         *   [
+         *     'id' => 101,
+         *     'komoditas' => [
+         *       [
+         *         'nama' => 'Beras',
+         *         'jumlah' => 100,
+         *         'satuan_data' => 'Ton',
+         *       ],
          *     ],
+         *   ],
          * ]
          */
-
         $tujuan = collect($data['tujuan'])
             ->map(fn ($t) => [
                 'id' => (int) $t['id'],
@@ -381,7 +374,9 @@ class InputDataController extends Controller
                             (string) $k['nama']
                         ),
 
-                        'berat' => $k['berat'],
+                        'jumlah' => $k['jumlah'],
+
+                        'satuan_data' => $k['satuan_data'],
                     ])
                     ->values()
                     ->all(),
@@ -389,8 +384,7 @@ class InputDataController extends Controller
             ->unique('id')
             ->values();
 
-        // Pengamanan tambahan: setiap tujuan minimal
-        // memiliki satu komoditas.
+        // Pastikan setiap tujuan memiliki komoditas.
         foreach ($tujuan as $index => $t) {
             if (count($t['komoditas']) < 1) {
                 throw ValidationException::withMessages([
@@ -410,7 +404,7 @@ class InputDataController extends Controller
 
         $konektivitas = $namaTujuan->implode(', ');
 
-        // Daftar file untuk dibersihkan jika gagal.
+        // Daftar file untuk dibersihkan jika transaksi gagal.
         $tersimpan = [];
 
         try {
@@ -425,9 +419,7 @@ class InputDataController extends Controller
                 $tujuan,
                 &$tersimpan
             ) {
-                /*
-                 * Ambil atau buat data Pemda.
-                 */
+                // Ambil atau buat data Pemda.
                 $pemda = DataPemda::where(
                     'id_kab_kota',
                     $kab->id_kab_kota
@@ -467,9 +459,7 @@ class InputDataController extends Controller
                         ->first();
                 }
 
-                /*
-                 * Data utama pengajuan.
-                 */
+                // Data utama pengajuan.
                 $isian = [
                     'potensi_pemda' => $potensi,
 
@@ -492,11 +482,7 @@ class InputDataController extends Controller
                     'id_user' => $user->id_user,
                 ] + $isian)->save();
 
-                /*
-                 * Buat pengajuan baru.
-                 *
-                 * Pengajuan sebelumnya tidak ditimpa.
-                 */
+                // Buat pengajuan baru.
                 $rute = RuteSubsidi::create([
                     'id_pemda' => $pemda->id_pemda,
 
@@ -513,12 +499,8 @@ class InputDataController extends Controller
 
                 ] + $isian);
 
-                /*
-                 * Simpan daftar kabupaten/kota tujuan.
-                 *
-                 * Satu kabupaten/kota hanya muncul
-                 * satu kali dalam tabel pivot.
-                 */
+                // Simpan daftar kabupaten/kota tujuan.
+                // Tabel pivot hanya menyimpan daftar tujuan.
                 $rute->tujuan()->sync(
                     $tujuan->mapWithKeys(
                         fn ($t) => [
@@ -527,14 +509,7 @@ class InputDataController extends Controller
                     )->all()
                 );
 
-                /*
-                 * Simpan seluruh komoditas per tujuan.
-                 *
-                 * Setiap komoditas menjadi satu baris
-                 * tersendiri di tabel:
-                 *
-                 * rute_subsidi_tujuan_komoditas
-                 */
+                // Simpan detail komoditas, jumlah, dan satuan.
                 foreach ($tujuan as $t) {
                     foreach ($t['komoditas'] as $kom) {
                         RuteSubsidiTujuanKomoditas::create([
@@ -547,16 +522,16 @@ class InputDataController extends Controller
                             'nama_komoditas' =>
                                 $kom['nama'],
 
-                            'berat' =>
-                                $kom['berat'],
+                            'jumlah' =>
+                                $kom['jumlah'],
+
+                            'satuan_data' =>
+                                $kom['satuan_data'],
                         ]);
                     }
                 }
 
-                /*
-                 * Jika pengajuan merupakan revisi,
-                 * tandai permintaan INTRAM terpenuhi.
-                 */
+                // Tandai permintaan revisi INTRAM terpenuhi.
                 if ($permintaan) {
                     $permintaan->update([
                         'status' =>
@@ -567,12 +542,7 @@ class InputDataController extends Controller
                     ]);
                 }
 
-                /*
-                 * Simpan dokumen pengajuan.
-                 *
-                 * Semua mekanisme dokumen lama
-                 * tetap dipertahankan.
-                 */
+                // Simpan dokumen pengajuan.
                 foreach (
                     FormOptions::DOKUMEN
                     as $field => $jenis
@@ -613,18 +583,12 @@ class InputDataController extends Controller
             });
 
         } catch (ValidationException $e) {
-            // Hapus file jika validasi gagal.
-            Storage::disk('local')->delete(
-                $tersimpan
-            );
+            Storage::disk('local')->delete($tersimpan);
 
             throw $e;
 
         } catch (\Throwable $e) {
-            // Hapus file jika transaksi gagal.
-            Storage::disk('local')->delete(
-                $tersimpan
-            );
+            Storage::disk('local')->delete($tersimpan);
 
             report($e);
 

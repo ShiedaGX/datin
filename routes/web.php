@@ -12,11 +12,13 @@ use App\Http\Controllers\InputDataController;
 use App\Http\Controllers\PermohonanController;
 use App\Http\Controllers\RekomendasiController;
 use App\Http\Controllers\SuratController;
+use App\Http\Controllers\Admin\MasterSatuanDataController;
 use App\Http\Middleware\AkunAktif;
 use App\Http\Middleware\HanyaRole;
 use App\Http\Middleware\HanyaSuperAdmin;
 use App\Http\Middleware\PunyaHakAkses;
 use Illuminate\Support\Facades\Route;
+
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -103,6 +105,39 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
         Route::get('role/{role}/hak-akses', [HakAksesController::class, 'edit'])->whereNumber('role')->name('role.hak-akses.edit');
         Route::put('role/{role}/hak-akses', [HakAksesController::class, 'update'])->whereNumber('role')->name('role.hak-akses.update');
     });
+
+
+    Route::middleware(['auth'])
+        ->prefix('admin/master-satuan')
+        ->name('admin.master-satuan.')
+        ->group(function () {
+
+            Route::get('/', [
+                MasterSatuanDataController::class,
+                'index',
+            ])->name('index');
+
+            Route::post('/', [
+                MasterSatuanDataController::class,
+                'store',
+            ])->name('store');
+
+            Route::put('/{satuan}', [
+                MasterSatuanDataController::class,
+                'update',
+            ])->name('update');
+
+            Route::patch('/{satuan}/toggle', [
+                MasterSatuanDataController::class,
+                'toggle',
+            ])->name('toggle');
+
+            Route::delete('/{satuan}', [
+                MasterSatuanDataController::class,
+                'destroy',
+            ])->name('destroy');
+        });
+
 
     // Akun saya: semua role dapat mengganti kata sandinya sendiri
     Route::get('/akun/password', [AkunController::class, 'password'])->name('akun.password');

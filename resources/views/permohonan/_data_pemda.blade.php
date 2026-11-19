@@ -1,10 +1,11 @@
 
 @php
-    // Memuat tujuan beserta komoditas dan berat dari tabel pivot.
+    // Daftar kabupaten/kota tujuan.
     $daftarTujuan = $rute->tujuan;
 
-    // Master komoditas untuk mendapatkan sektor secara otomatis.
-    $masterKomoditas = collect(\App\Support\Sektor::komoditas());
+    // Detail komoditas dari tabel rute_subsidi_tujuan_komoditas.
+    $komPerTujuan = $rute->detailKomoditasTujuan
+        ->groupBy('id_kab_kota_tujuan');
 @endphp
 
 {{-- 2. Data yang diinput Pemda --}}
@@ -99,16 +100,25 @@
             @forelse ($daftarTujuan as $tujuan)
 
                 @php
-                    // Mengambil nama komoditas dari tabel master.
-                    $namaKomoditas = $tujuan->pivot->komoditas;
-
-                    // Mencari sektor berdasarkan komoditas yang diinput Pemda.
-                    $dataKomoditas = $masterKomoditas->firstWhere(
-                        'nama',
-                        $namaKomoditas
+                    // Ambil detail komoditas berdasarkan ID kabupaten/kota tujuan.
+                    $daftarKomoditas = $komPerTujuan->get(
+                        $tujuan->id_kab_kota,
+                        collect()
                     );
 
-                    $sektorTujuan = $dataKomoditas['sektor'] ?? [];
+                    // Kompatibilitas data pengajuan lama yang masih memakai pivot.
+                    if (
+                        $daftarKomoditas->isEmpty() &&
+                        trim((string) ($tujuan->pivot->komoditas ?? '')) !== ''
+                    ) {
+                        $daftarKomoditas = collect([
+                            (object) [
+                                'nama_komoditas' => $tujuan->pivot->komoditas,
+                                'jumlah' => $tujuan->pivot->berat,
+                                'satuan_data' => 'Ton',
+                            ]
+                        ]);
+                    }
                 @endphp
 
                 <div class="rv-tujuan-item">
@@ -119,41 +129,74 @@
                         {{ $tujuan->nama_lengkap }}
                     </strong>
 
-                    <div class="rv-tujuan-detail">
+                    @if ($daftarKomoditas->isNotEmpty())
 
-                        {{-- KOMODITAS --}}
-                        <div>
-                            <span>Potensi Komoditas</span>
-                            <strong>
-                                {{ $namaKomoditas ?: '-' }}
-                            </strong>
+                        <div class="table-box rv-komoditas-table">
+                            <table class="table table-data">
+                                <thead>
+                                    <tr>
+                                        <th>Komoditas</th>
+                                        <th>Sektor</th>
+                                        <th class="num">Jumlah</th>
+                                        <th>Satuan</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach ($daftarKomoditas as $kom)
+                                        @php
+                                            $namaKomoditas = trim(
+                                                (string) $kom->nama_komoditas
+                                            );
+
+                                            $sektorTujuan = \App\Support\Sektor::dariKomoditas(
+                                                $namaKomoditas
+                                            );
+
+                                            $jumlah = $kom->jumlah;
+                                            $satuan = $kom->satuan_data;
+                                        @endphp
+
+                                        <tr>
+                                            <td data-label="Komoditas">
+                                                <strong>{{ $namaKomoditas ?: '-' }}</strong>
+                                            </td>
+
+                                            <td data-label="Sektor">
+                                                @if (!empty($sektorTujuan))
+                                                    {{ is_array($sektorTujuan)
+                                                        ? implode(', ', $sektorTujuan)
+                                                        : $sektorTujuan }}
+                                                @else
+                                                    <span class="muted">
+                                                        Tidak teridentifikasi
+                                                    </span>
+                                                @endif
+                                            </td>
+
+                                            <td data-label="Jumlah" class="num">
+                                                {{ $jumlah !== null
+                                                    ? rtrim(rtrim(number_format((float) $jumlah, 2, ',', '.'), '0'), ',')
+                                                    : '-' }}
+                                            </td>
+
+                                            <td data-label="Satuan">
+                                                {{ $satuan ?: '-' }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
 
-                        {{-- SEKTOR --}}
-                        <div>
-                            <span>Sektor</span>
-                            <strong>
-                                @if (count($sektorTujuan))
-                                    {{ implode(', ', $sektorTujuan) }}
-                                @else
-                                    Tidak teridentifikasi
-                                @endif
-                            </strong>
+                    @else
+                        <div class="rv-komoditas-kosong">
+                            <span class="muted">
+                                Belum ada detail komoditas untuk tujuan ini.
+                            </span>
                         </div>
+                    @endif
 
-                        {{-- BERAT --}}
-                        <div>
-                            <span>Berat (ton)</span>
-                            <strong>
-                                @if ($tujuan->pivot->berat !== null)
-                                    {{ number_format((float) $tujuan->pivot->berat, 2, ',', '.') }}
-                                @else
-                                    -
-                                @endif
-                            </strong>
-                        </div>
-
-                    </div>
                 </div>
 
             @empty
@@ -167,7 +210,6 @@
 </section>
 
 <style>
-    /* Kartu setiap rute tujuan */
     .rv-tujuan-item {
         padding: 12px 14px;
         margin-top: 10px;
@@ -176,7 +218,6 @@
         border-radius: 8px;
     }
 
-    /* Nama kabupaten/kota tujuan */
     .rv-tujuan-title {
         display: block;
         margin-bottom: 12px;
@@ -185,39 +226,32 @@
         font-weight: 700;
     }
 
-    /* Susunan informasi komoditas, sektor, dan berat */
-    .rv-tujuan-detail {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
+    .rv-komoditas-table {
+        width: 100%;
+        overflow-x: auto;
     }
 
-    .rv-tujuan-detail div {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        min-width: 0;
+    .rv-komoditas-table table {
+        width: 100%;
+        min-width: 520px;
+        margin: 0;
     }
 
-    .rv-tujuan-detail span {
-        font-size: 11px;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: .3px;
+    .rv-komoditas-table th,
+    .rv-komoditas-table td {
+        padding: 10px 12px;
     }
 
-    .rv-tujuan-detail strong {
-        font-size: 13px;
-        color: #1e293b;
-        font-weight: 600;
-        overflow-wrap: anywhere;
+    .rv-komoditas-kosong {
+        padding: 12px;
+        background: #fff;
+        border: 1px dashed #cbd5e1;
+        border-radius: 6px;
     }
 
-    /* Tampilan perangkat mobile */
     @media (max-width: 640px) {
-        .rv-tujuan-detail {
-            grid-template-columns: 1fr;
-            gap: 10px;
+        .rv-komoditas-table {
+            overflow-x: auto;
         }
     }
 </style>

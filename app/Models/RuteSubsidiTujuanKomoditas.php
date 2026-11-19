@@ -15,10 +15,15 @@ class RuteSubsidiTujuanKomoditas extends Model
         'id_rute_subsidi',
         'id_kab_kota_tujuan',
         'nama_komoditas',
+        'jumlah',
+        'satuan_data',
+
+        // Dipertahankan untuk kompatibilitas data lama.
         'berat',
     ];
 
     protected $casts = [
+        'jumlah' => 'decimal:2',
         'berat' => 'decimal:2',
     ];
 

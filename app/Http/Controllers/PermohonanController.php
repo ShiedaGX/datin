@@ -232,6 +232,7 @@ class PermohonanController extends Controller
         )->deleteFileAfterSend(true);
     }
 
+
     public function show(Request $request, RuteSubsidi $rute)
     {
         $this->pastikanMilik($request->user(), $rute);
@@ -242,6 +243,7 @@ class PermohonanController extends Controller
             'kabKotaAsal.wilayah',
             'moda',
             'tujuan',
+            'detailKomoditasTujuan',
             'dokumen',
             'verifikasi.verifikator',
             'rekomendasi'
@@ -265,6 +267,7 @@ class PermohonanController extends Controller
             'checklist' => self::CHECKLIST,
         ]);
     }
+
 
     public function keputusan(Request $request, RuteSubsidi $rute)
     {
