@@ -51,7 +51,7 @@
             <div>
                 <h2>{{ $terpilih?->nama_sektor ?? 'Semua sektor' }}</h2>
                 <p class="muted">
-                    {{ number_format($komoditas->total(), 0, ',', '.') }} komoditas@if ($q !== '') cocok dengan "{{ $q }}"@endif
+                    {{ number_format($komoditas->total(), 0, ',', '.') }} komoditas{{ $q !== '' ? ' cocok dengan "' . $q . '"' : '' }}
                     @if ($terpilih && (int) ($pakaiSektor[$terpilih->id_sektor] ?? 0) > 0) &middot; sektor dipakai {{ (int) $pakaiSektor[$terpilih->id_sektor] }} pengajuan @endif
                 </p>
             </div>
