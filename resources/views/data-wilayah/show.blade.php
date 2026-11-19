@@ -106,23 +106,22 @@
 
 <section class="box">
     <div class="box-head">
-        <h2>Semua Pengajuan Daerah Ini</h2>
-        <p class="muted">Setiap pengajuan (satu moda) ditinjau secara terpisah. Pilih "Rincian" untuk melihat dokumen dan riwayatnya.</p>
+        <h2>Pengajuan Ini</h2>
+        <p class="muted">Status peninjauan dan surat untuk pengajuan yang dipilih.</p>
     </div>
     <div class="table-box">
         <table class="table table-data">
             <thead>
-                <tr><th>Nomor laporan</th><th>Moda</th><th>Status</th><th>Surat CHR</th><th>Surat Rekomendasi Teknis</th><th></th></tr>
+                <tr><th>Nomor laporan</th><th>Moda</th><th>Status</th><th>Surat CHR</th><th>Surat Rekomendasi Teknis</th></tr>
             </thead>
             <tbody>
-                @forelse ($pemda->ruteSubsidi->sortByDesc('id_rute_subsidi') as $r)
+                @forelse (collect([$rute])->filter() as $r)
                     @php
                         $st = \App\Support\StatusPengajuan::normalisasi($r->status_pengajuan);
                         $chr = $r->chr_terbaru;
                         $rt = $r->rekomendasi_terbaru;
-                        $aktif = $rute && $rute->id_rute_subsidi === $r->id_rute_subsidi;
                     @endphp
-                    <tr @class(['row-aktif' => $aktif])>
+                    <tr>
                         <td data-label="Nomor laporan"><strong>{{ $r->nomor_laporan }}</strong></td>
                         <td data-label="Moda">{{ $r->moda->nama_moda ?? '-' }}</td>
                         <td data-label="Status"><span class="badge {{ \App\Support\StatusPengajuan::kelas($st) }}">{{ $st }}</span></td>
@@ -158,16 +157,9 @@
                                 <span class="muted">Belum diunggah</span>
                             @endif
                         </td>
-                        <td class="td-aksi">
-                            @if ($aktif)
-                                <span class="muted">Ditampilkan</span>
-                            @else
-                                <a class="btn btn-soft" href="{{ route('data-wilayah.show', [$pemda->id_pemda, 'pengajuan' => $r->id_rute_subsidi]) }}">Rincian</a>
-                            @endif
-                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="empty">Belum ada pengajuan.</td></tr>
+                    <tr><td colspan="5" class="empty">Belum ada pengajuan.</td></tr>
                 @endforelse
             </tbody>
         </table>
