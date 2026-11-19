@@ -60,6 +60,22 @@
             </a>
 
 
+            {{-- PETA KONEKTIVITAS REGIONAL --}}
+            <a href="{{ route('peta.index') }}"
+               class="nav-link {{ request()->routeIs('peta.*') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <circle cx="17" cy="17" r="2"/>
+                    <path d="M9 8.5c6 0 0 7 6 7M3 19l4-3 5 2 5-6 4-1"/>
+                </svg>
+
+                <span>Peta Konektivitas</span>
+            </a>
+
+
             {{-- MENU MODA --}}
             @if ($pengguna->isModa() && $pengguna->bisa('chr.pantau'))
 
