@@ -1,0 +1,1905 @@
+﻿
+===== app\Http\Controllers\InputDataController.php =====
+<?php
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreWilayahRequest;
+use App\Models\DataPemda;
+use App\Models\DokumenPengajuan;
+use App\Models\KabKota;
+use App\Models\Moda;
+use App\Models\PermintaanRevisi;
+use App\Models\Provinsi;
+use App\Models\RuteSubsidi;
+use App\Models\Wilayah;
+use App\Support\FormOptions;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+
+class InputDataController extends Controller
+{
+    public function create(Request $request)
+    {
+        $user = auth()->user();
+
+        // id_wilayah pada provinsi ikut diambil supaya Wilayah Regional bisa terisi otomatis
+        $semua = KabKota::with('provinsi:id_provinsi,id_wilayah,nama_provinsi', 'dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi')
+            ->orderBy('nama_kab_kota')->get();
+
+        // Kab/kota milik akun (Pemda): wilayah, provinsi, dan kab/kota terisi otomatis & terkunci
+        $kabSaya = $user->id_kab_kota ? $semua->firstWhere('id_kab_kota', (int) $user->id_kab_kota) : null;
+        $terkunci = $kabSaya !== null;
+        $akunBelumTerhubung = ! $terkunci && ! $user->isSuperAdmin();
+
+        [$isian, $sumber] = $this->isianDariPengajuanSebelumnya($request, $semua, $user);
+        $namaModa = Moda::pluck('nama_moda', 'id_moda');
+
+        return view('input-data.create', [
+            'isian'       => $isian,           // data pengajuan sebelumnya (revisi INTRAM), kosong untuk pengajuan baru
+            'sumber'      => $sumber,
+            'terkunci'    => $terkunci,
+            'kabSaya'     => $kabSaya,
+            'alasanSaya'  => $kabSaya?->alasanTidakTersedia($user),
+            'akunBelumTerhubung' => $akunBelumTerhubung,
+            // saran sektor pada kolom Potensi Unggulan Daerah (nama + kata kunci untuk pencarian)
+            'sektor'      => collect(\App\Support\Sektor::peta())->map(fn ($kunci, $nama) => ['nama' => $nama, 'kunci' => $kunci])->values(),
+            'provinsi'    => Provinsi::orderBy('nama_provinsi')->get(),
+            'wilayah'     => Wilayah::orderBy('nama_wilayah')->get(),
+            'moda'        => Moda::orderBy('id_moda')->get(),
+            'klasifikasi' => FormOptions::KLASIFIKASI,
+            'keterangan'  => FormOptions::KETERANGAN,
+            'dokumen'     => FormOptions::DOKUMEN,
+            // pilihan dropdown Kabupaten/Kota
+            'kabKota'     => $semua->map(fn ($k) => [
+                'id'          => $k->id_kab_kota,
+                'id_provinsi' => $k->id_provinsi,
+                'nama'        => $k->nama_kab_kota,
+                'alasan'      => $k->alasanTidakTersedia($user),
+                'revisi'      => $k->modaRevisiTerbuka($user),     // id moda yang diminta INTRAM
+                'sudah'       => $k->modaDiajukan($user),          // id moda yang sudah diajukan akun ini
+                'sudahNama'   => collect($k->modaDiajukan($user))->map(fn ($id) => $namaModa[$id] ?? '')->filter()->values()->all(),
+                'revisiNama'  => Moda::whereIn('id_moda', $k->modaRevisiTerbuka($user))->orderBy('id_moda')->pluck('nama_moda')->all(),
+            ])->values(),
+            // saran otomatis untuk kolom Kebutuhan Konektivitas
+            'saran'       => $semua->map(fn ($k) => [
+                'id'       => $k->id_kab_kota,
+                'nama'     => $k->nama_kab_kota,
+                'provinsi' => $k->provinsi->nama_provinsi,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Pengajuan ulang atas permintaan revisi INTRAM (?kab=ID): form diisi dengan data pengajuan terakhir
+     * daerah tersebut agar Pemda cukup memeriksa dan mengubah seperlunya. Dokumen tetap harus diunggah.
+     *
+     * @return array{0: array, 1: ?RuteSubsidi}
+     */
+    private function isianDariPengajuanSebelumnya(Request $request, $semuaKabKota, $user): array
+    {
+        $idKab = (int) $request->query('kab');
+
+        // Akun yang terhubung ke satu kab/kota hanya boleh memakai kab/kota miliknya
+        if ($idKab && $user->id_kab_kota && (int) $user->id_kab_kota !== $idKab) {
+            return [[], null];
+        }
+
+        $kab = $idKab ? $semuaKabKota->firstWhere('id_kab_kota', $idKab) : null;
+        if (! $kab) {
+            return [[], null];
+        }
+
+        $modaDiminta = $kab->modaRevisiTerbuka($user);
+        $sumber = $modaDiminta ? RuteSubsidi::where('id_kab_kota_asal', $idKab)->orderByDesc('id_rute_subsidi')->first() : null;
+        if (! $sumber) {
+            return [[], null];
+        }
+
+        $kunciKeterangan = collect(FormOptions::KETERANGAN)->mapWithKeys(fn ($v, $k) => [mb_strtolower($v['label']) => $k]);
+
+        return [[
+            'id_wilayah'             => Provinsi::where('id_provinsi', $kab->id_provinsi)->value('id_wilayah'),
+            'id_provinsi'            => $kab->id_provinsi,
+            'id_kab_kota'            => $kab->id_kab_kota,
+            'klasifikasi_pemda'      => $sumber->klasifikasi_pemda,
+            'keterangan'             => collect($sumber->keterangan_daftar)->map(fn ($l) => $kunciKeterangan[mb_strtolower($l)] ?? null)->filter()->values()->all(),
+            'potensi'                => array_slice($sumber->potensi_daftar, 0, 5),
+            'kebutuhan_konektivitas' => $sumber->kebutuhan_konektivitas,
+            'id_moda'                => count($modaDiminta) === 1 ? $modaDiminta[0] : null,
+        ], $sumber];
+    }
+
+    public function store(StoreWilayahRequest $request)
+    {
+        $data = $request->validated();
+        $user = $request->user();
+
+        // Pengaman: kab/kota harus milik akun (readonly di browser bisa diakali lewat DevTools)
+        if ($user->id_kab_kota) {
+            if ((int) $data['id_kab_kota'] !== (int) $user->id_kab_kota) {
+                throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota harus sesuai dengan akun Anda.']);
+            }
+        } elseif (! $user->isSuperAdmin()) {
+            throw ValidationException::withMessages(['id_kab_kota' => 'Akun Anda belum terhubung ke kabupaten/kota. Hubungi Super Admin.']);
+        }
+
+        $kab = KabKota::findOrFail($data['id_kab_kota']);
+
+        // Format sama dengan data Excel: "1. A; 2. B; 3. C"
+        $potensi = collect($data['potensi'])
+            ->map(fn ($v) => trim((string) $v))
+            ->filter()
+            ->values()
+            ->map(fn ($v, $i) => ($i + 1) . '. ' . $v)
+            ->implode('; ');
+
+        // Format sama dengan data Excel: "3TP, KSPEAN, ..."
+        $keterangan = collect($data['keterangan'] ?? [])
+            ->map(fn ($key) => FormOptions::KETERANGAN[$key]['nilai'])
+            ->implode(', ');
+
+        // "Merauke, Jayapura, " -> "Merauke, Jayapura"
+        $konektivitas = trim((string) ($data['kebutuhan_konektivitas'] ?? ''), " \t\r\n,");
+
+        $tersimpan = []; // path file, untuk dibersihkan jika transaksi gagal
+
+        try {
+            DB::transaction(function () use ($request, $data, $user, $kab, $potensi, $keterangan, $konektivitas, &$tersimpan) {
+                // Daerah dipilih dari data yang sudah ada: isi/ambil alih data_pemda miliknya.
+                $pemda = DataPemda::where('id_kab_kota', $kab->id_kab_kota)->lockForUpdate()->first()
+                    ?? new DataPemda(['id_kab_kota' => $kab->id_kab_kota]);
+
+                // Pemda boleh mengajukan berkali-kali (pengajuan lama tidak diubah); data milik akun lain tetap ditolak.
+                $permintaan = null;
+                if ($pemda->exists) {
+                    if (! $pemda->bisaDiajukanOleh($user)) {
+                        throw ValidationException::withMessages(['id_kab_kota' => 'Kabupaten/Kota ini sudah diajukan atau dikelola akun lain.']);
+                    }
+                    // Bila INTRAM sedang meminta revisi untuk moda ini, pengajuan ini otomatis memenuhinya
+                    $permintaan = PermintaanRevisi::where('id_pemda', $pemda->id_pemda)
+                        ->where('id_moda', $data['id_moda'])->where('status', PermintaanRevisi::MENUNGGU)
+                        ->lockForUpdate()->first();
+                }
+
+                $isian = [
+                    'potensi_pemda'          => $potensi,
+                    'klasifikasi_pemda'      => $data['klasifikasi_pemda'],
+                    'keterangan_pemda'       => $keterangan !== '' ? $keterangan : null,
+                    'kebutuhan_konektivitas' => $konektivitas !== '' ? $konektivitas : null,
+                ];
+
+                // data_pemda menyimpan isian terbaru daerah; setiap pengajuan juga menyimpan salinannya sendiri
+                $pemda->fill(['id_user' => $user->id_user] + $isian)->save();
+
+                // Satu pengajuan = satu rute_subsidi (satu moda). Kota tujuan tertulis pada kebutuhan_konektivitas.
+                $rute = RuteSubsidi::create([
+                    'id_pemda'           => $pemda->id_pemda,
+                    'id_moda'            => $data['id_moda'],
+                    'id_kab_kota_asal'   => $kab->id_kab_kota,
+                    'id_kab_kota_tujuan' => null,
+                    'status_pengajuan'   => FormOptions::STATUS_AWAL,
+                    'tanggal_pengajuan'  => now()->toDateString(),
+                ] + $isian);
+
+                if ($permintaan) {
+                    $permintaan->update(['status' => PermintaanRevisi::DIPENUHI, 'id_rute_baru' => $rute->id_rute_subsidi]);
+                }
+
+                foreach (FormOptions::DOKUMEN as $field => $jenis) {
+                    $file = $request->file($field);
+                    $path = $file->store("dokumen_pengajuan/{$rute->id_rute_subsidi}", 'local');
+                    $tersimpan[] = $path;
+
+                    DokumenPengajuan::create([
+                        'id_rute_subsidi' => $rute->id_rute_subsidi,
+                        'id_user'         => $user->id_user,
+                        'jenis_dokumen'   => $jenis,
+                        'nama_file'       => $file->getClientOriginalName(),
+                        'nomor_surat'     => trim($data['nomor'][$field]),
+                        'path_file'       => $path,
+                        'versi_dokumen'   => 1,
+                        'tanggal_upload'  => now(),
+                    ]);
+                }
+            });
+        } catch (ValidationException $e) {
+            Storage::disk('local')->delete($tersimpan);
+
+            throw $e;
+        } catch (\Throwable $e) {
+            Storage::disk('local')->delete($tersimpan);
+            report($e);
+
+            return back()->withInput()->with('error', 'Data gagal disimpan. Silakan coba lagi atau hubungi administrator.');
+        }
+
+        return redirect()->route('data-wilayah.index')
+            ->with('success', 'Pengajuan untuk "' . $kab->nama_kab_kota . '" berhasil ditambahkan.');
+    }
+}
+
+===== app\Http\Requests\StoreWilayahRequest.php =====
+<?php
+namespace App\Http\Requests;
+
+use App\Models\KabKota;
+use App\Models\Provinsi;
+use App\Support\FormOptions;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreWilayahRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true; // akses dibatasi middleware 'auth' pada route
+    }
+
+    public function rules(): array
+    {
+        $rules = [
+            'id_provinsi'            => ['required', 'integer', 'exists:provinsi,id_provinsi'],
+            'id_wilayah'             => ['required', 'integer', 'exists:wilayah,id_wilayah'],
+            'id_kab_kota'            => ['required', 'integer', 'exists:kab_kota,id_kab_kota'],
+            'klasifikasi_pemda'      => ['required', Rule::in(FormOptions::KLASIFIKASI)],
+            'keterangan'             => ['nullable', 'array'],
+            'keterangan.*'           => ['string', Rule::in(array_keys(FormOptions::KETERANGAN))],
+            'potensi'                => ['required', 'array', 'max:5'],
+            'potensi.*'              => ['nullable', 'string', 'max:200', function ($attribute, $value, $fail) {
+                // satu potensi per kolom; pengecualian: nama sektor dari daftar saran yang memang memuat koma
+                if ($value !== null && preg_match('/[,;\r\n]/', (string) $value) && ! in_array(trim((string) $value), \App\Support\Sektor::daftar(), true)) {
+                    $fail('Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).');
+                }
+            }],
+            'id_moda'                => ['required', 'integer', 'exists:moda,id_moda'],
+            // PERUBAHAN: menggantikan rule 'kebutuhan_konektivitas'
+            'tujuan'                 => ['required', 'array', 'min:1', 'max:20'],
+            'tujuan.*'               => ['integer', 'distinct', 'exists:kab_kota,id_kab_kota', 'different:id_kab_kota'],
+        ];
+
+        foreach (array_keys(FormOptions::DOKUMEN) as $field) {
+            $rules[$field] = ['required', 'file', 'mimes:pdf,doc,docx', 'max:5120']; // 5 MB
+            $rules['nomor.' . $field] = ['required', 'string', 'max:100'];          // nomor surat diisi manual
+        }
+
+        return $rules;
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($v) {
+            // Provinsi harus berada di wilayah regional yang dipilih
+            if (! $v->errors()->hasAny(['id_provinsi', 'id_wilayah'])) {
+                $provinsi = Provinsi::find($this->input('id_provinsi'));
+                if ($provinsi && (int) $provinsi->id_wilayah !== (int) $this->input('id_wilayah')) {
+                    $v->errors()->add('id_wilayah', 'Wilayah regional tidak sesuai dengan provinsi yang dipilih.');
+                }
+            }
+
+            // Kab/Kota harus berada di provinsi yang dipilih dan masih tersedia
+            if (! $v->errors()->hasAny(['id_provinsi', 'id_kab_kota'])) {
+                $kab = KabKota::with('dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi')->find($this->input('id_kab_kota'));
+                if ($kab && (int) $kab->id_provinsi !== (int) $this->input('id_provinsi')) {
+                    $v->errors()->add('id_kab_kota', 'Kabupaten/Kota tidak berada pada provinsi yang dipilih.');
+                } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user()))) {
+                    $v->errors()->add('id_kab_kota', 'Kabupaten/Kota ini ' . $alasan . '.');
+                }
+            }
+
+            // Minimal satu potensi unggulan
+            $terisi = collect($this->input('potensi', []))->filter(fn ($x) => trim((string) $x) !== '');
+            if ($terisi->isEmpty() && ! $v->errors()->has('potensi')) {
+                $v->errors()->add('potensi', 'Isi minimal satu potensi unggulan daerah.');
+            }
+        });
+    }
+
+    public function attributes(): array
+    {
+        $nomor = [];
+        foreach (FormOptions::DOKUMEN as $field => $label) {
+            $nomor['nomor.' . $field] = 'Nomor ' . mb_strtolower($label);
+        }
+
+        return $nomor + [
+            'id_provinsi'            => 'Provinsi',
+            'id_wilayah'             => 'Wilayah regional',
+            'id_kab_kota'            => 'Kabupaten/Kota',
+            'klasifikasi_pemda'      => 'Klasifikasi wilayah',
+            'id_moda'                => 'Moda transportasi',
+            // PERUBAHAN: menggantikan atribut 'kebutuhan_konektivitas'
+            'tujuan'                 => 'Rute tujuan',
+            'tujuan.*'               => 'Rute tujuan',
+            'potensi.*'              => 'Potensi unggulan',
+            'surat_permohonan'       => 'Surat permohonan',
+            'surat_pernyataan'       => 'Surat pernyataan',
+            'surat_rencana_teknis'   => 'Surat rencana teknis',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'required'            => ':attribute wajib diisi.',
+            'id_kab_kota.required' => 'Kabupaten/Kota wajib dipilih.',
+            'exists'              => ':attribute tidak valid.',
+            'in'                  => ':attribute tidak valid.',
+            'max.string'          => ':attribute maksimal :max karakter.',
+            'max.file'            => ':attribute maksimal 5 MB.',
+            'mimes'               => ':attribute harus berformat PDF, DOC, atau DOCX.',
+            'uploaded'            => ':attribute gagal diunggah. Periksa batas ukuran upload pada server (upload_max_filesize).',
+            'potensi.*.not_regex' => 'Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).',
+            // PERUBAHAN: pesan untuk validasi tujuan
+            'tujuan.required'     => 'Pilih minimal satu rute tujuan.',
+            'tujuan.min'          => 'Pilih minimal satu rute tujuan.',
+            'tujuan.max'          => 'Rute tujuan maksimal :max kabupaten/kota.',
+            'tujuan.*.distinct'   => 'Rute tujuan tidak boleh dipilih lebih dari sekali.',
+            'tujuan.*.different'  => 'Rute tujuan tidak boleh sama dengan Kabupaten/Kota asal.',
+        ];
+    }
+}
+
+===== app\Models\RuteSubsidi.php =====
+<?php
+namespace App\Models;
+
+use App\Models\Concerns\DataDaerah;
+use App\Support\StatusPengajuan;
+use App\Support\SuratOptions;
+use App\Support\Tanggal;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+class RuteSubsidi extends Model
+{
+    use DataDaerah;
+
+    protected $table = 'rute_subsidi';
+    protected $primaryKey = 'id_rute_subsidi';
+    public $timestamps = true;
+    protected $casts = ['tanggal_pengajuan' => 'date'];
+    protected $fillable = ['id_pemda', 'id_moda', 'id_kab_kota_asal', 'id_kab_kota_tujuan', 'status_pengajuan', 'tanggal_pengajuan', 'klasifikasi_pemda', 'keterangan_pemda', 'potensi_pemda', 'kebutuhan_konektivitas'];
+
+    public function pemda(): BelongsTo { return $this->belongsTo(DataPemda::class, 'id_pemda', 'id_pemda'); }
+    public function moda(): BelongsTo { return $this->belongsTo(Moda::class, 'id_moda', 'id_moda'); }
+    public function kabKotaAsal(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota_asal', 'id_kab_kota'); }
+    public function kabKotaTujuan(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota_tujuan', 'id_kab_kota'); }
+
+    public function tujuan(): BelongsToMany
+    {
+        return $this->belongsToMany(KabKota::class, 'rute_subsidi_tujuan', 'id_rute_subsidi', 'id_kab_kota_tujuan')
+            ->withTimestamps()
+            ->orderBy('nama_kab_kota');
+    }
+
+    public function verifikasi(): HasMany { return $this->hasMany(VerifikasiPengajuan::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
+    public function pengajuanSurat(): HasMany { return $this->hasMany(PengajuanSurat::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
+    public function rekomendasi(): HasManyThrough
+    {
+        return $this->hasManyThrough(RekomendasiTeknis::class, PengajuanSurat::class, 'id_rute_subsidi', 'id_pengajuan_surat', 'id_rute_subsidi', 'id_pengajuan_surat');
+    }
+    public function dokumen(): HasMany { return $this->hasMany(DokumenPengajuan::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
+
+    // ---- Tampilan halaman Permohonan ----
+
+    /** Contoh: LP-2026-00482 (tahun pengajuan + id laporan). */
+    public function getNomorLaporanAttribute(): string
+    {
+        $waktu = $this->created_at ?? $this->tanggal_pengajuan;
+
+        return 'LP-' . ($waktu ? $waktu->format('Y') : date('Y')) . '-' . str_pad((string) $this->id_rute_subsidi, 5, '0', STR_PAD_LEFT);
+    }
+
+    public function getWaktuPengajuanAttribute()
+    {
+        return $this->created_at ?? $this->tanggal_pengajuan;
+    }
+
+    public function getTanggalLengkapAttribute(): string
+    {
+        return Tanggal::panjang($this->waktu_pengajuan);
+    }
+
+    public function getJamPengajuanAttribute(): string
+    {
+        return $this->created_at ? Tanggal::jam($this->created_at) : '';
+    }
+
+    /** menunggu | disetujui | revisi | ditolak | lainnya */
+    public function getGrupStatusAttribute(): string
+    {
+        return StatusPengajuan::grup($this->status_pengajuan);
+    }
+
+    public function getSedangMenungguAttribute(): bool
+    {
+        return $this->grup_status === 'menunggu';
+    }
+
+    public function getKelasStatusModaAttribute(): string
+    {
+        return 's-' . $this->grup_status;
+    }
+
+    /** Label status untuk Moda: "Verifikasi 1" dan "Verifikasi Final" ditampilkan sebagai "Disetujui". */
+    public function getLabelStatusModaAttribute(): string
+    {
+        return StatusPengajuan::LABEL_GRUP[$this->grup_status] ?? $this->status_pengajuan;
+    }
+
+    // ---- Surat CHR yang terhubung dengan laporan ini ----
+
+    /** Surat CHR terbaru untuk laporan ini (relasi pengajuanSurat sebaiknya sudah di-eager-load). */
+    public function getChrTerbaruAttribute(): ?PengajuanSurat
+    {
+        return $this->pengajuanSurat->sortByDesc('id_pengajuan_surat')->first();
+    }
+
+    /** Moda masih perlu/bisa mengunggah CHR: belum ada, masih draf, atau perlu perbaikan. */
+    public function getPerluChrAttribute(): bool
+    {
+        $chr = $this->chr_terbaru;
+
+        return ! $chr || in_array($chr->status, [SuratOptions::DRAF, SuratOptions::PERLU_PERBAIKAN, SuratOptions::DITOLAK], true);
+    }
+
+    /** Waktu laporan disetujui (keputusan "Disetujui" terakhir pada riwayat peninjauan). */
+    public function getTanggalDisetujuiAttribute()
+    {
+        $v = $this->verifikasi->where('status_verifikasi', 'Disetujui')->sortByDesc('id_verifikasi_pengajuan')->first();
+
+        return $v ? $v->tanggal_verifikasi : $this->updated_at;
+    }
+
+    /** Surat Rekomendasi Teknis terbaru dari INTRAM untuk laporan ini (relasi rekomendasi sebaiknya sudah di-eager-load). */
+    public function getRekomendasiTerbaruAttribute(): ?RekomendasiTeknis
+    {
+        return $this->rekomendasi->sortByDesc('id_rekomendasi_teknis')->first();
+    }
+
+    /** [label, kelas CSS] posisi Surat Rekomendasi Teknis laporan ini (relasi pengajuanSurat dan rekomendasi di-eager-load). */
+    public function getStatusRekomendasiAttribute(): array
+    {
+        if ($this->rekomendasi_terbaru) {
+            return ['Terunggah', 'sr-disetujui'];
+        }
+        if ($this->pengajuanSurat->contains('status', SuratOptions::DISETUJUI)) {
+            return ['Menunggu Rekomendasi Teknis', 'sr-dalam-review'];
+        }
+        $chr = $this->chr_terbaru;
+
+        return $chr ? ['CHR ' . $chr->status, 'sr-draf'] : ['Belum ada CHR', 'sr-belum'];
+    }
+}
+
+
+===== app\Models\RuteSubsidiPotensi.php =====
+(TIDAK ADA)
+
+===== app\Support\Sektor.php =====
+<?php
+
+namespace App\Support;
+
+use App\Models\MasterSektor;
+use Illuminate\Support\Facades\Cache;
+
+class Sektor
+{
+    public const CACHE_KEY = 'master_sektor.peta';
+
+    /** @return array<string, string[]> 'Nama Sektor' => [kata kunci...] */
+    public static function peta(): array
+    {
+        return Cache::rememberForever(self::CACHE_KEY, function () {
+            return MasterSektor::with('komoditas:id_komoditas,id_sektor,nama_komoditas')
+                ->orderBy('urutan')->get()
+                ->mapWithKeys(function ($s) {
+                    // kata dari nama sektor ("Perikanan & Kelautan" => perikanan, kelautan) + semua komoditas
+                    $dariNama = preg_split('/\s*[&,]\s*/', mb_strtolower($s->nama_sektor));
+                    $kunci = collect($dariNama)
+                        ->merge($s->komoditas->pluck('nama_komoditas')->map(fn ($k) => mb_strtolower($k)))
+                        ->filter()->unique()->values()->all();
+
+                    return [$s->nama_sektor => $kunci];
+                })->all();
+        });
+    }
+
+    /** @return string[] daftar nama sektor, sesuai urutan master */
+    public static function daftar(): array
+    {
+        return array_keys(self::peta());
+    }
+
+    /**
+     * Nama sektor yang terdeteksi dari teks potensi: dihitung bila minimal satu
+     * kata kunci ditemukan (tanpa membedakan huruf besar/kecil).
+     *
+     * @return string[]
+     */
+    public static function deteksi(string $teks): array
+    {
+        $teks = mb_strtolower($teks);
+        if (trim($teks) === '') {
+            return [];
+        }
+
+        $hasil = [];
+        foreach (self::peta() as $nama => $kunci) {
+            foreach ($kunci as $k) {
+                if ($k !== '' && str_contains($teks, $k)) {
+                    $hasil[] = $nama;
+                    break;
+                }
+            }
+        }
+
+        return $hasil;
+    }
+
+    public static function lupakan(): void
+    {
+        Cache::forget(self::CACHE_KEY);
+    }
+}
+
+===== app\Models\DataPemda.php =====
+<?php
+namespace App\Models;
+
+use App\Support\StatusPengajuan;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class DataPemda extends Model
+{
+    protected $table = 'data_pemda';
+    protected $primaryKey = 'id_pemda';
+    public $timestamps = false;
+    protected $fillable = [
+        'id_user', 'id_kab_kota', 'potensi_pemda', 'nama_pemda', 'kontak_pemda',
+        'klasifikasi_pemda', 'keterangan_pemda', 'kebutuhan_konektivitas',
+    ];
+
+    public function user(): BelongsTo { return $this->belongsTo(User::class, 'id_user', 'id_user'); }
+    public function kabKota(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota', 'id_kab_kota'); }
+    public function permintaanRevisi(): HasMany { return $this->hasMany(PermintaanRevisi::class, 'id_pemda', 'id_pemda'); }
+    public function ruteSubsidi(): HasMany { return $this->hasMany(RuteSubsidi::class, 'id_pemda', 'id_pemda'); }
+
+    /** Prioritas Strategis | Prioritas | Strategis | Belum diklasifikasi */
+    public static function normalisasiKlasifikasi(?string $nilai): string
+    {
+        $v = mb_strtolower((string) $nilai);
+        $p = str_contains($v, 'prioritas');
+        $s = str_contains($v, 'strategis');
+
+        return $p && $s ? 'Prioritas Strategis' : ($p ? 'Prioritas' : ($s ? 'Strategis' : 'Belum diklasifikasi'));
+    }
+
+    public function getKlasifikasiLabelAttribute(): string
+    {
+        return self::normalisasiKlasifikasi($this->klasifikasi_pemda);
+    }
+
+    /** Daftar sektor yang terdeteksi dari teks potensi_pemda (lihat config/sektor.php). */
+    public function getSektorTerdeteksiAttribute(): array
+    {
+        return \App\Support\Sektor::deteksi((string) $this->potensi_pemda);
+    }
+
+    public function getJumlahSektorAttribute(): int
+    {
+        return count($this->sektor_terdeteksi);
+    }
+
+    /** Jumlah tujuan yang tertulis pada kebutuhan_konektivitas (dipisah koma, titik koma, atau baris baru). null bila kosong. */
+    public function getJumlahTujuanAttribute(): ?int
+    {
+        $teks = trim((string) $this->kebutuhan_konektivitas);
+        if ($teks === '') {
+            return null;
+        }
+        $butir = array_filter(array_map('trim', preg_split('/[,;\n]+/', $teks)), fn ($x) => $x !== '');
+
+        return count($butir);
+    }
+
+    // ---- Tampilan daftar Data Wilayah ----
+
+    /** Pengajuan terbaru (relasi ruteSubsidi sebaiknya sudah di-eager-load). */
+    public function getPengajuanTerbaruAttribute(): ?RuteSubsidi
+    {
+        return $this->ruteSubsidi->sortByDesc('id_rute_subsidi')->first();
+    }
+
+    /** Permintaan revisi INTRAM yang belum dipenuhi Pemda. */
+    public function getPermintaanTerbukaAttribute()
+    {
+        return $this->permintaanRevisi->where('status', PermintaanRevisi::MENUNGGU)->values();
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        // Ada permintaan revisi dari INTRAM yang belum dipenuhi -> tampil "Perlu Revisi"
+        if ($this->permintaan_terbuka->isNotEmpty()) {
+            return StatusPengajuan::REVISI;
+        }
+
+        return StatusPengajuan::normalisasi($this->pengajuan_terbaru?->status_pengajuan);
+    }
+
+    public function getStatusKelasAttribute(): string
+    {
+        return StatusPengajuan::kelas($this->status_label);
+    }
+
+    /** Butir potensi tanpa penomoran: ["Konstruksi", "Pertanian Sagu", ...] */
+    public function getPotensiDaftarAttribute(): array
+    {
+        $butir = array_map(
+            fn ($x) => trim(preg_replace('/^\s*\d+\.\s*/', '', trim($x))),
+            explode(';', (string) $this->potensi_pemda)
+        );
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
+    /** Daftar tujuan pada kebutuhan_konektivitas: ["Merauke", "Jayapura", ...] */
+    public function getTujuanDaftarAttribute(): array
+    {
+        $butir = array_map('trim', preg_split('/[,;\n]+/', (string) $this->kebutuhan_konektivitas));
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
+    /** Butir keterangan daerah: ["3TP", "KSPEAN", ...] */
+    public function getKeteranganDaftarAttribute(): array
+    {
+        $butir = array_map('trim', explode(',', (string) $this->keterangan_pemda));
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
+    public function getPotensiRingkasAttribute(): string
+    {
+        return implode(', ', $this->potensi_daftar);
+    }
+
+    /**
+     * Hanya pemilik data yang boleh membatalkan pengajuan, dan tidak setelah disetujui Moda
+     * (Verifikasi 1 / Verifikasi Final). Pengajuan yang ditolak atau perlu revisi boleh dibatalkan
+     * agar Pemda dapat mengajukan ulang.
+     */
+    public function bisaDiubahOleh(User $user): bool
+    {
+        // Pengajuan pada moda mana pun yang sudah disetujui mengunci seluruh data daerah ini
+        $adaYangDisetujui = $this->ruteSubsidi->contains(
+            fn ($r) => StatusPengajuan::grup($r->status_pengajuan) === 'disetujui'
+        );
+
+        return $this->id_user !== null
+            && (int) $this->id_user === (int) $user->id_user
+            && ! $adaYangDisetujui;
+    }
+
+    /**
+     * Dokumen pengajuan hanya untuk pemilik data, Super Admin, Intram, dan Moda yang menjadi
+     * tujuan salah satu pengajuan daerah ini.
+     */
+    public function dokumenBisaDiunduhOleh(User $user): bool
+    {
+        if ($this->id_user !== null && (int) $this->id_user === (int) $user->id_user) {
+            return true;
+        }
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return true;
+        }
+        if ($user->isModa() && $user->id_moda !== null) {
+            return $this->ruteSubsidi->contains(fn ($r) => (int) $r->id_moda === (int) $user->id_moda);
+        }
+
+        return false;
+    }
+
+    /**
+     * Data Wilayah per role: Pemda hanya data yang diunggahnya; Moda hanya data pemda yang memiliki pengajuan
+     * untuk moda akun itu; INTRAM dan Super Admin melihat semuanya.
+     */
+    public function scopeTerlihatOleh($query, User $user)
+    {
+        if ($user->isSuperAdmin() || $user->isIntram()) {
+            return $query;
+        }
+        if ($user->isModa()) {
+            return $user->id_moda === null
+                ? $query->whereRaw('1 = 0')
+                : $query->whereHas('ruteSubsidi', fn ($r) => $r->where('id_moda', $user->id_moda));
+        }
+
+        return $query->where('data_pemda.id_user', $user->id_user);
+    }
+
+    /** Pengajuan terbaru di atas; daerah tanpa pengajuan menyusul berdasarkan id terbesar. */
+    public function scopeTerbaru($query)
+    {
+        return $query
+            ->orderByRaw('(SELECT MAX(rute_subsidi.created_at) FROM rute_subsidi WHERE rute_subsidi.id_pemda = data_pemda.id_pemda) DESC')
+            ->orderByDesc('id_pemda');
+    }
+
+    /**
+     * Pemilik data boleh mengajukan berkali-kali. Data tanpa pemilik hanya bisa diambil alih
+     * bila belum punya pengajuan; data milik akun lain tidak boleh diajukan.
+     */
+    public function bisaDiajukanOleh(User $user): bool
+    {
+        if ($this->id_user !== null) {
+            return (int) $this->id_user === (int) $user->id_user;
+        }
+
+        return ! $this->ruteSubsidi()->exists();
+    }
+}
+
+
+===== app\Models\Concerns\DataDaerah.php =====
+<?php
+namespace App\Models\Concerns;
+
+use App\Models\DataPemda;
+
+/**
+ * Tampilan data yang diinput Pemda (klasifikasi, keterangan, potensi, kebutuhan konektivitas, sektor).
+ * Dipakai model yang memiliki kolom klasifikasi_pemda, keterangan_pemda, potensi_pemda, kebutuhan_konektivitas.
+ * Sektor dibaca dari teks potensi memakai kata kunci di config/sektor.php.
+ */
+trait DataDaerah
+{
+    public function getKlasifikasiLabelAttribute(): string
+    {
+        return DataPemda::normalisasiKlasifikasi($this->klasifikasi_pemda);
+    }
+
+    public function getKeteranganDaftarAttribute(): array
+    {
+        return $this->pecah((string) $this->keterangan_pemda, '/,/');
+    }
+
+    /** Butir potensi tanpa penomoran: ["Konstruksi", "Pertanian Sagu", ...] */
+    public function getPotensiDaftarAttribute(): array
+    {
+        $butir = array_map(
+            fn ($x) => trim(preg_replace('/^\s*\d+\.\s*/', '', trim($x))),
+            explode(';', (string) $this->potensi_pemda)
+        );
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+
+    public function getPotensiRingkasAttribute(): string
+    {
+        return implode(', ', $this->potensi_daftar);
+    }
+
+    public function getSektorTerdeteksiAttribute(): array
+    {
+        return \App\Support\Sektor::deteksi((string) $this->potensi_pemda);
+    }
+
+    public function getJumlahSektorAttribute(): int
+    {
+        return count($this->sektor_terdeteksi);
+    }
+
+    public function getTujuanDaftarAttribute(): array
+    {
+        return $this->pecah((string) $this->kebutuhan_konektivitas, '/[,;\n]+/');
+    }
+
+    public function getJumlahTujuanAttribute(): ?int
+    {
+        $n = count($this->tujuan_daftar);
+
+        return $n > 0 ? $n : null;
+    }
+
+    private function pecah(string $teks, string $pola): array
+    {
+        $butir = array_map('trim', preg_split($pola, $teks));
+
+        return array_values(array_filter($butir, fn ($x) => $x !== ''));
+    }
+}
+
+
+===== resources\views\input-data\create.blade.php =====
+@extends('layouts.app')
+
+@section('title', 'Input Data Wilayah Baru')
+@section('heading', 'Input Data Wilayah Baru')
+
+@section('content')
+<form class="card form" id="formInput" method="POST" action="{{ route('input-data.store') }}" enctype="multipart/form-data">
+    @csrf
+        @if ($sumber ?? null)
+            <div class="alert alert-info form-prefill" role="status">
+                <div>
+                    <strong>Pengajuan ulang atas permintaan revisi INTRAM</strong>
+                    <p>Data diisi otomatis dari pengajuan sebelumnya ({{ $sumber->nomor_laporan }}). Periksa dan ubah bila perlu, lalu unggah dokumen pengajuan untuk moda yang diminta. Pengajuan moda sebelumnya tidak berubah.</p>
+                </div>
+            </div>
+        @endif
+
+
+    <div class="card-head">
+        <h2>Sistem Formulir Digital Pengajuan Subsidi</h2>
+        <p>Pastikan semua data wilayah, keterkaitan geografis, potensi lokal, serta sektor potensial diisi dengan akurat sesuai rujukan Bappenas.</p>
+    </div>
+
+    @if ($errors->any())
+        <div class="alert alert-error" role="alert">
+            <strong>Data belum dapat disimpan.</strong> Periksa kembali isian yang ditandai merah.
+        </div>
+    @endif
+
+    {{-- 1. Informasi Administrasi & Wilayah --}}
+    <section class="step">
+        <h3><span class="step-no">1</span> Informasi Administrasi &amp; Wilayah</h3>
+
+        @if ($akunBelumTerhubung)
+            <div class="alert alert-error" role="alert">
+                <strong>Akun Anda belum terhubung ke kabupaten/kota.</strong> Hubungi Super Admin untuk melengkapi data akun sebelum mengisi formulir ini.
+            </div>
+        @elseif ($terkunci && $alasanSaya)
+            <div class="alert alert-info" role="status">
+                <strong>Kabupaten/Kota Anda saat ini tidak dapat diajukan:</strong> {{ $alasanSaya }}.
+            </div>
+        @endif
+
+        @if ($terkunci)
+            @php
+                $idWilayahSaya = $kabSaya->provinsi->id_wilayah ?? $kabSaya->id_wilayah;
+                $wilayahSaya   = $wilayah->firstWhere('id_wilayah', $idWilayahSaya);
+                $provinsiSaya  = $provinsi->firstWhere('id_provinsi', $kabSaya->id_provinsi);
+                $kabSayaData   = collect($kabKota)->firstWhere('id', $kabSaya->id_kab_kota);
+            @endphp
+
+            {{-- Select tersembunyi: menjaga nilai yang dikirim & JS halaman ini tetap bekerja --}}
+            <select id="id_wilayah" name="id_wilayah" hidden aria-hidden="true" tabindex="-1">
+                <option value="{{ $idWilayahSaya }}" selected>{{ $wilayahSaya->nama_wilayah ?? '' }}</option>
+            </select>
+            <select id="id_provinsi" name="id_provinsi" hidden aria-hidden="true" tabindex="-1">
+                <option value="{{ $kabSaya->id_provinsi }}" data-wilayah="{{ $idWilayahSaya }}" selected>{{ $provinsiSaya->nama_provinsi ?? '' }}</option>
+            </select>
+            <select id="id_kab_kota" name="id_kab_kota" hidden aria-hidden="true" tabindex="-1">
+                <option value="{{ $kabSaya->id_kab_kota }}" data-provinsi="{{ $kabSaya->id_provinsi }}"
+                        @if ($kabSayaData && count($kabSayaData['revisi'])) data-revisi="{{ implode(',', $kabSayaData['revisi']) }}" data-isi="{{ route('input-data.create', ['kab' => $kabSaya->id_kab_kota]) }}" @endif
+                        @if ($kabSayaData && count($kabSayaData['sudah'])) data-sudah="{{ implode(',', $kabSayaData['sudah']) }}" @endif
+                        selected>{{ $kabSaya->nama_kab_kota }}</option>
+            </select>
+        @endif
+
+        <div class="grid-2">
+            <div class="field">
+                @if ($terkunci)
+                    <label for="tampil_wilayah">Wilayah Regional</label>
+                    <input type="text" id="tampil_wilayah" class="is-locked" value="{{ $wilayahSaya->nama_wilayah ?? '' }}" readonly tabindex="-1">
+                @else
+                    <label for="id_wilayah">Wilayah Regional</label>
+                    <select id="id_wilayah" name="id_wilayah" required class="@error('id_wilayah') is-invalid @enderror">
+                        <option value="">Pilih Wilayah Regional (Papua/Sulawesi/Maluku/etc)...</option>
+                        @foreach ($wilayah as $w)
+                            <option value="{{ $w->id_wilayah }}" @selected(old('id_wilayah', $isian['id_wilayah'] ?? null) == $w->id_wilayah)>{{ $w->nama_wilayah }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                @error('id_wilayah')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                @if ($terkunci)
+                    <label for="tampil_provinsi">Provinsi</label>
+                    <input type="text" id="tampil_provinsi" class="is-locked" value="{{ $provinsiSaya->nama_provinsi ?? '' }}" readonly tabindex="-1">
+                @else
+                    <label for="id_provinsi">Provinsi</label>
+                    <select id="id_provinsi" name="id_provinsi" required class="@error('id_provinsi') is-invalid @enderror">
+                        <option value="">Pilih Provinsi...</option>
+                        @foreach ($provinsi as $p)
+                            <option value="{{ $p->id_provinsi }}" data-wilayah="{{ $p->id_wilayah }}" @selected(old('id_provinsi', $isian['id_provinsi'] ?? null) == $p->id_provinsi)>{{ $p->nama_provinsi }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                @error('id_provinsi')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                @if ($terkunci)
+                    <label for="tampil_kab_kota">Kabupaten / Kota</label>
+                    <input type="text" id="tampil_kab_kota" class="is-locked" value="{{ $kabSaya->nama_kab_kota }}" readonly tabindex="-1">
+                @else
+                    <label for="id_kab_kota">Kabupaten / Kota</label>
+                    <select id="id_kab_kota" name="id_kab_kota" required class="@error('id_kab_kota') is-invalid @enderror">
+                        <option value="">Pilih Kabupaten / Kota</option>
+                        @foreach ($kabKota as $k)
+                            <option value="{{ $k['id'] }}" data-provinsi="{{ $k['id_provinsi'] }}"
+                                    @if ($k['alasan']) disabled data-terkunci="1" @endif
+                                    @if (count($k['revisi'])) data-revisi="{{ implode(',', $k['revisi']) }}" data-isi="{{ route('input-data.create', ['kab' => $k['id']]) }}" @endif
+                                    @if (count($k['sudah'])) data-sudah="{{ implode(',', $k['sudah']) }}" @endif
+                                    @selected((string) old('id_kab_kota', $isian['id_kab_kota'] ?? '') === (string) $k['id'])>{{ $k['nama'] }}@if ($k['alasan']) ({{ $k['alasan'] }})@elseif (count($k['revisi'])) (revisi diminta: {{ implode(', ', $k['revisiNama']) }})@elseif (count($k['sudah'])) (pernah diajukan: {{ implode(', ', $k['sudahNama']) }})@endif</option>
+                        @endforeach
+                    </select>
+                @endif
+                @error('id_kab_kota')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                <label for="klasifikasi_pemda">Klasifikasi Wilayah</label>
+                <select id="klasifikasi_pemda" name="klasifikasi_pemda" required class="@error('klasifikasi_pemda') is-invalid @enderror">
+                    <option value="">Pilih Klasifikasi...</option>
+                    @foreach ($klasifikasi as $k)
+                        <option value="{{ $k }}" @selected(old('klasifikasi_pemda', $isian['klasifikasi_pemda'] ?? '') === $k)>{{ $k }}</option>
+                    @endforeach
+                </select>
+                @error('klasifikasi_pemda')<p class="error">{{ $message }}</p>@enderror
+            </div>
+        </div>
+    </section>
+
+    {{-- 2. Keterangan Pembangunan & Potensi Lokal --}}
+    <section class="step">
+        <h3><span class="step-no">2</span> Keterangan Pembangunan &amp; Potensi Lokal</h3>
+
+        <fieldset class="field">
+            <legend>Keterangan Daerah (Dapat Memilih Lebih Dari Satu)</legend>
+            <div class="chips">
+                @foreach ($keterangan as $key => $item)
+                    <label class="chip">
+                        <input type="checkbox" name="keterangan[]" value="{{ $key }}" @checked(in_array($key, old('keterangan', $isian['keterangan'] ?? [])))>
+                        <span>{{ $item['label'] }}</span>
+                    </label>
+                @endforeach
+            </div>
+            @error('keterangan.*')<p class="error">{{ $message }}</p>@enderror
+        </fieldset>
+
+        <fieldset class="field">
+            <legend>Potensi Unggulan Daerah</legend>
+            <div class="stack">
+                @for ($i = 0; $i < 5; $i++)
+                    <input type="text" name="potensi[]" maxlength="200" autocomplete="off"
+                           aria-label="Potensi unggulan {{ $i + 1 }}"
+                           placeholder="{{ $i < 4 ? 'Masukkan Potensi Unggulan Daerah' : 'Lainnya' }}"
+                           value="{{ old('potensi.' . $i, $isian['potensi'][$i] ?? '') }}">
+                @endfor
+                <ul class="ac-list sektor-list" id="sektorList" role="listbox" aria-label="Saran sektor potensi" hidden></ul>
+            </div>
+            <p class="hint" id="potensiHint" aria-live="polite">Isi satu potensi pada setiap kolom. Ketik atau klik kolom untuk melihat saran sektor.</p>
+            @error('potensi')<p class="error">{{ $message }}</p>@enderror
+            @error('potensi.*')<p class="error">{{ $message }}</p>@enderror
+        <script type="application/json" id="data-sektor">@json($sektor)</script>
+        </fieldset>
+
+        <fieldset class="field">
+            <legend>Pemilihan Moda Transportasi</legend>
+            <div class="chips">
+                @foreach ($moda as $m)
+                    <label class="chip">
+                        <input type="radio" name="id_moda" value="{{ $m->id_moda }}" required @checked((string) old('id_moda', $isian['id_moda'] ?? '') === (string) $m->id_moda)>
+                        <span>{{ $m->nama_moda }}</span>
+                    </label>
+                @endforeach
+            </div>
+            <p class="hint is-warn" id="modaHint" hidden></p>
+            @error('id_moda')<p class="error">{{ $message }}</p>@enderror
+        </fieldset>
+
+        {{-- PERUBAHAN: textarea diganti kotak pencarian; pilihan tampil sebagai chip dengan input tujuan[] berisi ID --}}
+        <div class="field field-wide">
+            <label for="tujuanCari">Kebutuhan Konektivitas Regional (Hubungan Logistik) / Rute Tujuan</label>
+
+            @php
+                $tujuanAwal = old('tujuan')
+                    ? \App\Models\KabKota::whereIn('id_kab_kota', old('tujuan'))->get(['id_kab_kota', 'nama_kab_kota'])
+                        ->map(fn ($k) => ['id' => $k->id_kab_kota, 'nama' => $k->nama_kab_kota])->all()
+                    : ($isian['tujuan'] ?? []);
+            @endphp
+
+            <div class="ac">
+                <div class="tujuan-chips" id="tujuanChips"></div>
+                <input type="text" id="tujuanCari" placeholder="Ketik nama kabupaten/kota tujuan" autocomplete="off"
+                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tujuanList">
+                <ul class="ac-list" id="tujuanList" role="listbox" hidden></ul>
+            </div>
+            <div id="tujuanInputs"></div>
+
+            <p class="hint">Cari dan klik kabupaten/kota. Satu asal bisa memiliki lebih dari satu tujuan.</p>
+            @error('tujuan')<p class="error">{{ $message }}</p>@enderror
+            @error('tujuan.*')<p class="error">{{ $message }}</p>@enderror
+
+            <script type="application/json" id="data-kabkota">@json($saran)</script>
+            <script type="application/json" id="data-tujuan-awal">@json($tujuanAwal)</script>
+        </div>
+    </section>
+
+    {{-- 3. Upload Surat --}}
+    <section class="upload-card">
+        <div class="card-head">
+            <h2>Upload Surat</h2>
+            <p>Pastikan semua surat sudah terupload</p>
+        </div>
+
+        <h3><span class="step-no">3</span> Upload Surat</h3>
+
+        <div class="grid-2">
+            @foreach ($dokumen as $field => $label)
+                <div class="field">
+                    <label for="{{ $field }}_name">{{ $label }}</label>
+                    <div class="nomor-surat">
+                        <label for="nomor_{{ $field }}" class="sub">Nomor surat <span class="wajib">*</span></label>
+                        <input type="text" id="nomor_{{ $field }}" name="nomor[{{ $field }}]" value="{{ old('nomor.' . $field) }}" maxlength="100" required placeholder="Contoh: 045/123/DISHUB/2026" autocomplete="off" class="@error('nomor.' . $field) is-invalid @enderror">
+                        @error('nomor.' . $field)<p class="error">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="upload-box @error($field) is-invalid @enderror">
+                        <input type="text" id="{{ $field }}_name" class="upload-name" data-for="{{ $field }}" readonly
+                               placeholder="upload {{ strtolower($label) }}">
+                        <input type="file" id="{{ $field }}" name="{{ $field }}" accept=".pdf,.doc,.docx" data-upload hidden>
+                        <button type="button" class="btn-upload" data-target="{{ $field }}">Upload</button>
+                    </div>
+                    @error($field)<p class="error">{{ $message }}</p>@enderror
+                </div>
+            @endforeach
+        </div>
+        <p class="hint">Format PDF, DOC, atau DOCX. Ukuran maksimal 5 MB per file.</p>
+    </section>
+
+    <div class="actions">
+        <a class="btn btn-outline" href="{{ route('data-wilayah.index') }}">Batal</a>
+        <button type="submit" class="btn btn-primary">Tambah Data</button>
+    </div>
+</form>
+
+<style>
+    /* Wilayah / provinsi / kab-kota: terisi otomatis dari akun, hanya baca */
+    input.is-locked {
+        background-color: #f1f5f9;
+        color: #475569;
+        cursor: default;
+    }
+
+    /* PERUBAHAN: chip kab/kota tujuan */
+    .tujuan-chips { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.5rem; }
+    .tujuan-chips .tag { background:#e0f2fe; border-radius:999px; padding:.2rem .7rem; font-size:.85rem; }
+    .tujuan-chips .tag button { border:0; background:none; cursor:pointer; margin-left:.3rem; }
+</style>
+
+{{-- PERUBAHAN: JS pemilih tujuan (menggantikan autocomplete textarea yang lama) --}}
+<script>
+(() => {
+    const kab = JSON.parse(document.getElementById('data-kabkota').textContent);
+    const awal = JSON.parse(document.getElementById('data-tujuan-awal').textContent || '[]');
+    const cari = document.getElementById('tujuanCari');
+    const list = document.getElementById('tujuanList');
+    const chips = document.getElementById('tujuanChips');
+    const inputs = document.getElementById('tujuanInputs');
+    const asal = () => document.getElementById('id_kab_kota');
+    const dipilih = new Map(awal.map(t => [Number(t.id), t.nama]));
+
+    function render() {
+        chips.innerHTML = ''; inputs.innerHTML = '';
+        dipilih.forEach((nama, id) => {
+            const tag = document.createElement('span');
+            tag.className = 'tag'; tag.textContent = nama;
+            const x = document.createElement('button');
+            x.type = 'button'; x.textContent = 'Ã—'; x.setAttribute('aria-label', 'Hapus ' + nama);
+            x.onclick = () => { dipilih.delete(id); render(); };
+            tag.appendChild(x); chips.appendChild(tag);
+
+            const h = document.createElement('input');
+            h.type = 'hidden'; h.name = 'tujuan[]'; h.value = id;
+            inputs.appendChild(h);
+        });
+    }
+
+    function tampilkan() {
+        const q = cari.value.trim().toLowerCase();
+        const idAsal = Number(asal()?.value || 0);
+        const hasil = kab.filter(k => k.id !== idAsal && !dipilih.has(k.id) &&
+            (!q || (k.nama + ' ' + k.provinsi).toLowerCase().includes(q))).slice(0, 12);
+
+        list.innerHTML = '';
+        hasil.forEach(k => {
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.textContent = k.nama + ' â€” ' + k.provinsi;
+            li.onmousedown = e => { e.preventDefault(); dipilih.set(k.id, k.nama); cari.value = ''; render(); tampilkan(); };
+            list.appendChild(li);
+        });
+        list.hidden = hasil.length === 0;
+        cari.setAttribute('aria-expanded', String(!list.hidden));
+    }
+
+    cari.addEventListener('input', tampilkan);
+    cari.addEventListener('focus', tampilkan);
+    cari.addEventListener('blur', () => { list.hidden = true; });
+    // kab/kota asal berubah: buang tujuan yang sama dengan asal
+    asal()?.addEventListener('change', () => {
+        dipilih.delete(Number(asal().value)); render();
+    });
+    render();
+})();
+</script>
+@endsection
+
+===== C:\project_datin\projectdatin\public\js\datin.js =====
+(function () {
+  'use strict';
+  var $ = function (s, c) { return (c || document).querySelector(s); };
+  var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+
+
+  /* ---------- Dialog konfirmasi (pengganti window.confirm) ---------- */
+  var dlgAktif = null;
+  function tampilKonfirmasi(o, ok) {
+    if (dlgAktif) return;
+    var ikon = {
+      primary: '<path d="M5 12l4.5 4.5L19 7"/>',
+      danger: '<path d="M12 8v5M12 16.5v.01"/><path d="M10.3 4.2L2.8 17.5A2 2 0 004.5 20.5h15a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z"/>',
+      warning: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>'
+    };
+    var nada = o.nada || 'primary';
+    var tpl = document.createElement('div');
+    tpl.className = 'dlg-backdrop';
+    tpl.innerHTML =
+      '<div class="dlg dlg-' + nada + '" role="alertdialog" aria-modal="true" aria-labelledby="dlgJudul" aria-describedby="dlgPesan">' +
+        '<div class="dlg-ikon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ikon[nada] || ikon.primary) + '</svg></div>' +
+        '<h2 class="dlg-judul" id="dlgJudul"></h2>' +
+        '<p class="dlg-pesan" id="dlgPesan"></p>' +
+        (o.catatan ? '<p class="dlg-catatan"></p>' : '') +
+        '<div class="dlg-aksi">' +
+          '<button type="button" class="btn btn-light dlg-batal"></button>' +
+          '<button type="button" class="btn dlg-ok ' + (nada === 'danger' ? 'btn-danger' : 'btn-primary') + '"></button>' +
+        '</div>' +
+      '</div>';
+    $('.dlg-judul', tpl).textContent = o.judul || 'Konfirmasi';
+    $('.dlg-pesan', tpl).textContent = o.pesan || '';
+    if (o.catatan) $('.dlg-catatan', tpl).textContent = o.catatan;
+    $('.dlg-batal', tpl).textContent = o.batal || 'Batal';
+    $('.dlg-ok', tpl).textContent = o.ok || 'Ya, lanjutkan';
+
+    var fokusSebelum = document.activeElement;
+    function tutup(hasil) {
+      document.removeEventListener('keydown', tombol, true);
+      tpl.classList.remove('show');
+      document.body.classList.remove('dlg-terbuka');
+      setTimeout(function () { if (tpl.parentNode) tpl.parentNode.removeChild(tpl); }, 150);
+      dlgAktif = null;
+      if (fokusSebelum && fokusSebelum.focus) fokusSebelum.focus();
+      if (hasil) ok();
+    }
+    function tombol(e) {
+      if (e.key === 'Escape') { e.preventDefault(); tutup(false); }
+      else if (e.key === 'Tab') {
+        var f = $$('button', tpl);
+        var i = f.indexOf(document.activeElement);
+        e.preventDefault();
+        f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+      }
+    }
+    tpl.addEventListener('mousedown', function (e) { if (e.target === tpl) tutup(false); });
+    $('.dlg-batal', tpl).addEventListener('click', function () { tutup(false); });
+    $('.dlg-ok', tpl).addEventListener('click', function () { tutup(true); });
+    document.addEventListener('keydown', tombol, true);
+    document.body.appendChild(tpl);
+    document.body.classList.add('dlg-terbuka');
+    dlgAktif = tpl;
+    requestAnimationFrame(function () { tpl.classList.add('show'); $('.dlg-ok', tpl).focus(); });
+  }
+
+  /* Tahan submit sampai pengguna menyetujui di dialog, lalu kirim ulang formulir yang sama */
+  function konfirmasiSubmit(e, form, opsi) {
+    if (form.__konfirmasiLolos) { form.__konfirmasiLolos = false; return true; }
+    e.preventDefault();
+    var pengirim = e.submitter || null;
+    tampilKonfirmasi(opsi, function () {
+      form.__konfirmasiLolos = true;
+      if (form.requestSubmit) form.requestSubmit(pengirim); else form.submit();
+    });
+    return false;
+  }
+
+  /* ---------- Sidebar (mobile) ---------- */
+  var sidebar = $('#sidebar'), backdrop = $('#backdrop'), menuBtn = $('#menuBtn');
+  function toggleMenu(open) {
+    if (!sidebar) return;
+    sidebar.classList.toggle('open', open);
+    backdrop.classList.toggle('show', open);
+    menuBtn.setAttribute('aria-expanded', String(open));
+  }
+  if (menuBtn) menuBtn.addEventListener('click', function () { toggleMenu(!sidebar.classList.contains('open')); });
+  if (backdrop) backdrop.addEventListener('click', function () { toggleMenu(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggleMenu(false); });
+
+  /* ---------- Wilayah -> Provinsi -> Kabupaten/Kota (dropdown bertingkat) ---------- */
+  var prov = $('#id_provinsi'), wil = $('#id_wilayah'), kab = $('#id_kab_kota');
+  if (kab && kab.tagName !== 'SELECT') kab = null;   // form user: #id_kab_kota berupa input hidden (hasil saran Instansi), bukan dropdown
+
+  /* ---------- Revisi dari INTRAM: moda yang diminta disarankan, moda lain tetap boleh diajukan ---------- */
+  var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false;
+  function batasiModa() {
+    if (!kab || !modaRadios.length) return;
+    var o = kab.options[kab.selectedIndex];
+    var diminta = o && o.dataset && o.dataset.revisi ? o.dataset.revisi.split(',') : [];
+    var sudah = o && o.dataset && o.dataset.sudah ? o.dataset.sudah.split(',') : [];
+    var namaModa = function (ids) {
+      return modaRadios.filter(function (r) { return ids.indexOf(r.value) !== -1; })
+        .map(function (r) { return r.nextElementSibling.textContent.trim(); }).join(', ');
+    };
+    modaRadios.forEach(function (r) { r.disabled = false; r.closest('.chip').classList.remove('is-off'); });
+    if (!diminta.length) {
+      if (modaAuto) { modaRadios.forEach(function (r) { r.checked = false; }); modaAuto = false; }  // batalkan pilihan otomatis
+      if (modaHint) {
+        modaHint.hidden = !sudah.length;
+        if (sudah.length) modaHint.textContent = 'Daerah ini pernah diajukan untuk moda ' + namaModa(sudah) + '. Anda dapat mengajukan lagi; pengajuan sebelumnya tidak berubah.';
+      }
+      return;
+    }
+    var saran = modaRadios.filter(function (r) { return diminta.indexOf(r.value) !== -1; });
+    if (saran.length && !modaRadios.some(function (r) { return r.checked; })) { saran[0].checked = true; modaAuto = true; }
+    if (modaHint) {
+      modaHint.textContent = 'INTRAM meminta Anda mengajukan untuk moda ' + namaModa(diminta) + '. Pengajuan moda sebelumnya tidak berubah.';
+      modaHint.hidden = false;
+    }
+  }
+
+  function filterProvinsi() {
+    if (!prov || !wil) return;
+    var w = wil.value;
+    $$('option', prov).forEach(function (o) {
+      if (!o.value) return;
+      var sembunyi = w !== '' && o.dataset.wilayah !== w;
+      o.hidden = sembunyi;
+      o.disabled = sembunyi;
+    });
+    var terpilih = prov.options[prov.selectedIndex];
+    if (terpilih && terpilih.disabled) prov.value = '';
+  }
+
+  function filterKab() {
+    if (!kab) return;
+    var p = prov ? prov.value : '';
+    kab.disabled = (p === '');
+    $$('option', kab).forEach(function (o) {
+      if (!o.value) return;
+      var sembunyi = (p === '' || o.dataset.provinsi !== p);
+      o.hidden = sembunyi;
+      o.disabled = sembunyi || o.dataset.terkunci === '1';   // yang sudah diajukan tetap terkunci
+    });
+    var terpilih = kab.options[kab.selectedIndex];
+    if (terpilih && terpilih.value && terpilih.disabled) kab.value = '';
+    batasiModa();
+  }
+
+  if (prov && wil) {
+    prov.addEventListener('change', function () {
+      var o = prov.options[prov.selectedIndex];
+      if (o && o.dataset.wilayah) wil.value = o.dataset.wilayah;   // wilayah mengikuti provinsi
+      kab && (kab.value = '');
+      filterKab();
+    });
+    wil.addEventListener('change', function () { filterProvinsi(); if (kab) kab.value = ''; filterKab(); });
+    filterProvinsi();
+  }
+  if (kab) kab.addEventListener('change', batasiModa);
+  function formKosong() {
+    var kb = $('#kebutuhan_konektivitas'), kl = $('#klasifikasi_pemda');
+    return !(kb && kb.value.trim()) && !(kl && kl.value) &&
+      !$$('input[name="potensi[]"]').some(function (i) { return i.value.trim(); }) &&
+      !$$('input[name="keterangan[]"]').some(function (c) { return c.checked; });
+  }
+  if (kab) kab.addEventListener('change', function () {   // daerah yang diminta direvisi: buka form yang terisi dari pengajuan sebelumnya
+    var o = kab.options[kab.selectedIndex];
+    if (o && o.dataset && o.dataset.isi && location.search.indexOf('kab=') === -1 && formKosong()) location.href = o.dataset.isi;
+  });
+  filterKab();
+
+  /* ---------- Potensi: satu potensi per kolom ---------- */
+  var potensi = $$('input[name="potensi[]"]');
+  var dataSektor = [];
+  try { dataSektor = JSON.parse(($('#data-sektor') || {}).textContent || '[]'); } catch (e) { dataSektor = []; }
+  var namaSektor = dataSektor.map(function (x) { return x.nama; });
+  var hint = $('#potensiHint');
+  var hintAsli = hint ? hint.textContent : '';
+  var hintTimer;
+  function kabarkan(teks, peringatan) {
+    if (!hint) return;
+    hint.textContent = teks;
+    hint.classList.toggle('is-warn', !!peringatan);
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(function () { hint.textContent = hintAsli; hint.classList.remove('is-warn'); }, 5000);
+  }
+  potensi.forEach(function (el, i) {
+    el.addEventListener('input', function () {
+      if (!/[,;\n\r]/.test(el.value)) return;
+      if (namaSektor.indexOf(el.value.trim()) !== -1) return;   // nama sektor yang memuat koma jangan dipecah
+      // Dipaste/diketik berisi beberapa butir: sisakan satu di kolom ini, sebar sisanya ke kolom kosong berikutnya
+      var bagian = el.value.split(/[,;\n\r]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+      el.value = bagian.shift() || '';
+      var idx = i + 1, sisa = [];
+      bagian.forEach(function (b) {
+        while (idx < potensi.length && potensi[idx].value.trim() !== '') idx++;
+        if (idx < potensi.length) { potensi[idx].value = b; idx++; } else { sisa.push(b); }
+      });
+      if (sisa.length) {
+        kabarkan('Semua kolom sudah terisi. Tidak dimasukkan: ' + sisa.join(', '), true);
+      } else if (bagian.length) {
+        kabarkan('Setiap kolom hanya untuk satu potensi. Sisanya dipindahkan ke kolom berikutnya.', false);
+      } else {
+        kabarkan('Setiap kolom hanya untuk satu potensi.', false);
+      }
+    });
+  });
+
+  /* ---------- Potensi: saran sektor ---------- */
+  var sektorList = $('#sektorList');
+  if (sektorList && potensi.length && dataSektor.length) {
+    var sAktif = -1, sHasil = [], sInput = null;
+    var sNorm = function (t) { return String(t).toLowerCase(); };
+
+    var sTutup = function () {
+      sektorList.hidden = true; sektorList.innerHTML = ''; sAktif = -1;
+      if (sInput) { sInput.setAttribute('aria-expanded', 'false'); sInput.removeAttribute('aria-activedescendant'); }
+    };
+    var sCari = function (el) {
+      var q = sNorm(el.value).trim();
+      var dipakai = potensi.filter(function (o) { return o !== el; }).map(function (o) { return sNorm(o.value).trim(); });
+      var out = [], kataCari = q === '' ? [] : q.split(/\s+/);
+      dataSektor.forEach(function (d) {
+        if (dipakai.indexOf(sNorm(d.nama)) !== -1) return;          // sektor yang sudah dipilih pada kolom lain
+        var nama = sNorm(d.nama), kata = '', cocok = true;
+        // setiap kata yang diketik harus cocok dengan nama sektor atau salah satu kata kuncinya
+        kataCari.forEach(function (t) {
+          if (nama.indexOf(t) !== -1) return;
+          var k = d.kunci.filter(function (x) { return x.indexOf(t) !== -1; })[0];
+          if (k) { kata = kata || k; } else { cocok = false; }
+        });
+        if (!cocok) return;
+        out.push({ nama: d.nama, kata: kata, skor: nama.indexOf(q) === 0 ? 0 : (kata ? 2 : 1) });
+      });
+      if (q !== '') out.sort(function (a, b) { return a.skor - b.skor; });
+      return out;
+    };
+    var sSelesaiAt = 0;
+    var sPilih = function (item) {
+      sSelesaiAt = Date.now();
+      sInput.value = item.nama;
+      sTutup();
+      var berikut = potensi[potensi.indexOf(sInput) + 1];
+      if (berikut && berikut.value.trim() === '') berikut.focus();
+    };
+    var sGambar = function (el) {
+      sInput = el; sektorList.innerHTML = '';
+      sHasil.forEach(function (it, i) {
+        var li = document.createElement('li');
+        li.id = 'sektor-opt-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+        var a = document.createElement('span'); a.textContent = it.nama;
+        var b = document.createElement('small'); b.textContent = it.kata ? 'cocok: ' + it.kata : 'Sektor';
+        li.appendChild(a); li.appendChild(b);
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); sPilih(it); });
+        sektorList.appendChild(li);
+      });
+      // posisikan tepat di bawah kolom yang sedang diisi
+      sektorList.style.top = (el.offsetTop + el.offsetHeight + 4) + 'px';
+      sektorList.style.left = el.offsetLeft + 'px';
+      sektorList.style.right = 'auto';
+      sektorList.style.width = el.offsetWidth + 'px';
+      sektorList.hidden = false; el.setAttribute('aria-expanded', 'true');
+    };
+    var sPerbarui = function (el) {
+      sHasil = sCari(el);
+      if (!sHasil.length) { sTutup(); return; }
+      sAktif = -1; sGambar(el);
+    };
+    var sSorot = function () {
+      Array.prototype.forEach.call(sektorList.children, function (li, i) {
+        li.setAttribute('aria-selected', String(i === sAktif));
+        if (i === sAktif) { sInput.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+      });
+    };
+
+    potensi.forEach(function (el) {
+      el.setAttribute('role', 'combobox'); el.setAttribute('aria-autocomplete', 'list');
+      el.setAttribute('aria-expanded', 'false'); el.setAttribute('aria-controls', 'sektorList');
+      el.addEventListener('focus', function () { sPerbarui(el); });
+      el.addEventListener('click', function () { if (Date.now() - sSelesaiAt > 400) sPerbarui(el); });   // abaikan click susulan setelah memilih saran
+      el.addEventListener('input', function () { sPerbarui(el); });
+      el.addEventListener('blur', function () { setTimeout(function () { if (document.activeElement !== el && sInput === el) sTutup(); }, 120); });   // jangan tutup daftar yang sudah berpindah ke kolom lain
+      el.addEventListener('keydown', function (e) {
+        if (sektorList.hidden || sInput !== el) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); sAktif = (sAktif + 1) % sHasil.length; sSorot(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); sAktif = (sAktif - 1 + sHasil.length) % sHasil.length; sSorot(); }
+        else if (e.key === 'Enter' && sAktif >= 0) { e.preventDefault(); sPilih(sHasil[sAktif]); }
+        else if (e.key === 'Escape') { e.stopPropagation(); sTutup(); }
+      });
+    });
+  }
+
+  /* ---------- Kebutuhan konektivitas: saran nama kabupaten/kota ---------- */
+  var ta = $('#kebutuhan_konektivitas'), list = $('#acList'), dataEl = $('#data-kabkota');
+  if (ta && list && dataEl) {
+    var semua = [];
+    try { semua = JSON.parse(dataEl.textContent); } catch (e) { semua = []; }
+    var hasil = [], aktif = -1;
+
+    var norm = function (s) { return String(s).toLowerCase(); };
+
+    function tokenAktif() {
+      var v = ta.value, pos = ta.selectionStart == null ? v.length : ta.selectionStart, mulai = 0, akhir = v.length, i, j;
+      for (i = pos - 1; i >= 0; i--) { if (v[i] === ',' || v[i] === '\n') { mulai = i + 1; break; } }
+      for (j = pos; j < v.length; j++) { if (v[j] === ',' || v[j] === '\n') { akhir = j; break; } }
+      return { mulai: mulai, akhir: akhir, teks: v.slice(mulai, akhir).trim() };
+    }
+
+    function cari(t) {
+      var q = norm(t.teks);
+      var lain = ta.value.slice(0, t.mulai) + ',' + ta.value.slice(t.akhir);          // teks di luar token yang sedang diketik
+      var sudah = lain.split(/[,\n]+/).map(function (x) { return norm(x.trim()); }).filter(Boolean);
+      var asal = kab ? kab.value : '';
+      var out = [];
+      semua.forEach(function (k) {
+        if (String(k.id) === asal) return;                                            // tidak menyarankan daerah asal sendiri
+        var n = norm(k.nama);
+        if (sudah.indexOf(n) !== -1) return;                                          // sudah ada di daftar
+        var inti = n.replace(/^(kab\.?|kabupaten|kota)\s+/, '');
+        var skor = (n.indexOf(q) === 0 || inti.indexOf(q) === 0) ? 0 : (n.indexOf(q) !== -1 ? 1 : -1);
+        if (skor >= 0) out.push({ k: k, skor: skor });
+      });
+      out.sort(function (a, b) { return a.skor - b.skor || a.k.nama.localeCompare(b.k.nama, 'id'); });
+      return out.slice(0, 8).map(function (o) { return o.k; });
+    }
+
+    function tutup() {
+      list.hidden = true; list.innerHTML = ''; aktif = -1;
+      ta.setAttribute('aria-expanded', 'false'); ta.removeAttribute('aria-activedescendant');
+    }
+
+    function gambar() {
+      list.innerHTML = '';
+      hasil.forEach(function (k, i) {
+        var li = document.createElement('li');
+        li.id = 'ac-opt-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+        var a = document.createElement('span'); a.textContent = k.nama;
+        var b = document.createElement('small'); b.textContent = k.provinsi;
+        li.appendChild(a); li.appendChild(b);
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); pilih(k); });   // cegah textarea kehilangan fokus
+        list.appendChild(li);
+      });
+      list.hidden = false;
+      ta.setAttribute('aria-expanded', 'true');
+    }
+
+    function sorot() {
+      $$('li', list).forEach(function (li, i) {
+        li.setAttribute('aria-selected', String(i === aktif));
+        if (i === aktif) { ta.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+      });
+    }
+
+    function perbarui() {
+      var t = tokenAktif();
+      if (t.teks.length < 2) { tutup(); return; }
+      hasil = cari(t);
+      if (!hasil.length) { tutup(); return; }
+      aktif = -1;
+      gambar();
+    }
+
+    function pilih(k) {
+      var v = ta.value, t = tokenAktif();
+      var depan = v.slice(0, t.mulai).replace(/[ \t]+$/, ''), belakang = v.slice(t.akhir);
+      var pemisah = (depan === '' || /\n$/.test(depan)) ? '' : ' ';
+      var tambah = belakang.trim() === '' ? ', ' : '';                                // siap mengetik daerah berikutnya
+      var awal = depan + pemisah + k.nama + tambah;
+      ta.value = awal + belakang;
+      ta.setSelectionRange(awal.length, awal.length);
+      ta.focus();
+      tutup();
+    }
+
+    ta.addEventListener('input', perbarui);
+    ta.addEventListener('click', perbarui);
+    ta.addEventListener('blur', function () { setTimeout(tutup, 120); });
+    ta.addEventListener('keydown', function (e) {
+      if (list.hidden) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); aktif = (aktif + 1) % hasil.length; sorot(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); aktif = (aktif - 1 + hasil.length) % hasil.length; sorot(); }
+      else if (e.key === 'Enter' && aktif >= 0) { e.preventDefault(); pilih(hasil[aktif]); }
+      else if (e.key === 'Escape') { e.stopPropagation(); tutup(); }
+    });
+  }
+
+  /* ---------- Form user: saran Instansi (kab/kota) dari server ---------- */
+  var inInst = $('#instansi'), listInst = $('#instansiList'), idKab = $('#id_kab_kota');
+  if (inInst && listInst && idKab && inInst.dataset.url) {
+    var instHasil = [], instAktif = -1, instTimer = null, instSeq = 0;
+
+    var tutupInst = function () {
+      listInst.hidden = true; listInst.innerHTML = ''; instAktif = -1;
+      inInst.setAttribute('aria-expanded', 'false'); inInst.removeAttribute('aria-activedescendant');
+    };
+    var tandaiInst = function (i) {
+      var li = $$('li', listInst);
+      li.forEach(function (el, n) { el.setAttribute('aria-selected', n === i ? 'true' : 'false'); });
+      instAktif = i;
+      if (li[i]) { inInst.setAttribute('aria-activedescendant', li[i].id); li[i].scrollIntoView({ block: 'nearest' }); }
+    };
+    var pilihInst = function (s) {
+      inInst.value = s.value;
+      idKab.value = s.id_kab_kota;                         // ID inilah yang dikirim & divalidasi server
+      var w = $('#id_wilayah'); if (w && s.id_wilayah) w.value = s.id_wilayah;
+      inInst.classList.remove('is-invalid');
+      tutupInst();
+    };
+    var gambarInst = function () {
+      listInst.innerHTML = '';
+      if (!instHasil.length) { tutupInst(); return; }
+      instHasil.forEach(function (s, i) {
+        var li = document.createElement('li');
+        li.id = 'instansi-opt-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+        var a = document.createElement('span'); a.textContent = s.value;
+        var b = document.createElement('small'); b.textContent = s.provinsi;
+        li.appendChild(a); li.appendChild(b);
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); pilihInst(s); });
+        listInst.appendChild(li);
+      });
+      listInst.hidden = false;
+      inInst.setAttribute('aria-expanded', 'true');
+    };
+
+    inInst.addEventListener('input', function () {
+      idKab.value = '';                                    // teks diubah: pilihan sebelumnya tidak berlaku lagi
+      clearTimeout(instTimer);
+      var q = inInst.value.trim();
+      if (q.length < 2) { instSeq++; tutupInst(); return; }
+      instTimer = setTimeout(function () {
+        var n = ++instSeq;
+        fetch(inInst.dataset.url + '?q=' + encodeURIComponent(q), {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (r) { return r.ok ? r.json() : []; }).then(function (d) {
+          if (n !== instSeq) return;                       // abaikan respons yang sudah usang
+          instHasil = Array.isArray(d) ? d : []; instAktif = -1; gambarInst();
+        }).catch(tutupInst);
+      }, 200);
+    });
+    inInst.addEventListener('keydown', function (e) {
+      if (listInst.hidden || !instHasil.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); tandaiInst((instAktif + 1) % instHasil.length); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); tandaiInst((instAktif - 1 + instHasil.length) % instHasil.length); }
+      else if (e.key === 'Enter' && instAktif >= 0) { e.preventDefault(); pilihInst(instHasil[instAktif]); }
+      else if (e.key === 'Escape') { tutupInst(); }
+    });
+    inInst.addEventListener('blur', function () { setTimeout(tutupInst, 150); });
+  }
+
+  /* ---------- Form user: cakupan & hak akses menyesuaikan role ---------- */
+  var peran = $('#id_role'), dataRole = $('#data-role');
+  if (peran && dataRole) {
+    var info = {};
+    try { info = JSON.parse(dataRole.textContent); } catch (e) { info = {}; }
+    var panel = $('#roleInfo'), daftar = $('#roleInfoList'), catatan = $('#roleInfoCatatan'), tandaWajib = $('#wajibInstansi');
+
+    var sesuaikan = function () {
+      var r = info[peran.value];
+      var butuh = r ? r.syarat : [];
+
+      $$('[data-butuh]').forEach(function (wadah) {
+        var perlu = butuh.indexOf(wadah.dataset.butuh) !== -1;
+        wadah.hidden = !perlu;
+        $$('input,select', wadah).forEach(function (el) { el.disabled = !perlu; el.required = perlu; });
+      });
+      $$('[data-wajib]').forEach(function (el) { el.required = butuh.indexOf(el.dataset.wajib) !== -1; });
+      if (tandaWajib) tandaWajib.hidden = butuh.indexOf('instansi') === -1;
+
+      if (!r) { panel.hidden = true; return; }
+      daftar.innerHTML = '';
+      if (r.super) {
+        catatan.textContent = 'Super Admin memiliki seluruh hak akses dan dapat mengelola akun.';
+      } else {
+        r.hak.forEach(function (nama) {
+          var li = document.createElement('li');
+          li.textContent = nama;
+          daftar.appendChild(li);
+        });
+        catatan.textContent = r.hak.length
+          ? 'Hak akses diatur per role lewat tombol "Atur hak akses" di halaman Data User.'
+          : 'Role ini belum memiliki hak akses.';
+      }
+      panel.hidden = false;
+    };
+    peran.addEventListener('change', sesuaikan);
+    sesuaikan();
+  }
+
+  /* ---------- Review laporan (Moda): checklist & keputusan ---------- */
+  var fk = $('#formKeputusan');
+  if (fk) {
+    var cek = $$('input[name="periksa[]"]', fk);
+    var hitung = $('#cekHitung'), setuju = $('#btnSetuju'), catatan = $('#catatan');
+
+    var perbaruiCek = function () {
+      var n = cek.filter(function (c) { return c.checked; }).length;
+      if (hitung) {
+        hitung.textContent = n + ' dari ' + cek.length + ' pemeriksaan telah dikonfirmasi';
+        hitung.classList.toggle('ok', cek.length > 0 && n === cek.length);
+      }
+      if (setuju) setuju.disabled = n !== cek.length;       // Setujui hanya aktif bila semua pemeriksaan dikonfirmasi
+    };
+    cek.forEach(function (c) { c.addEventListener('change', perbaruiCek); });
+    if (cek.length) perbaruiCek();
+
+    // Catatan wajib untuk Minta Revisi / Tolak
+    ['btnRevisi', 'btnTolak'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b && catatan) b.addEventListener('click', function () { catatan.required = true; });
+    });
+    $$('[data-wajib-catatan]', fk).forEach(function (b) {
+      if (catatan) b.addEventListener('click', function () { catatan.required = true; });
+    });
+    if (setuju && catatan) setuju.addEventListener('click', function () { catatan.required = false; });
+
+    fk.addEventListener('submit', function (e) {
+      var v = e.submitter ? e.submitter.value : '';
+      var opsi = {
+        setuju:    { judul: 'Setujui laporan ini?', pesan: 'Laporan akan ditandai disetujui dan diteruskan ke tahap berikutnya.', ok: 'Ya, setujui', nada: 'primary' },
+        revisi:    { judul: 'Minta revisi laporan?', pesan: 'Laporan dikembalikan kepada pengirim untuk diperbaiki sesuai catatan Anda.', ok: 'Ya, minta revisi', nada: 'warning' },
+        perbaikan: { judul: 'Kembalikan surat?', pesan: 'Surat dikembalikan untuk diperbaiki sesuai catatan Anda.', ok: 'Ya, kembalikan', nada: 'warning' },
+        tolak:     { judul: 'Tolak laporan ini?', pesan: 'Laporan akan ditolak dan pengirim diberi tahu.', ok: 'Ya, tolak', nada: 'danger' }
+      }[v];
+      if (opsi) {
+        opsi.catatan = 'Keputusan akan tercatat permanen pada riwayat persetujuan.';
+        konfirmasiSubmit(e, fk, opsi);
+      }
+    });
+  }
+
+  /* ---------- Surat CHR: unggah, ringkasan, dan kirim ---------- */
+  var fs = $('#formSurat');
+  if (fs) {
+    var MAKS_BYTE = (parseInt(fs.dataset.maksMb, 10) || 10) * 1024 * 1024;
+    var slots = $$('.sr-slot', fs);
+    var baru = {};   // kode slot -> File yang baru dipilih (belum disimpan)
+
+    var fmt = function (b) {
+      return b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+    };
+    var adaDiServer = function (slot) { return slot.dataset.adaNama !== undefined; };
+
+    var perbaruiSlot = function (slot) {
+      var f = baru[slot.dataset.slot], ada = adaDiServer(slot);
+      var fAda = $('.sr-file-ada', slot), fBaru = $('.sr-file-baru', slot), drop = $('.sr-drop', slot), st = $('[data-state]', slot);
+      fAda.hidden = !(ada && !f);
+      fBaru.hidden = !f;
+      drop.hidden = !!(ada || f);
+      if (f) {
+        $('[data-nama]', fBaru).textContent = f.name;
+        $('[data-meta]', fBaru).textContent = 'PDF Â· ' + fmt(f.size) + ' Â· Belum disimpan';
+      }
+      st.textContent = f ? 'Siap disimpan' : (ada ? 'Terunggah' : 'Belum diunggah');
+      st.classList.toggle('is-ok', !!(f || ada));
+    };
+
+    var hitung = function () {
+      var n = 0, total = 0, wajib = 0, wajibOk = 0, tanpaNomor = 0;
+      slots.forEach(function (s) {
+        var f = baru[s.dataset.slot], ada = adaDiServer(s), wj = s.dataset.wajib === '1';
+        var ukuran = f ? f.size : (ada ? (parseInt(s.dataset.adaUkuran, 10) || 0) : 0);
+        var ada_ = !!(f || ada);
+        if (ada_) { n++; total += ukuran; }
+        var nomorEl = $('.sr-nomor input', s), nomorOk = !nomorEl || nomorEl.value.trim() !== '';
+        if (ada_ && !nomorOk) tanpaNomor++;
+        if (wj) { wajib++; if (ada_ && nomorOk) wajibOk++; }
+        var li = $('#srList li[data-slot="' + s.dataset.slot + '"]');
+        if (li) {
+          li.classList.toggle('ok', ada_ && nomorOk);
+          var ket = $('[data-ket]', li);
+          if (ket) ket.textContent = ada_ ? (nomorOk ? '' : 'Nomor surat belum diisi') : 'Belum diunggah Â· ' + (wj ? 'Wajib' : 'Opsional');
+        }
+      });
+
+      var lengkap = wajibOk === wajib && tanpaNomor === 0;
+      $('#srCount').textContent = n + ' surat Â· Total ' + (total ? fmt(total) : '0 KB');
+      $('#srBar').style.width = (wajib ? Math.round(wajibOk / wajib * 100) : 100) + '%';
+      $('#srBarLabel').textContent = wajibOk === wajib ? 'Surat wajib lengkap' : 'Surat wajib belum lengkap (' + wajibOk + '/' + wajib + ')';
+      $('#srSiap').classList.toggle('is-belum', !lengkap);
+      $('#srSiapChip').textContent = lengkap ? 'Siap dikirim' : 'Belum lengkap';
+      $('#srSiapTeks').textContent = lengkap ? 'Surat sudah siap dikirim' : (wajibOk < wajib ? 'Lengkapi ' + (wajib - wajibOk) + ' surat wajib (berkas dan nomor surat)' : 'Isi nomor surat pada setiap berkas');
+      $('#srFooterJudul').textContent = lengkap ? 'Siap mengirim ' + n + ' surat ke User INTRAM' : 'Lengkapi surat wajib untuk mengirim';
+      $('#btnKirim').disabled = !lengkap;
+    };
+
+    slots.forEach(function (slot) {
+      var kode = slot.dataset.slot, input = $('input[type=file]', slot), drop = $('.sr-drop', slot);
+
+      var terima = function (file) {
+        if (!file) return;
+        if (!/\.pdf$/i.test(file.name) || (file.type && file.type !== 'application/pdf')) {
+          window.alert('Berkas harus berformat PDF.'); input.value = ''; return;
+        }
+        if (file.size > MAKS_BYTE) {
+          window.alert('Ukuran berkas maksimal ' + (MAKS_BYTE / 1048576) + ' MB.'); input.value = ''; return;
+        }
+        baru[kode] = file;
+        perbaruiSlot(slot); hitung();
+      };
+
+      $$('[data-pilih],[data-ganti]', slot).forEach(function (b) { b.addEventListener('click', function () { input.click(); }); });
+      input.addEventListener('change', function () {
+        if (input.files && input.files[0]) { terima(input.files[0]); }
+        else { delete baru[kode]; perbaruiSlot(slot); hitung(); }
+      });
+      $$('[data-batal]', slot).forEach(function (b) {
+        b.addEventListener('click', function () { input.value = ''; delete baru[kode]; perbaruiSlot(slot); hitung(); });
+      });
+
+      // Tarik dan lepas berkas
+      ['dragenter', 'dragover'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-over'); });
+      });
+      drop.addEventListener('dragleave', function () { drop.classList.remove('is-over'); });
+      drop.addEventListener('drop', function (e) {
+        e.preventDefault(); drop.classList.remove('is-over');
+        var f = e.dataTransfer && e.dataTransfer.files[0];
+        if (!f) return;
+        try { var dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; }
+        catch (err) { window.alert('Browser Anda belum mendukung tarik-dan-lepas. Gunakan tombol Pilih berkas.'); return; }
+        terima(f);
+      });
+    });
+
+    var ta = $('#srCatatan'), ctr = $('#srCounter');
+    if (ta && ctr) {
+      var hitungKarakter = function () { ctr.textContent = ta.value.length.toLocaleString('id-ID') + ' / 1.000 karakter'; };
+      ta.addEventListener('input', hitungKarakter);
+      hitungKarakter();
+    }
+
+    fs.addEventListener('submit', function (e) {
+      var v = e.submitter ? e.submitter.value : '';
+      if (v === 'kirim') konfirmasiSubmit(e, fs, { judul: 'Kirim surat ke User INTRAM?', pesan: 'Surat yang sudah dikirim tidak dapat diubah lagi.', ok: 'Ya, kirim', nada: 'primary' });
+    });
+
+    $$('.sr-nomor input', fs).forEach(function (el) { el.addEventListener('input', hitung); });
+    slots.forEach(perbaruiSlot);
+    hitung();
+  }
+
+  /* ---------- Upload surat ---------- */
+  var MAX = 5 * 1024 * 1024;
+  $$('.btn-upload, .upload-name').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var f = document.getElementById(el.dataset.target || el.dataset.for);
+      if (f) f.click();
+    });
+  });
+  $$('input[type=file][data-upload]').forEach(function (f) {
+    f.addEventListener('change', function () {
+      var label = $('.upload-name[data-for="' + f.id + '"]');
+      var file = f.files[0];
+      var maksMb = parseInt(f.dataset.maksMb, 10) || 5;
+      if (file && f.hasAttribute('data-pdf') && !/\.pdf$/i.test(file.name)) {
+        alert('Berkas harus berformat PDF.');
+        f.value = '';
+        label.value = '';
+        return;
+      }
+      if (file && file.size > maksMb * 1024 * 1024) {
+        alert('Ukuran file maksimal ' + maksMb + ' MB.');
+        f.value = '';
+        label.value = '';
+        return;
+      }
+      label.value = file ? file.name : '';
+    });
+  });
+
+  /* ---------- Ubah kata sandi: tampilkan sandi & cek konfirmasi ---------- */
+  (function () {
+    var tampil = $('#tampilSandi'), baru = $('#password'), konfirm = $('#password_confirmation'), pesan = $('#sandiBeda');
+    if (!tampil || !baru || !konfirm) return;
+    var kolom = [$('#password_lama'), baru, konfirm];
+    tampil.addEventListener('change', function () {
+      kolom.forEach(function (k) { if (k) k.type = tampil.checked ? 'text' : 'password'; });
+    });
+    var cek = function () {
+      var beda = konfirm.value !== '' && baru.value !== konfirm.value;
+      konfirm.setCustomValidity(beda ? 'Konfirmasi kata sandi baru tidak sama.' : '');
+      if (pesan) pesan.hidden = !beda;
+    };
+    baru.addEventListener('input', cek);
+    konfirm.addEventListener('input', cek);
+  })();
+
+  /* ---------- Notifikasi (lonceng) ---------- */
+  (function () {
+    var btn = $('#notifBtn'), panel = $('#notifPanel');
+    if (!btn || !panel) return;
+    function tutup() { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var buka = panel.hidden;
+      panel.hidden = !buka;
+      btn.setAttribute('aria-expanded', buka ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) { if (!panel.contains(e.target)) tutup(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') tutup(); });
+  })();
+
+  /* ---------- Konfirmasi lewat tombol submit (data-konfirmasi) ---------- */
+  $$('form').forEach(function (f) {
+    f.addEventListener('submit', function (e) {
+      var pesan = e.submitter && e.submitter.dataset ? e.submitter.dataset.konfirmasi : '';
+      if (pesan) konfirmasiSubmit(e, f, { judul: 'Konfirmasi', pesan: pesan, ok: 'Ya, lanjutkan', nada: 'warning' });
+    });
+  });
+
+  /* ---------- Filter otomatis & konfirmasi hapus ---------- */
+  $$('[data-autosubmit]').forEach(function (el) {
+    el.addEventListener('change', function () { el.form.submit(); });
+  });
+  $$('form[data-confirm]').forEach(function (f) {
+    f.addEventListener('submit', function (e) {
+      konfirmasiSubmit(e, f, { judul: 'Hapus data?', pesan: f.dataset.confirm, ok: 'Ya, hapus', nada: 'danger' });
+    });
+  });
+
+  /* ---------- Cegah submit ganda ---------- */
+  var form = $('#formInput');
+  if (form) {
+    var btn = $('button[type=submit]', form);
+    form.addEventListener('submit', function () {
+      if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+    });
+    window.addEventListener('pageshow', function () {
+      if (btn) { btn.disabled = false; btn.textContent = 'Tambah Data'; }
+      batasiModa();
+    });
+  }
+})();
+
+
+===== DAFTAR MIGRASI =====
+2014_10_12_100000_create_password_reset_tokens_table.php
+2019_08_19_000000_create_failed_jobs_table.php
+2019_12_14_000001_create_personal_access_tokens_table.php
+2026_10_14_000001_create_role_table.php
+2026_10_14_000002_create_moda_table.php
+2026_10_14_000003_create_wilayah_table.php
+2026_10_14_000004_create_provinsi_table.php
+2026_10_14_000005_create_kab_kota_table.php
+2026_10_14_000006_create_users_table.php
+2026_10_14_000007_create_data_pemda_table.php
+2026_10_14_000008_create_rute_subsidi_table.php
+2026_10_14_000009_create_verifikasi_pengajuan_table.php
+2026_10_14_000010_create_dokumen_pengajuan_table.php
+2026_10_15_000001_adjust_tables_for_input_form.php
+2026_10_15_000002_add_remember_token_to_users.php
+2026_10_16_000001_add_instansi_and_verifikasi_to_users.php
+2026_10_17_000001_create_hak_akses_and_user_cakupan.php
+2026_10_20_000001_create_surat_chr_tables.php
+2026_10_21_000001_add_laporan_to_pengajuan_surat.php
+2026_10_22_000001_create_approval_intram_tables.php
+2026_11_05_000001_rename_rancangan_to_rekomendasi_teknis.php
+2026_11_06_000001_add_nomor_surat_to_dokumen_tables.php
+2026_11_17_031538_add_id_kab_kota_to_users_table.php
+2026_11_18_075959_create_master_sektor_komoditas_dan_rute_tujuan.php
+2026_11_18_082800_create_rute_subsidi_potensi.php
+2026_11_18_082859_backfill_rute_subsidi_potensi.php
+2026_11_19_090000_tambah_berat_rute_subsidi_potensi.php

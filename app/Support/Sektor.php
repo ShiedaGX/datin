@@ -1,49 +1,80 @@
 <?php
+
 namespace App\Support;
 
-/**
- * Daftar sektor potensi. Sumbernya config/sektor.php, dengan dua format yang sama-sama didukung:
- *   'Perikanan & Kelautan' => ['perikanan', 'kelautan', 'udang', ...]   (nama => kata kunci, deteksi paling akurat)
- *   'Perikanan & Kelautan'                                              (nama saja; kata kunci diambil dari namanya)
- */
+use App\Models\MasterSektor;
+use Illuminate\Support\Facades\Cache;
+
 class Sektor
 {
-    /** @return array<string, array<int,string>> nama sektor => kata kunci (huruf kecil) */
+    public const CACHE_KEY = 'master_sektor.peta';
+    public const CACHE_KEY_KOMODITAS = 'master_sektor.komoditas';
+
+    /** @return array<string, string[]> 'Nama Sektor' => [kata kunci...] */
     public static function peta(): array
     {
-        $peta = [];
-        foreach ((array) config('sektor', []) as $kunci => $nilai) {
-            if (is_array($nilai)) {
-                $peta[(string) $kunci] = array_values(array_filter(array_map(fn ($k) => mb_strtolower(trim((string) $k)), $nilai), fn ($k) => $k !== ''));
-            } else {
-                $nama = trim((string) $nilai);
-                if ($nama !== '') {
-                    $peta[$nama] = self::kataDariNama($nama);
-                }
-            }
-        }
+        return Cache::rememberForever(self::CACHE_KEY, function () {
+            return MasterSektor::with('komoditas:id_komoditas,id_sektor,nama_komoditas')
+                ->orderBy('urutan')->get()
+                ->mapWithKeys(function ($s) {
+                    // kata dari nama sektor ("Perikanan & Kelautan" => perikanan, kelautan) + semua komoditas
+                    $dariNama = preg_split('/\s*[&,]\s*/', mb_strtolower($s->nama_sektor));
+                    $kunci = collect($dariNama)
+                        ->merge($s->komoditas->pluck('nama_komoditas')->map(fn ($k) => mb_strtolower($k)))
+                        ->filter()->unique()->values()->all();
 
-        return $peta;
+                    return [$s->nama_sektor => $kunci];
+                })->all();
+        });
     }
 
-    /** @return array<int,string> */
+    /**
+     * Daftar komoditas beserta sektornya (untuk kolom Komoditas -> Sektor pada form).
+     *
+     * @return array<int, array{nama: string, sektor: string[]}>
+     */
+    public static function komoditas(): array
+    {
+        return Cache::rememberForever(self::CACHE_KEY_KOMODITAS, function () {
+            return MasterSektor::with('komoditas:id_komoditas,id_sektor,nama_komoditas')
+                ->orderBy('urutan')->get()
+                ->flatMap(fn ($s) => $s->komoditas->map(fn ($k) => [
+                    'nama'   => $k->nama_komoditas,
+                    'sektor' => $s->nama_sektor,
+                ]))
+                ->groupBy(fn ($r) => mb_strtolower($r['nama']))
+                ->map(fn ($g) => [
+                    'nama'   => $g->first()['nama'],
+                    'sektor' => $g->pluck('sektor')->unique()->values()->all(),
+                ])
+                ->sortBy('nama', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values()->all();
+        });
+    }
+
+    /** @return string[] daftar nama sektor, sesuai urutan master */
     public static function daftar(): array
     {
         return array_keys(self::peta());
     }
 
-    /** Sektor yang terdeteksi dari teks potensi (tanpa membedakan huruf besar/kecil). */
+    /**
+     * Nama sektor yang terdeteksi dari teks potensi: dihitung bila minimal satu
+     * kata kunci ditemukan (tanpa membedakan huruf besar/kecil).
+     *
+     * @return string[]
+     */
     public static function deteksi(string $teks): array
     {
-        $t = mb_strtolower($teks);
-        if (trim($t) === '') {
+        $teks = mb_strtolower($teks);
+        if (trim($teks) === '') {
             return [];
         }
 
         $hasil = [];
         foreach (self::peta() as $nama => $kunci) {
             foreach ($kunci as $k) {
-                if (str_contains($t, $k)) {
+                if ($k !== '' && str_contains($teks, $k)) {
                     $hasil[] = $nama;
                     break;
                 }
@@ -53,11 +84,9 @@ class Sektor
         return $hasil;
     }
 
-    /** "Industri, Tambang & Energi" -> ["industri", "tambang", "energi"] */
-    private static function kataDariNama(string $nama): array
+    public static function lupakan(): void
     {
-        $bagian = preg_split('/\s*(?:&|,|\bdan\b)\s*/iu', mb_strtolower($nama)) ?: [];
-
-        return array_values(array_filter(array_map('trim', $bagian), fn ($x) => $x !== ''));
+        Cache::forget(self::CACHE_KEY);
+        Cache::forget(self::CACHE_KEY_KOMODITAS);
     }
 }

@@ -7,9 +7,9 @@ use App\Support\SuratOptions;
 use App\Support\Tanggal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class RuteSubsidi extends Model
 {
@@ -25,6 +25,16 @@ class RuteSubsidi extends Model
     public function moda(): BelongsTo { return $this->belongsTo(Moda::class, 'id_moda', 'id_moda'); }
     public function kabKotaAsal(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota_asal', 'id_kab_kota'); }
     public function kabKotaTujuan(): BelongsTo { return $this->belongsTo(KabKota::class, 'id_kab_kota_tujuan', 'id_kab_kota'); }
+
+    /** Tujuan (banyak) beserta muatan per tujuan: $k->pivot->komoditas dan $k->pivot->berat (ton). */
+    public function tujuan(): BelongsToMany
+    {
+        return $this->belongsToMany(KabKota::class, 'rute_subsidi_tujuan', 'id_rute_subsidi', 'id_kab_kota_tujuan')
+            ->withPivot('komoditas', 'berat')
+            ->withTimestamps()
+            ->orderBy('nama_kab_kota');
+    }
+
     public function verifikasi(): HasMany { return $this->hasMany(VerifikasiPengajuan::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
     public function pengajuanSurat(): HasMany { return $this->hasMany(PengajuanSurat::class, 'id_rute_subsidi', 'id_rute_subsidi'); }
     public function rekomendasi(): HasManyThrough

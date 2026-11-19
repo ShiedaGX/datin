@@ -43,6 +43,8 @@ class InputDataController extends Controller
             'akunBelumTerhubung' => $akunBelumTerhubung,
             // saran sektor pada kolom Potensi Unggulan Daerah (nama + kata kunci untuk pencarian)
             'sektor'      => collect(\App\Support\Sektor::peta())->map(fn ($kunci, $nama) => ['nama' => $nama, 'kunci' => $kunci])->values(),
+            // daftar komoditas + sektornya, untuk kolom Sektor di samping Komoditas
+            'komoditasSektor' => \App\Support\Sektor::komoditas(),
             'provinsi'    => Provinsi::orderBy('nama_provinsi')->get(),
             'wilayah'     => Wilayah::orderBy('nama_wilayah')->get(),
             'moda'        => Moda::orderBy('id_moda')->get(),
@@ -60,7 +62,7 @@ class InputDataController extends Controller
                 'sudahNama'   => collect($k->modaDiajukan($user))->map(fn ($id) => $namaModa[$id] ?? '')->filter()->values()->all(),
                 'revisiNama'  => Moda::whereIn('id_moda', $k->modaRevisiTerbuka($user))->orderBy('id_moda')->pluck('nama_moda')->all(),
             ])->values(),
-            // saran otomatis untuk kolom Kebutuhan Konektivitas
+            // saran otomatis untuk pemilih Rute Tujuan (id, nama, provinsi)
             'saran'       => $semua->map(fn ($k) => [
                 'id'       => $k->id_kab_kota,
                 'nama'     => $k->nama_kab_kota,
@@ -98,14 +100,20 @@ class InputDataController extends Controller
         $kunciKeterangan = collect(FormOptions::KETERANGAN)->mapWithKeys(fn ($v, $k) => [mb_strtolower($v['label']) => $k]);
 
         return [[
-            'id_wilayah'             => Provinsi::where('id_provinsi', $kab->id_provinsi)->value('id_wilayah'),
-            'id_provinsi'            => $kab->id_provinsi,
-            'id_kab_kota'            => $kab->id_kab_kota,
-            'klasifikasi_pemda'      => $sumber->klasifikasi_pemda,
-            'keterangan'             => collect($sumber->keterangan_daftar)->map(fn ($l) => $kunciKeterangan[mb_strtolower($l)] ?? null)->filter()->values()->all(),
-            'potensi'                => array_slice($sumber->potensi_daftar, 0, 5),
-            'kebutuhan_konektivitas' => $sumber->kebutuhan_konektivitas,
-            'id_moda'                => count($modaDiminta) === 1 ? $modaDiminta[0] : null,
+            'id_wilayah'        => Provinsi::where('id_provinsi', $kab->id_provinsi)->value('id_wilayah'),
+            'id_provinsi'       => $kab->id_provinsi,
+            'id_kab_kota'       => $kab->id_kab_kota,
+            'klasifikasi_pemda' => $sumber->klasifikasi_pemda,
+            'keterangan'        => collect($sumber->keterangan_daftar)->map(fn ($l) => $kunciKeterangan[mb_strtolower($l)] ?? null)->filter()->values()->all(),
+            'potensi'           => array_slice($sumber->potensi_daftar, 0, 5),
+            // tujuan lama beserta komoditas dan berat (dari tabel pivot)
+            'tujuan'            => $sumber->tujuan->map(fn ($k) => [
+                'id'        => $k->id_kab_kota,
+                'nama'      => $k->nama_kab_kota,
+                'komoditas' => $k->pivot->komoditas,
+                'berat'     => $k->pivot->berat,
+            ])->values()->all(),
+            'id_moda'           => count($modaDiminta) === 1 ? $modaDiminta[0] : null,
         ], $sumber];
     }
 
@@ -138,13 +146,21 @@ class InputDataController extends Controller
             ->map(fn ($key) => FormOptions::KETERANGAN[$key]['nilai'])
             ->implode(', ');
 
-        // "Merauke, Jayapura, " -> "Merauke, Jayapura"
-        $konektivitas = trim((string) ($data['kebutuhan_konektivitas'] ?? ''), " \t\r\n,");
+        // Tujuan dipilih dari tabel kab_kota (berdasarkan id), masing-masing dengan komoditas dan berat
+        $tujuan = collect($data['tujuan'])
+            ->map(fn ($t) => [
+                'id'        => (int) $t['id'],
+                'komoditas' => trim((string) $t['komoditas']),
+                'berat'     => $t['berat'],
+            ])
+            ->unique('id')->values();
+        $namaTujuan = KabKota::whereIn('id_kab_kota', $tujuan->pluck('id'))->orderBy('nama_kab_kota')->pluck('nama_kab_kota');
+        $konektivitas = $namaTujuan->implode(', ');   // salinan teks nama tujuan untuk halaman lama
 
         $tersimpan = []; // path file, untuk dibersihkan jika transaksi gagal
 
         try {
-            DB::transaction(function () use ($request, $data, $user, $kab, $potensi, $keterangan, $konektivitas, &$tersimpan) {
+            DB::transaction(function () use ($request, $data, $user, $kab, $potensi, $keterangan, $konektivitas, $tujuan, &$tersimpan) {
                 // Daerah dipilih dari data yang sudah ada: isi/ambil alih data_pemda miliknya.
                 $pemda = DataPemda::where('id_kab_kota', $kab->id_kab_kota)->lockForUpdate()->first()
                     ?? new DataPemda(['id_kab_kota' => $kab->id_kab_kota]);
@@ -171,15 +187,20 @@ class InputDataController extends Controller
                 // data_pemda menyimpan isian terbaru daerah; setiap pengajuan juga menyimpan salinannya sendiri
                 $pemda->fill(['id_user' => $user->id_user] + $isian)->save();
 
-                // Satu pengajuan = satu rute_subsidi (satu moda). Kota tujuan tertulis pada kebutuhan_konektivitas.
+                // Satu pengajuan = satu rute_subsidi (satu moda). Tujuan + komoditas + berat disimpan lewat relasi tujuan().
                 $rute = RuteSubsidi::create([
-                    'id_pemda'           => $pemda->id_pemda,
-                    'id_moda'            => $data['id_moda'],
-                    'id_kab_kota_asal'   => $kab->id_kab_kota,
-                    'id_kab_kota_tujuan' => null,
-                    'status_pengajuan'   => FormOptions::STATUS_AWAL,
-                    'tanggal_pengajuan'  => now()->toDateString(),
+                    'id_pemda'          => $pemda->id_pemda,
+                    'id_moda'           => $data['id_moda'],
+                    'id_kab_kota_asal'  => $kab->id_kab_kota,
+                    'status_pengajuan'  => FormOptions::STATUS_AWAL,
+                    'tanggal_pengajuan' => now()->toDateString(),
                 ] + $isian);
+
+                $rute->tujuan()->sync(
+                    $tujuan->mapWithKeys(fn ($t) => [
+                        $t['id'] => ['komoditas' => $t['komoditas'], 'berat' => $t['berat']],
+                    ])->all()
+                );
 
                 if ($permintaan) {
                     $permintaan->update(['status' => PermintaanRevisi::DIPENUHI, 'id_rute_baru' => $rute->id_rute_subsidi]);

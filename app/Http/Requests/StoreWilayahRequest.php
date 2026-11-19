@@ -31,7 +31,12 @@ class StoreWilayahRequest extends FormRequest
                 }
             }],
             'id_moda'                => ['required', 'integer', 'exists:moda,id_moda'],
-            'kebutuhan_konektivitas' => ['nullable', 'string', 'max:2000'],
+
+            // Rute tujuan: tiap tujuan membawa komoditas dan berat (ton)
+            'tujuan'                 => ['required', 'array', 'min:1', 'max:20'],
+            'tujuan.*.id'            => ['required', 'integer', 'distinct', 'exists:kab_kota,id_kab_kota', 'different:id_kab_kota'],
+            'tujuan.*.komoditas'     => ['required', 'string', 'max:150'],
+            'tujuan.*.berat'         => ['required', 'numeric', 'gt:0', 'max:9999999999'],
         ];
 
         foreach (array_keys(FormOptions::DOKUMEN) as $field) {
@@ -84,7 +89,10 @@ class StoreWilayahRequest extends FormRequest
             'id_kab_kota'            => 'Kabupaten/Kota',
             'klasifikasi_pemda'      => 'Klasifikasi wilayah',
             'id_moda'                => 'Moda transportasi',
-            'kebutuhan_konektivitas' => 'Kebutuhan konektivitas',
+            'tujuan'                 => 'Rute tujuan',
+            'tujuan.*.id'            => 'Rute tujuan',
+            'tujuan.*.komoditas'     => 'Komoditas',
+            'tujuan.*.berat'         => 'Berat',
             'potensi.*'              => 'Potensi unggulan',
             'surat_permohonan'       => 'Surat permohonan',
             'surat_pernyataan'       => 'Surat pernyataan',
@@ -95,15 +103,25 @@ class StoreWilayahRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required'            => ':attribute wajib diisi.',
-            'id_kab_kota.required' => 'Kabupaten/Kota wajib dipilih.',
-            'exists'              => ':attribute tidak valid.',
-            'in'                  => ':attribute tidak valid.',
-            'max.string'          => ':attribute maksimal :max karakter.',
-            'max.file'            => ':attribute maksimal 5 MB.',
-            'mimes'               => ':attribute harus berformat PDF, DOC, atau DOCX.',
-            'uploaded'            => ':attribute gagal diunggah. Periksa batas ukuran upload pada server (upload_max_filesize).',
-            'potensi.*.not_regex' => 'Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).',
+            'required'               => ':attribute wajib diisi.',
+            'id_kab_kota.required'   => 'Kabupaten/Kota wajib dipilih.',
+            'exists'                 => ':attribute tidak valid.',
+            'in'                     => ':attribute tidak valid.',
+            'max.string'             => ':attribute maksimal :max karakter.',
+            'max.file'               => ':attribute maksimal 5 MB.',
+            'mimes'                  => ':attribute harus berformat PDF, DOC, atau DOCX.',
+            'uploaded'               => ':attribute gagal diunggah. Periksa batas ukuran upload pada server (upload_max_filesize).',
+            'potensi.*.not_regex'    => 'Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).',
+
+            'tujuan.required'        => 'Pilih minimal satu rute tujuan.',
+            'tujuan.min'             => 'Pilih minimal satu rute tujuan.',
+            'tujuan.max'             => 'Rute tujuan maksimal :max kabupaten/kota.',
+            'tujuan.*.id.distinct'   => 'Rute tujuan tidak boleh dipilih lebih dari sekali.',
+            'tujuan.*.id.different'  => 'Rute tujuan tidak boleh sama dengan Kabupaten/Kota asal.',
+            'tujuan.*.komoditas.required' => 'Komoditas wajib diisi untuk setiap rute tujuan.',
+            'tujuan.*.berat.required' => 'Berat wajib diisi untuk setiap rute tujuan.',
+            'tujuan.*.berat.numeric' => 'Berat harus berupa angka.',
+            'tujuan.*.berat.gt'      => 'Berat harus lebih dari 0.',
         ];
     }
 }

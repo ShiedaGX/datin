@@ -178,18 +178,57 @@
             @error('id_moda')<p class="error">{{ $message }}</p>@enderror
         </fieldset>
 
+        {{-- Rute tujuan: tiap tujuan punya komoditas, sektor (otomatis), dan berat (ton) --}}
         <div class="field field-wide">
-            <label for="kebutuhan_konektivitas">Kebutuhan Konektivitas Regional (Hubungan Logistik) / Rute Tujuan</label>
+            <label for="tujuanCari">Kebutuhan Konektivitas Regional (Hubungan Logistik) / Rute Tujuan</label>
+
+            @php
+                $oldTujuan = collect(old('tujuan', []));
+                $namaOld   = $oldTujuan->isNotEmpty()
+                    ? \App\Models\KabKota::whereIn('id_kab_kota', $oldTujuan->pluck('id')->filter())->pluck('nama_kab_kota', 'id_kab_kota')
+                    : collect();
+                $tujuanAwal = $oldTujuan->isNotEmpty()
+                    ? $oldTujuan->map(fn ($t) => [
+                        'id'        => (int) ($t['id'] ?? 0),
+                        'nama'      => $namaOld[$t['id'] ?? 0] ?? '',
+                        'komoditas' => $t['komoditas'] ?? '',
+                        'berat'     => $t['berat'] ?? '',
+                    ])->values()->all()
+                    : ($isian['tujuan'] ?? []);
+                $galatTujuan = collect($errors->get('tujuan.*'))->flatten()->unique();
+            @endphp
+
             <div class="ac">
-                <textarea id="kebutuhan_konektivitas" name="kebutuhan_konektivitas" rows="4" maxlength="2000"
-                          placeholder="masukkan kebutuhan konektivitas daerah" autocomplete="off"
-                          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acList"
-                          class="@error('kebutuhan_konektivitas') is-invalid @enderror">{{ old('kebutuhan_konektivitas', $isian['kebutuhan_konektivitas'] ?? '') }}</textarea>
-                <ul class="ac-list" id="acList" role="listbox" hidden></ul>
+                <input type="text" id="tujuanCari" placeholder="Ketik nama kabupaten/kota tujuan, lalu klik hasilnya" autocomplete="off"
+                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tujuanList">
+                <ul class="ac-list" id="tujuanList" role="listbox" hidden></ul>
             </div>
-            <p class="hint">Ketik nama kabupaten/kota, lalu klik saran yang muncul. Bisa memilih lebih dari satu; pisahkan dengan koma.</p>
-            @error('kebutuhan_konektivitas')<p class="error">{{ $message }}</p>@enderror
+
+            {{-- Judul kolom --}}
+            <div class="tujuan-head" aria-hidden="true">
+                <span>Kabupaten/Kota Tujuan</span>
+                <span>Komoditas</span>
+                <span>Sektor</span>
+                <span>Berat (ton)</span>
+                <span></span>
+            </div>
+            <div class="tujuan-rows" id="tujuanRows"></div>
+            <p class="tujuan-kosong" id="tujuanKosong">Belum ada tujuan. Cari dan pilih kabupaten/kota di atas, lalu kolom komoditas, sektor, dan berat akan muncul di sini.</p>
+
+            {{-- Saran komoditas dari master_komoditas --}}
+            <datalist id="komoditasList">
+                @foreach ($komoditasSektor as $km)
+                    <option value="{{ $km['nama'] }}"></option>
+                @endforeach
+            </datalist>
+
+            <p class="hint">Satu asal bisa memiliki lebih dari satu tujuan. Pilih komoditas dari saran agar sektornya terisi otomatis, lalu isi berat (ton).</p>
+            @error('tujuan')<p class="error">{{ $message }}</p>@enderror
+            @foreach ($galatTujuan as $pesan)<p class="error">{{ $pesan }}</p>@endforeach
+
             <script type="application/json" id="data-kabkota">@json($saran)</script>
+            <script type="application/json" id="data-tujuan-awal">@json($tujuanAwal)</script>
+            <script type="application/json" id="data-komoditas">@json($komoditasSektor)</script>
         </div>
     </section>
 
@@ -237,5 +276,132 @@
         color: #475569;
         cursor: default;
     }
+
+    /* Rute tujuan: satu baris per tujuan (tujuan, komoditas, sektor, berat, hapus) */
+    .tujuan-head, .tujuan-row { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,.7fr) 2rem; gap:.5rem; align-items:center; }
+    .tujuan-head { margin-top:.8rem; padding:0 .7rem; font-size:.8rem; font-weight:600; color:#475569; }
+    .tujuan-rows { display:flex; flex-direction:column; gap:.5rem; margin-top:.4rem; }
+    .tujuan-row { background:#f0f9ff; border-radius:.6rem; padding:.5rem .7rem; }
+    .tujuan-row .nama { font-weight:600; font-size:.9rem; }
+    .tujuan-row input { width:100%; }
+    .tujuan-row .sektor { font-size:.82rem; color:#0369a1; }
+    .tujuan-row .sektor.is-kosong { color:#94a3b8; font-style:italic; }
+    .tujuan-row .hapus { border:0; background:none; cursor:pointer; font-size:1.2rem; line-height:1; }
+    .tujuan-kosong { margin:.4rem 0 0; padding:.8rem; border:1px dashed #cbd5e1; border-radius:.6rem; color:#64748b; font-size:.85rem; }
+    @media (max-width:640px) {
+        .tujuan-head { display:none; }
+        .tujuan-row { grid-template-columns:1fr 1fr; }
+        .tujuan-row .nama, .tujuan-row .sektor { grid-column:1 / -1; }
+    }
 </style>
+
+<script>
+(() => {
+    const kab = JSON.parse(document.getElementById('data-kabkota').textContent);
+    const awal = JSON.parse(document.getElementById('data-tujuan-awal').textContent || '[]');
+    const komoditas = JSON.parse(document.getElementById('data-komoditas').textContent || '[]');
+    const cari = document.getElementById('tujuanCari');
+    const list = document.getElementById('tujuanList');
+    const rows = document.getElementById('tujuanRows');
+    const asal = () => document.getElementById('id_kab_kota');
+    // id => {nama, komoditas, berat}
+    const dipilih = new Map(awal.map(t => [Number(t.id), {nama: t.nama, komoditas: t.komoditas ?? '', berat: t.berat ?? ''}]));
+
+    // Sektor dari teks komoditas: cocok persis dulu, lalu cocok sebagian
+    function cariSektor(teks) {
+        const t = (teks || '').trim().toLowerCase();
+        if (t.length < 2) return null;                       // belum diketik
+        const persis = komoditas.find(k => k.nama.toLowerCase() === t);
+        if (persis) return persis.sektor;
+        if (t.length < 3) return [];
+        const hasil = new Set();
+        komoditas.forEach(k => {
+            const n = k.nama.toLowerCase();
+            if (t.includes(n) || n.includes(t)) k.sektor.forEach(s => hasil.add(s));
+        });
+        return [...hasil];
+    }
+
+    function tampilSektor(el, teks) {
+        const s = cariSektor(teks);
+        el.classList.remove('is-kosong');
+        if (s === null) { el.textContent = '-'; el.classList.add('is-kosong'); }
+        else if (s.length === 0) { el.textContent = 'Tidak dikenali'; el.classList.add('is-kosong'); }
+        else { el.textContent = s.join(', '); }
+    }
+
+    function render() {
+        rows.innerHTML = '';
+        document.getElementById('tujuanKosong').hidden = dipilih.size > 0;
+        document.querySelector('.tujuan-head').hidden = dipilih.size === 0;
+        let i = 0;
+        dipilih.forEach((d, id) => {
+            const n = i++;
+            const row = document.createElement('div');
+            row.className = 'tujuan-row';
+
+            const nama = document.createElement('span');
+            nama.className = 'nama'; nama.textContent = d.nama;
+
+            const hid = document.createElement('input');
+            hid.type = 'hidden'; hid.name = `tujuan[${n}][id]`; hid.value = id;
+
+            const sek = document.createElement('span');
+            sek.className = 'sektor';
+            tampilSektor(sek, d.komoditas);
+
+            const kom = document.createElement('input');
+            kom.type = 'text'; kom.name = `tujuan[${n}][komoditas]`; kom.value = d.komoditas;
+            kom.maxLength = 150; kom.required = true; kom.placeholder = 'Contoh: Udang';
+            kom.setAttribute('list', 'komoditasList'); kom.autocomplete = 'off';
+            kom.setAttribute('aria-label', 'Komoditas ke ' + d.nama);
+            kom.addEventListener('input', () => { d.komoditas = kom.value; tampilSektor(sek, kom.value); });
+
+            const brt = document.createElement('input');
+            brt.type = 'number'; brt.name = `tujuan[${n}][berat]`; brt.value = d.berat;
+            brt.min = '0.01'; brt.step = '0.01'; brt.required = true; brt.placeholder = 'Contoh: 12.5';
+            brt.setAttribute('aria-label', 'Berat ke ' + d.nama + ' dalam ton');
+            brt.addEventListener('input', () => { d.berat = brt.value; });
+
+            const x = document.createElement('button');
+            x.type = 'button'; x.className = 'hapus'; x.textContent = '×';
+            x.setAttribute('aria-label', 'Hapus ' + d.nama);
+            x.onclick = () => { dipilih.delete(id); render(); };
+
+            // urutan kolom: tujuan | komoditas | sektor | berat | hapus
+            row.append(nama, kom, sek, brt, x, hid);
+            rows.appendChild(row);
+        });
+    }
+
+    function tampilkan() {
+        const q = cari.value.trim().toLowerCase();
+        const idAsal = Number(asal()?.value || 0);
+        const hasil = kab.filter(k => k.id !== idAsal && !dipilih.has(k.id) &&
+            (!q || (k.nama + ' ' + k.provinsi).toLowerCase().includes(q))).slice(0, 12);
+
+        list.innerHTML = '';
+        hasil.forEach(k => {
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.textContent = k.nama + ' — ' + k.provinsi;
+            li.onmousedown = e => {
+                e.preventDefault();
+                dipilih.set(k.id, {nama: k.nama, komoditas: '', berat: ''});
+                cari.value = ''; render(); tampilkan();
+            };
+            list.appendChild(li);
+        });
+        list.hidden = hasil.length === 0;
+        cari.setAttribute('aria-expanded', String(!list.hidden));
+    }
+
+    cari.addEventListener('input', tampilkan);
+    cari.addEventListener('focus', tampilkan);
+    cari.addEventListener('blur', () => { list.hidden = true; });
+    // kab/kota asal berubah: buang tujuan yang sama dengan asal
+    asal()?.addEventListener('change', () => { dipilih.delete(Number(asal().value)); render(); });
+    render();
+})();
+</script>
 @endsection
