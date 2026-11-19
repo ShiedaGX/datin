@@ -17,7 +17,6 @@ class Sektor
             return MasterSektor::with('komoditas:id_komoditas,id_sektor,nama_komoditas')
                 ->orderBy('urutan')->get()
                 ->mapWithKeys(function ($s) {
-                    // kata dari nama sektor ("Perikanan & Kelautan" => perikanan, kelautan) + semua komoditas
                     $dariNama = preg_split('/\s*[&,]\s*/', mb_strtolower($s->nama_sektor));
                     $kunci = collect($dariNama)
                         ->merge($s->komoditas->pluck('nama_komoditas')->map(fn ($k) => mb_strtolower($k)))
@@ -28,11 +27,7 @@ class Sektor
         });
     }
 
-    /**
-     * Daftar komoditas beserta sektornya (untuk kolom Komoditas -> Sektor pada form).
-     *
-     * @return array<int, array{nama: string, sektor: string[]}>
-     */
+    /** @return array<int, array{nama: string, sektor: string[]}> */
     public static function komoditas(): array
     {
         return Cache::rememberForever(self::CACHE_KEY_KOMODITAS, function () {
@@ -52,18 +47,45 @@ class Sektor
         });
     }
 
-    /** @return string[] daftar nama sektor, sesuai urutan master */
+    /**
+     * Sektor dari teks komoditas: cocok persis dulu, lalu cocok sebagian.
+     * @return string[]
+     */
+    public static function dariKomoditas(?string $teks): array
+    {
+        $t = mb_strtolower(trim((string) $teks));
+        if (mb_strlen($t) < 2) {
+            return [];
+        }
+
+        $semua = self::komoditas();
+        foreach ($semua as $k) {
+            if (mb_strtolower($k['nama']) === $t) {
+                return $k['sektor'];
+            }
+        }
+        if (mb_strlen($t) < 3) {
+            return [];
+        }
+
+        $hasil = [];
+        foreach ($semua as $k) {
+            $n = mb_strtolower($k['nama']);
+            if (str_contains($t, $n) || str_contains($n, $t)) {
+                $hasil = array_merge($hasil, $k['sektor']);
+            }
+        }
+
+        return array_values(array_unique($hasil));
+    }
+
+    /** @return string[] */
     public static function daftar(): array
     {
         return array_keys(self::peta());
     }
 
-    /**
-     * Nama sektor yang terdeteksi dari teks potensi: dihitung bila minimal satu
-     * kata kunci ditemukan (tanpa membedakan huruf besar/kecil).
-     *
-     * @return string[]
-     */
+    /** @return string[] */
     public static function deteksi(string $teks): array
     {
         $teks = mb_strtolower($teks);

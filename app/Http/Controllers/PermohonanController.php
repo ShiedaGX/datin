@@ -8,6 +8,7 @@ use App\Models\RuteSubsidi;
 use App\Models\VerifikasiPengajuan;
 use App\Support\Paginasi;
 use App\Support\Permohonan;
+use App\Support\Sektor;
 use App\Support\StatusPengajuan;
 use App\Support\Tanggal;
 use App\Support\XlsxExporter;
@@ -142,7 +143,7 @@ class PermohonanController extends Controller
         )->deleteFileAfterSend(true);
     }
 
-    /** Ekspor satu laporan (data yang diinput Pemda, dokumen, dan riwayat peninjauan) ke Excel. */
+    /** Ekspor satu laporan (data Pemda, rincian tujuan, dokumen, dan riwayat peninjauan) ke Excel. */
     public function exportDetail(Request $request, RuteSubsidi $rute)
     {
         $this->pastikanMilik($request->user(), $rute);
@@ -151,10 +152,11 @@ class PermohonanController extends Controller
             return back()->with('error', 'Ekspor Excel membutuhkan ekstensi PHP "zip". Aktifkan extension=zip di php.ini lalu restart server.');
         }
 
-        $rute->load('pemda.user', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator');
+        $rute->load('pemda.user', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator', 'tujuan');
         $p = $rute->pemda;
         $k = $rute->kabKotaAsal;
         $pengaju = $p->user;
+        $rincian = $this->rincianTujuan($rute);
 
         $baris = [];
         $tebal = [];
@@ -190,8 +192,21 @@ class PermohonanController extends Controller
         $isi('Keterangan daerah', $rute->keterangan_pemda ?: '-');
         $isi('Potensi unggulan daerah', $rute->potensi_pemda ?: '-');
         $isi('Sektor potensi', implode(', ', $rute->sektor_terdeteksi) ?: '-');
-        $isi('Kebutuhan konektivitas / rute tujuan', $rute->kebutuhan_konektivitas ?: '-');
-        $isi('Jumlah tujuan', $rute->jumlah_tujuan ?? '-');
+        $isi('Jumlah tujuan', $rincian['baris'] ? count($rincian['baris']) : ($rute->jumlah_tujuan ?? '-'));
+
+        $bagian('RUTE TUJUAN, KOMODITAS & BERAT');
+        if ($rincian['baris']) {
+            foreach ($rincian['baris'] as $b) {
+                $isi($b['nama'], 'Komoditas: ' . ($b['komoditas'] ?: '-')
+                    . ' | Sektor: ' . ($b['sektor'] ? implode(', ', $b['sektor']) : '-')
+                    . ' | Berat: ' . ($b['berat_teks'] !== null ? $b['berat_teks'] . ' ton' : '-'));
+            }
+            if ($rincian['total_teks'] !== null) {
+                $isi('Total berat', $rincian['total_teks'] . ' ton');
+            }
+        } else {
+            $isi('Kebutuhan konektivitas / rute tujuan', $rute->kebutuhan_konektivitas ?: '-');
+        }
 
         $bagian('DOKUMEN SURAT');
         foreach ($rute->dokumen as $d) {
@@ -220,9 +235,21 @@ class PermohonanController extends Controller
     public function show(Request $request, RuteSubsidi $rute)
     {
         $this->pastikanMilik($request->user(), $rute);
-        $rute->load('pemda.user.role', 'kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'dokumen', 'verifikasi.verifikator', 'rekomendasi');
 
-        $riwayat = $rute->verifikasi->sortBy('id_verifikasi_pengajuan')->values();
+        $rute->load(
+            'pemda.user.role',
+            'kabKotaAsal.provinsi',
+            'kabKotaAsal.wilayah',
+            'moda',
+            'tujuan',
+            'dokumen',
+            'verifikasi.verifikator',
+            'rekomendasi'
+        );
+
+        $riwayat = $rute->verifikasi
+            ->sortBy('id_verifikasi_pengajuan')
+            ->values();
 
         return view('permohonan.review', [
             'rute'      => $rute,
@@ -302,6 +329,45 @@ class PermohonanController extends Controller
     }
 
     // ------------------------------------------------------------------
+
+    /**
+     * Rincian tiap tujuan: nama, komoditas, sektor (dari master_komoditas), dan berat (ton).
+     * Pengajuan lama belum punya komoditas/berat: nilainya null dan tampil sebagai "-".
+     *
+     * @return array{baris: array<int, array>, total: ?float, total_teks: ?string}
+     */
+    private function rincianTujuan(RuteSubsidi $rute): array
+    {
+        $rute->loadMissing('tujuan');
+
+        $baris = $rute->tujuan->map(function ($k) {
+            $komoditas = trim((string) $k->pivot->komoditas);
+            $berat = $k->pivot->berat;
+
+            return [
+                'nama'       => $k->nama_kab_kota,
+                'komoditas'  => $komoditas !== '' ? $komoditas : null,
+                'sektor'     => $komoditas !== '' ? Sektor::dariKomoditas($komoditas) : [],
+                'berat'      => $berat !== null ? (float) $berat : null,
+                'berat_teks' => $berat !== null ? $this->formatBerat($berat) : null,
+            ];
+        })->values()->all();
+
+        $adaBerat = collect($baris)->contains(fn ($b) => $b['berat'] !== null);
+        $total = $adaBerat ? collect($baris)->sum(fn ($b) => $b['berat'] ?? 0) : null;
+
+        return [
+            'baris'      => $baris,
+            'total'      => $total,
+            'total_teks' => $total !== null ? $this->formatBerat($total) : null,
+        ];
+    }
+
+    /** 12.5 -> "12,5"; 1200 -> "1.200"; ",00" di belakang dihilangkan. */
+    private function formatBerat($berat): string
+    {
+        return preg_replace('/,00$/', '', number_format((float) $berat, 2, ',', '.'));
+    }
 
     /** Laporan di luar moda akun dijawab 404 agar keberadaannya tidak terlihat. */
     private function pastikanMilik($user, RuteSubsidi $rute): void
