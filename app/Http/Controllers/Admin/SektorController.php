@@ -15,23 +15,39 @@ use Illuminate\Validation\Rule;
  */
 class SektorController extends Controller
 {
-    public function index()
-    {
-        $sektor = MasterSektor::with(['komoditas' => fn ($q) => $q->orderBy('nama_komoditas')])
-            ->orderBy('urutan')->orderBy('id_sektor')->get();
+    private const PER_HALAMAN = 12;
 
-        // jumlah pengajuan yang memakai tiap sektor / komoditas (rute_subsidi_potensi)
+    public function index(Request $request)
+    {
+        $semuaSektor = MasterSektor::withCount('komoditas')->orderBy('urutan')->orderBy('id_sektor')->get();
+
+        // sektor terpilih (?sektor=ID); tidak ada / tidak dikenal = tampilkan komoditas semua sektor
+        $terpilih = $semuaSektor->firstWhere('id_sektor', (int) $request->query('sektor'));
+        $q = trim((string) $request->query('q', ''));
+
+        $komoditas = MasterKomoditas::with('sektor:id_sektor,nama_sektor')
+            ->when($terpilih, fn ($x) => $x->where('id_sektor', $terpilih->id_sektor))
+            ->when($q !== '', fn ($x) => $x->where('nama_komoditas', 'like', '%' . addcslashes($q, '\\%_') . '%'))
+            ->orderBy('nama_komoditas')->orderBy('id_komoditas')
+            ->paginate(self::PER_HALAMAN)->withQueryString();
+
+        // jumlah pengajuan yang memakai sektor / komoditas (rute_subsidi_potensi)
         $pakaiSektor = DB::table('rute_subsidi_potensi')->select('id_sektor', DB::raw('COUNT(DISTINCT id_rute_subsidi) AS n'))
             ->groupBy('id_sektor')->pluck('n', 'id_sektor');
         $pakaiKomoditas = DB::table('rute_subsidi_potensi')->whereNotNull('id_komoditas')
+            ->whereIn('id_komoditas', $komoditas->pluck('id_komoditas'))
             ->select('id_komoditas', DB::raw('COUNT(DISTINCT id_rute_subsidi) AS n'))
             ->groupBy('id_komoditas')->pluck('n', 'id_komoditas');
 
         return view('admin.sektor.index', [
-            'sektor'         => $sektor,
+            'semuaSektor'    => $semuaSektor,
+            'terpilih'       => $terpilih,
+            'q'              => $q,
+            'komoditas'      => $komoditas,
+            'totalKomoditas' => (int) $semuaSektor->sum('komoditas_count'),
             'pakaiSektor'    => $pakaiSektor,
             'pakaiKomoditas' => $pakaiKomoditas,
-            'urutanBerikut'  => ((int) MasterSektor::max('urutan')) + 1,
+            'urutanBerikut'  => ((int) $semuaSektor->max('urutan')) + 1,
         ]);
     }
 
@@ -44,12 +60,13 @@ class SektorController extends Controller
             return $v;
         }
 
-        MasterSektor::create([
+        $baru = MasterSektor::create([
             'nama_sektor' => $v['nama_sektor'],
             'urutan'      => $v['urutan'] ?? ((int) MasterSektor::max('urutan')) + 1,
         ]);
 
-        return back()->with('success', 'Sektor "' . $v['nama_sektor'] . '" ditambahkan.');
+        return redirect()->route('admin.sektor.index', ['sektor' => $baru->id_sektor])
+            ->with('success', 'Sektor "' . $v['nama_sektor'] . '" ditambahkan.');
     }
 
     public function ubahSektor(Request $request, MasterSektor $sektor)
@@ -80,7 +97,8 @@ class SektorController extends Controller
         $jumlah = $sektor->komoditas()->count();
         $sektor->delete();   // komoditas ikut terhapus (cascade)
 
-        return back()->with('success', 'Sektor "' . $nama . '"' . ($jumlah ? " dan {$jumlah} komoditasnya" : '') . ' dihapus.');
+        return redirect()->route('admin.sektor.index')
+            ->with('success', 'Sektor "' . $nama . '"' . ($jumlah ? " dan {$jumlah} komoditasnya" : '') . ' dihapus.');
     }
 
     // ---- Komoditas ----
