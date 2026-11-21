@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -14,6 +13,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{{ asset('css/datin.css') }}">
+    <style>
+        /* Hanya mengatur pemotongan identitas yang panjang di profil sidebar. */
+        .sidebar-user .who { min-width: 0; flex: 1; }
+        .sidebar-user .who strong,
+        .sidebar-user .who small {
+            display: block;
+            max-width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    </style>
 </head>
 
 <body>
@@ -45,7 +56,8 @@
                 <p class="nav-title">MENU UTAMA</p>
             @endif
 
-            {{-- DASHBOARD --}}
+            @if ($pengguna->isSuperAdmin())
+
             <a href="{{ route('dashboard') }}"
                class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
 
@@ -59,8 +71,19 @@
                 <span>Dashboard</span>
             </a>
 
+            <a href="{{ route('data-wilayah.index') }}"
+               class="nav-link {{ request()->routeIs('data-wilayah.*') ? 'active' : '' }}">
 
-            {{-- PETA KONEKTIVITAS REGIONAL --}}
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/>
+                    <path d="M9 4v14M15 6v14"/>
+                </svg>
+
+                <span>Data Wilayah</span>
+            </a>
+
             <a href="{{ route('peta.index') }}"
                class="nav-link {{ request()->routeIs('peta.index') ? 'active' : '' }}">
 
@@ -87,8 +110,7 @@
                 <span>Peta Geospasial</span>
             </a>
 
-            @if ($pengguna->isSuperAdmin())
-                <a href="{{ route('fasilitas.index') }}"
+            <a href="{{ route('fasilitas.index') }}"
                    class="nav-link {{ request()->routeIs('fasilitas.*') ? 'active' : '' }}">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -97,48 +119,8 @@
                     </svg>
                     <span>Data Fasilitas Transportasi</span>
                 </a>
-            @endif
 
-
-            {{-- MENU MODA --}}
-            @if ($pengguna->isModa() && $pengguna->bisa('chr.pantau'))
-
-                <a href="{{ route('surat.index') }}"
-                   class="nav-link {{ request()->routeIs('surat.*') ? 'active' : '' }}">
-
-                    <svg viewBox="0 0 24 24" width="20" height="20"
-                         fill="none" stroke="currentColor" stroke-width="1.8"
-                         stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/>
-                        <path d="M13.5 6.5l4 4"/>
-                    </svg>
-
-                    <span>Surat</span>
-                </a>
-
-            @endif
-
-
-            {{-- MENU SUPER ADMIN --}}
-            @if ($pengguna->isSuperAdmin())
-
-                {{-- DATA USER --}}
-                <a href="{{ route('admin.user.index') }}"
-                   class="nav-link {{ request()->routeIs('admin.user.*', 'admin.role.*') ? 'active' : '' }}">
-
-                    <svg viewBox="0 0 24 24" width="20" height="20"
-                         fill="none" stroke="currentColor" stroke-width="1.8"
-                         stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/>
-                        <path d="M13.5 6.5l4 4"/>
-                    </svg>
-
-                    <span>Data User</span>
-                </a>
-
-
-                {{-- MASTER SEKTOR --}}
-                <a href="{{ route('admin.sektor.index') }}"
+            <a href="{{ route('admin.sektor.index') }}"
                    class="nav-link {{ request()->routeIs('admin.sektor.*', 'admin.komoditas.*') ? 'active' : '' }}">
 
                     <svg viewBox="0 0 24 24" width="20" height="20"
@@ -150,9 +132,7 @@
                     <span>Master Sektor</span>
                 </a>
 
-
-                {{-- MASTER SATUAN DATA --}}
-                <a href="{{ route('admin.master-satuan.index') }}"
+            <a href="{{ route('admin.master-satuan.index') }}"
                    class="nav-link {{ request()->routeIs('admin.master-satuan.*') ? 'active' : '' }}">
 
                     <svg viewBox="0 0 24 24" width="20" height="20"
@@ -165,12 +145,8 @@
                     <span>Master Satuan Data</span>
                 </a>
 
-
-            {{-- MENU PEMDA --}}
-            @elseif ($pengguna->bisa('pemda.unggah'))
-
-                <a href="{{ route('input-data.create') }}"
-                   class="nav-link {{ request()->routeIs('input-data.*') ? 'active' : '' }}">
+            <a href="{{ route('admin.user.index') }}"
+                   class="nav-link {{ request()->routeIs('admin.user.*', 'admin.role.*') ? 'active' : '' }}">
 
                     <svg viewBox="0 0 24 24" width="20" height="20"
                          fill="none" stroke="currentColor" stroke-width="1.8"
@@ -179,31 +155,26 @@
                         <path d="M13.5 6.5l4 4"/>
                     </svg>
 
-                    <span>Input Data</span>
+                    <span>Data User</span>
                 </a>
 
-            @endif
+            @elseif ($pengguna->isModa())
 
-
-            {{-- DATA WILAYAH --}}
-            <a href="{{ route('data-wilayah.index') }}"
-               class="nav-link {{ request()->routeIs('data-wilayah.*') ? 'active' : '' }}">
+            <a href="{{ route('dashboard') }}"
+               class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
 
                 <svg viewBox="0 0 24 24" width="20" height="20"
                      fill="none" stroke="currentColor" stroke-width="1.8"
                      stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/>
-                    <path d="M9 4v14M15 6v14"/>
+                    <path d="M3 11l9-8 9 8"/>
+                    <path d="M5 10v10h5v-6h4v6h5V10"/>
                 </svg>
 
-                <span>Data Wilayah</span>
+                <span>Dashboard</span>
             </a>
 
-
-            {{-- MENU PERMOHONAN MODA --}}
-            @if ($pengguna->isModa() && $pengguna->bisa('laporan.tinjau'))
-
-                <a href="{{ route('permohonan.index') }}"
+            @if ($pengguna->bisa('laporan.tinjau'))
+            <a href="{{ route('permohonan.index') }}"
                    class="nav-link {{ request()->routeIs('permohonan.*') ? 'active' : '' }}">
 
                     <svg viewBox="0 0 24 24" width="20" height="20"
@@ -218,11 +189,93 @@
 
             @endif
 
+            @if ($pengguna->bisa('chr.pantau'))
+            <a href="{{ route('surat.index') }}"
+                   class="nav-link {{ request()->routeIs('surat.*') ? 'active' : '' }}">
 
-            {{-- MENU APPROVAL INTRAM --}}
-            @if ($pengguna->isIntram() && $pengguna->bisa('chr.tinjau'))
+                    <svg viewBox="0 0 24 24" width="20" height="20"
+                         fill="none" stroke="currentColor" stroke-width="1.8"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/>
+                        <path d="M13.5 6.5l4 4"/>
+                    </svg>
 
-                <a href="{{ route('approval.index') }}"
+                    <span>Surat</span>
+                </a>
+
+            @endif
+
+            <a href="{{ route('data-wilayah.index') }}"
+               class="nav-link {{ request()->routeIs('data-wilayah.*') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/>
+                    <path d="M9 4v14M15 6v14"/>
+                </svg>
+
+                <span>Data Wilayah</span>
+            </a>
+
+            <a href="{{ route('peta.index') }}"
+               class="nav-link {{ request()->routeIs('peta.index') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <circle cx="17" cy="17" r="2"/>
+                    <path d="M9 8.5c6 0 0 7 6 7M3 19l4-3 5 2 5-6 4-1"/>
+                </svg>
+
+                <span>Peta Konektivitas</span>
+            </a>
+
+            <a href="{{ route('peta.geospasial') }}"
+               class="nav-link {{ request()->routeIs('peta.geospasial*') ? 'active' : '' }}">
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 5l6-2 6 3 6-2v15l-6 2-6-3-6 2z"/>
+                    <path d="M9 3v15M15 6v15"/>
+                    <circle cx="15" cy="10" r="2"/>
+                </svg>
+                <span>Peta Geospasial</span>
+            </a>
+
+            @elseif ($pengguna->isIntram())
+
+            <a href="{{ route('dashboard') }}"
+               class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 11l9-8 9 8"/>
+                    <path d="M5 10v10h5v-6h4v6h5V10"/>
+                </svg>
+
+                <span>Dashboard</span>
+            </a>
+
+            @if ($pengguna->bisa('cakupan.lihat_unggahan') || $pengguna->bisa('rekomendasi_teknis.unggah'))
+            <a href="{{ route('hasil.index') }}"
+                   class="nav-link {{ request()->routeIs('hasil.*') ? 'active' : '' }}">
+
+                    <svg viewBox="0 0 24 24" width="20" height="20"
+                         fill="none" stroke="currentColor" stroke-width="1.8"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+
+                    <span>Hasil Unggahan</span>
+                </a>
+
+            @endif
+
+            @if ($pengguna->bisa('chr.tinjau'))
+            <a href="{{ route('approval.index') }}"
                    class="nav-link {{ request()->routeIs('approval.*') ? 'active' : '' }}">
 
                     <svg viewBox="0 0 24 24" width="20" height="20"
@@ -237,21 +290,168 @@
 
             @endif
 
+            <a href="{{ route('data-wilayah.index') }}"
+               class="nav-link {{ request()->routeIs('data-wilayah.*') ? 'active' : '' }}">
 
-            {{-- HASIL UNGGAHAN INTRAM --}}
-            @if ($pengguna->isIntram() && ($pengguna->bisa('cakupan.lihat_unggahan') || $pengguna->bisa('rekomendasi_teknis.unggah')))
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/>
+                    <path d="M9 4v14M15 6v14"/>
+                </svg>
 
-                <a href="{{ route('hasil.index') }}"
-                   class="nav-link {{ request()->routeIs('hasil.*') ? 'active' : '' }}">
+                <span>Data Wilayah</span>
+            </a>
+
+            <a href="{{ route('peta.index') }}"
+               class="nav-link {{ request()->routeIs('peta.index') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <circle cx="17" cy="17" r="2"/>
+                    <path d="M9 8.5c6 0 0 7 6 7M3 19l4-3 5 2 5-6 4-1"/>
+                </svg>
+
+                <span>Peta Konektivitas</span>
+            </a>
+
+            <a href="{{ route('peta.geospasial') }}"
+               class="nav-link {{ request()->routeIs('peta.geospasial*') ? 'active' : '' }}">
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 5l6-2 6 3 6-2v15l-6 2-6-3-6 2z"/>
+                    <path d="M9 3v15M15 6v15"/>
+                    <circle cx="15" cy="10" r="2"/>
+                </svg>
+                <span>Peta Geospasial</span>
+            </a>
+
+            @elseif ($pengguna->bisa('pemda.unggah'))
+
+            <a href="{{ route('dashboard') }}"
+               class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 11l9-8 9 8"/>
+                    <path d="M5 10v10h5v-6h4v6h5V10"/>
+                </svg>
+
+                <span>Dashboard</span>
+            </a>
+
+            @if ($pengguna->bisa('pemda.unggah'))
+            <a href="{{ route('input-data.create') }}"
+                   class="nav-link {{ request()->routeIs('input-data.*') ? 'active' : '' }}">
 
                     <svg viewBox="0 0 24 24" width="20" height="20"
                          fill="none" stroke="currentColor" stroke-width="1.8"
                          stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        <path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/>
+                        <path d="M13.5 6.5l4 4"/>
                     </svg>
 
-                    <span>Hasil Unggahan</span>
+                    <span>Input Data</span>
                 </a>
+
+            @endif
+
+            <a href="{{ route('data-wilayah.index') }}"
+               class="nav-link {{ request()->routeIs('data-wilayah.*') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/>
+                    <path d="M9 4v14M15 6v14"/>
+                </svg>
+
+                <span>Data Wilayah</span>
+            </a>
+
+            <a href="{{ route('peta.index') }}"
+               class="nav-link {{ request()->routeIs('peta.index') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <circle cx="17" cy="17" r="2"/>
+                    <path d="M9 8.5c6 0 0 7 6 7M3 19l4-3 5 2 5-6 4-1"/>
+                </svg>
+
+                <span>Peta Konektivitas</span>
+            </a>
+
+            <a href="{{ route('peta.geospasial') }}"
+               class="nav-link {{ request()->routeIs('peta.geospasial*') ? 'active' : '' }}">
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 5l6-2 6 3 6-2v15l-6 2-6-3-6 2z"/>
+                    <path d="M9 3v15M15 6v15"/>
+                    <circle cx="15" cy="10" r="2"/>
+                </svg>
+                <span>Peta Geospasial</span>
+            </a>
+
+            @else
+
+            <a href="{{ route('dashboard') }}"
+               class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 11l9-8 9 8"/>
+                    <path d="M5 10v10h5v-6h4v6h5V10"/>
+                </svg>
+
+                <span>Dashboard</span>
+            </a>
+
+            <a href="{{ route('data-wilayah.index') }}"
+               class="nav-link {{ request()->routeIs('data-wilayah.*') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/>
+                    <path d="M9 4v14M15 6v14"/>
+                </svg>
+
+                <span>Data Wilayah</span>
+            </a>
+
+            <a href="{{ route('peta.index') }}"
+               class="nav-link {{ request()->routeIs('peta.index') ? 'active' : '' }}">
+
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <circle cx="17" cy="17" r="2"/>
+                    <path d="M9 8.5c6 0 0 7 6 7M3 19l4-3 5 2 5-6 4-1"/>
+                </svg>
+
+                <span>Peta Konektivitas</span>
+            </a>
+
+            <a href="{{ route('peta.geospasial') }}"
+               class="nav-link {{ request()->routeIs('peta.geospasial*') ? 'active' : '' }}">
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 5l6-2 6 3 6-2v15l-6 2-6-3-6 2z"/>
+                    <path d="M9 3v15M15 6v15"/>
+                    <circle cx="15" cy="10" r="2"/>
+                </svg>
+                <span>Peta Geospasial</span>
+            </a>
 
             @endif
 
@@ -330,9 +530,23 @@
 
             <span class="avatar" aria-hidden="true"></span>
 
+            {{-- Identitas role dibuat langsung dari relasi akun, tanpa variabel tambahan. --}}
             <a class="who" href="{{ route('akun.password') }}" title="Akun saya">
                 <strong>{{ auth()->user()->full_name }}</strong>
-                <small>{{ auth()->user()->role->nama_role ?? '-' }}</small>
+
+                @if (auth()->user()->isSuperAdmin())
+                    <small>Super Admin</small>
+                @elseif (auth()->user()->isModa())
+                    <small title="{{ auth()->user()->moda?->nama_moda ?? 'Moda' }}">
+                        Moda {{ preg_replace('/^Moda\s+/i', '', auth()->user()->moda?->nama_moda ?? '') ?: '' }}
+                    </small>
+                @elseif (auth()->user()->isIntram())
+                    <small>INTRAM</small>
+                @else
+                    <small title="{{ auth()->user()->kabKota?->nama_lengkap ?? 'Pemda' }}">
+                        Pemda{{ auth()->user()->kabKota?->nama_lengkap ? ' · ' . auth()->user()->kabKota->nama_lengkap : '' }}
+                    </small>
+                @endif
             </a>
 
             <a class="logout" href="{{ route('akun.password') }}"
