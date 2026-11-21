@@ -62,7 +62,7 @@
 
             {{-- PETA KONEKTIVITAS REGIONAL --}}
             <a href="{{ route('peta.index') }}"
-               class="nav-link {{ request()->routeIs('peta.*') ? 'active' : '' }}">
+               class="nav-link {{ request()->routeIs('peta.index') ? 'active' : '' }}">
 
                 <svg viewBox="0 0 24 24" width="20" height="20"
                      fill="none" stroke="currentColor" stroke-width="1.8"
@@ -74,6 +74,30 @@
 
                 <span>Peta Konektivitas</span>
             </a>
+
+            <a href="{{ route('peta.geospasial') }}"
+               class="nav-link {{ request()->routeIs('peta.geospasial*') ? 'active' : '' }}">
+                <svg viewBox="0 0 24 24" width="20" height="20"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 5l6-2 6 3 6-2v15l-6 2-6-3-6 2z"/>
+                    <path d="M9 3v15M15 6v15"/>
+                    <circle cx="15" cy="10" r="2"/>
+                </svg>
+                <span>Peta Geospasial</span>
+            </a>
+
+            @if ($pengguna->isSuperAdmin())
+                <a href="{{ route('fasilitas.index') }}"
+                   class="nav-link {{ request()->routeIs('fasilitas.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+                         stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 21h18M5 21V9l7-6 7 6v12M9 21v-7h6v7"/>
+                        <circle cx="12" cy="10" r="1"/>
+                    </svg>
+                    <span>Data Fasilitas Transportasi</span>
+                </a>
+            @endif
 
 
             {{-- MENU MODA --}}

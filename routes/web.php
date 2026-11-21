@@ -12,6 +12,8 @@ use App\Http\Controllers\DataWilayahController;
 use App\Http\Controllers\InputDataController;
 use App\Http\Controllers\PermohonanController;
 use App\Http\Controllers\PetaController;
+use App\Http\Controllers\PetaGeospasialController;
+use App\Http\Controllers\FasilitasTransportasiController;
 use App\Http\Controllers\RekomendasiController;
 use App\Http\Controllers\SuratController;
 
@@ -69,6 +71,20 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
 
     Route::get('/peta-konektivitas', [PetaController::class, 'index'])
         ->name('peta.index');
+
+    Route::get('/peta-geospasial', [PetaGeospasialController::class, 'index'])
+        ->name('peta.geospasial');
+
+    Route::get('/peta-geospasial/data/{layer}', [PetaGeospasialController::class, 'data'])
+        ->name('peta.geospasial.data');
+
+    // Data fasilitas referensi dapat dikelola hanya oleh Super Admin.
+    Route::get('/fasilitas-transportasi', [FasilitasTransportasiController::class, 'index'])->name('fasilitas.index');
+    Route::get('/fasilitas-transportasi/tambah', [FasilitasTransportasiController::class, 'create'])->name('fasilitas.create');
+    Route::post('/fasilitas-transportasi', [FasilitasTransportasiController::class, 'store'])->name('fasilitas.store');
+    Route::get('/fasilitas-transportasi/{fasilitas}/edit', [FasilitasTransportasiController::class, 'edit'])->name('fasilitas.edit');
+    Route::put('/fasilitas-transportasi/{fasilitas}', [FasilitasTransportasiController::class, 'update'])->name('fasilitas.update');
+    Route::delete('/fasilitas-transportasi/{fasilitas}', [FasilitasTransportasiController::class, 'destroy'])->name('fasilitas.destroy');
 
 
     /*
