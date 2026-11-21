@@ -8,13 +8,34 @@
 
 @section('content')
 
+@php
+    /*
+     * Menyiapkan data dropdown bertingkat.
+     * Diproses di PHP terlebih dahulu agar aman untuk Blade.
+     */
+    $dataKabKotaJs = $kabKotaFilter->map(function ($kab) {
+        return [
+            'id' => (string) $kab->id_kab_kota,
+            'nama' => $kab->nama_lengkap,
+            'provinsi' => (string) $kab->id_provinsi,
+            'wilayah' => (string) $kab->id_wilayah,
+        ];
+    })->values()->all();
+
+    $dataProvinsiJs = $provinsi->map(function ($p) {
+        return [
+            'id' => (string) $p->id_provinsi,
+            'nama' => $p->nama_provinsi,
+        ];
+    })->values()->all();
+@endphp
+
 <style>
     /* =====================================================
-       PENYESUAIAN KHUSUS HALAMAN FASILITAS
-       Komponen utama mengikuti style halaman Data User
+       INFORMASI
     ===================================================== */
 
-    .fasilitas-info {
+    .ft-info {
         padding: 14px 18px;
         margin-bottom: 18px;
         background: #eff8f7;
@@ -25,81 +46,138 @@
         line-height: 1.7;
     }
 
-    .fasilitas-info p {
+    .ft-info p {
         margin: 0;
     }
 
-    .fasilitas-filter {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
+    /* =====================================================
+       FILTER
+    ===================================================== */
+
+    .ft-filter {
+        padding: 22px;
+        margin-bottom: 20px;
     }
 
-    .fasilitas-filter .filter {
+    .ft-filter-header {
         display: flex;
-        align-items: center;
-        gap: 9px;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .ft-filter-header h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #17324d;
+    }
+
+    .ft-filter-header p {
+        margin: 6px 0 0;
+        font-size: 12px;
+        color: #8190a2;
+        line-height: 1.6;
+    }
+
+    .ft-filter-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .ft-field {
         min-width: 0;
     }
 
-    .fasilitas-filter .filter span {
-        white-space: nowrap;
+    .ft-field label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #425a73;
     }
 
-    .fasilitas-filter .filter select {
-        min-width: 150px;
-        max-width: 100%;
-    }
-
-    .fasilitas-filter .filter-source select {
-        min-width: 210px;
-    }
-
-    .fasilitas-filter .filter-search {
-        flex: 1 1 220px;
-    }
-
-    .fasilitas-filter .filter-search input {
+    .ft-field input,
+    .ft-field select {
+        display: block;
         width: 100%;
-        min-width: 0;
-        padding: 10px 12px;
+        height: 42px;
+        padding: 0 12px;
+        box-sizing: border-box;
         border: 1px solid #d4dee8;
         border-radius: 8px;
         background: #fff;
         color: #253b53;
         font: inherit;
         font-size: 13px;
-        box-sizing: border-box;
+        outline: none;
     }
 
-    .fasilitas-filter .filter-search input:focus {
-        outline: none;
+    .ft-field input:focus,
+    .ft-field select:focus {
         border-color: #12aaa0;
         box-shadow: 0 0 0 3px rgba(18, 170, 160, .10);
     }
 
-    .fasilitas-filter .filter-search input::placeholder {
+    .ft-field input::placeholder {
         color: #94a3b8;
     }
 
-    .fasilitas-filter .fasilitas-cari {
-        white-space: nowrap;
-        cursor: pointer;
+    .ft-filter-divider {
+        height: 1px;
+        margin: 20px 0;
+        background: #e5ebf1;
     }
 
-    .fasilitas-filter .count {
+    .ft-filter-section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 15px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #425a73;
+    }
+
+    .ft-filter-section-title svg {
+        color: #0e938b;
+    }
+
+    .ft-filter-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+    }
+
+    .ft-filter-actions .count {
+        margin-right: auto;
+        color: #8190a2;
+        font-size: 12px;
+    }
+
+    .ft-filter-actions .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
         white-space: nowrap;
     }
 
-    .fasilitas-filter .btn-new {
+    .ft-filter-actions .reset {
         white-space: nowrap;
-        margin-left: auto;
     }
 
-    .fasilitas-notice {
+    /* =====================================================
+       NOTIFIKASI
+    ===================================================== */
+
+    .ft-notice {
         margin-bottom: 18px;
-        padding: 12px 16px;
+        padding: 13px 16px;
         background: #ecfdf5;
         border: 1px solid #bbf7d0;
         border-radius: 9px;
@@ -121,15 +199,15 @@
     }
 
     .table-fasilitas .col-nama {
-        min-width: 210px;
+        min-width: 190px;
     }
 
     .table-fasilitas .col-wilayah {
-        min-width: 160px;
+        min-width: 180px;
     }
 
     .table-fasilitas .col-koordinat {
-        min-width: 155px;
+        min-width: 150px;
     }
 
     .table-fasilitas .col-aksi {
@@ -137,14 +215,14 @@
         white-space: nowrap;
     }
 
-    .fasilitas-nama {
+    .ft-nama {
         display: block;
         color: #182f49;
         font-weight: 700;
         line-height: 1.5;
     }
 
-    .fasilitas-sumber {
+    .ft-sumber {
         display: block;
         margin-top: 4px;
         color: #8190a2;
@@ -152,26 +230,36 @@
         line-height: 1.5;
     }
 
-    .fasilitas-wilayah {
-        line-height: 1.6;
+    .ft-lokasi {
+        display: block;
+        color: #253b53;
+        font-weight: 600;
+        line-height: 1.5;
     }
 
-    .fasilitas-koordinat {
+    .ft-provinsi {
+        display: block;
+        margin-top: 3px;
+        color: #8190a2;
+        font-size: 11px;
+    }
+
+    .ft-koordinat {
         color: #53657b;
         font-size: 12px;
         font-variant-numeric: tabular-nums;
     }
 
-    .fasilitas-status {
+    .ft-status {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
         font-size: 12px;
         font-weight: 700;
         white-space: nowrap;
     }
 
-    .fasilitas-status::before {
+    .ft-status::before {
         content: "";
         width: 7px;
         height: 7px;
@@ -179,11 +267,11 @@
         background: currentColor;
     }
 
-    .fasilitas-status.is-active {
+    .ft-status.aktif {
         color: #15945c;
     }
 
-    .fasilitas-status.is-inactive {
+    .ft-status.nonaktif {
         color: #c07828;
     }
 
@@ -208,186 +296,181 @@
        RESPONSIVE
     ===================================================== */
 
-    @media (max-width: 1200px) {
-        .fasilitas-filter .count {
-            order: 5;
-        }
-    }
-
-    @media (max-width: 900px) {
-        .fasilitas-filter .filter-search {
-            flex-basis: 100%;
-        }
-
-        .fasilitas-filter .btn-new {
-            margin-left: 0;
+    @media (max-width: 1100px) {
+        .ft-filter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
     @media (max-width: 650px) {
-        .fasilitas-filter {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .ft-filter {
+            padding: 16px;
         }
 
-        .fasilitas-filter .filter-search {
-            grid-column: 1 / -1;
+        .ft-filter-grid {
+            grid-template-columns: 1fr;
+            gap: 13px;
         }
 
-        .fasilitas-filter .filter {
-            display: flex;
+        .ft-filter-actions {
             flex-direction: column;
             align-items: stretch;
-            gap: 5px;
         }
 
-        .fasilitas-filter .filter select,
-        .fasilitas-filter .filter-source select {
-            width: 100%;
-            min-width: 0;
+        .ft-filter-actions .count {
+            margin-right: 0;
         }
 
-        .fasilitas-filter .fasilitas-cari {
-            grid-column: 1 / -1;
+        .ft-filter-actions .reset {
+            align-self: flex-start;
         }
 
-        .fasilitas-filter .count {
-            grid-column: 1 / -1;
-            order: initial;
-            white-space: normal;
-        }
-
-        .fasilitas-filter .reset {
-            grid-column: 1 / -1;
-            justify-self: start;
-        }
-
-        .fasilitas-filter .btn-new {
-            grid-column: 1 / -1;
-            justify-content: center;
+        .ft-filter-actions .btn {
             width: 100%;
             box-sizing: border-box;
         }
 
-        .fasilitas-info {
+        .ft-info {
             padding: 12px 14px;
         }
     }
 </style>
 
+
 {{-- =====================================================
      INFORMASI HALAMAN
 ===================================================== --}}
 
-<div class="fasilitas-info">
+<div class="ft-info">
     <p>
-        Fasilitas transportasi merupakan data referensi yang terpisah dari
-        pengajuan Pemerintah Daerah. Informasi lokasi, kabupaten/kota,
-        dan jenis moda digunakan sebagai pendukung analisis
-        kebutuhan konektivitas.
+        Fasilitas transportasi merupakan data referensi yang terpisah
+        dari pengajuan Pemerintah Daerah. Informasi lokasi,
+        kabupaten/kota, dan jenis moda digunakan untuk mendukung
+        analisis kebutuhan konektivitas regional.
     </p>
 </div>
+
 
 {{-- =====================================================
      NOTIFIKASI
 ===================================================== --}}
 
 @if (session('success'))
-    <div class="fasilitas-notice" role="status">
+    <div class="ft-notice" role="status">
         {{ session('success') }}
     </div>
 @endif
 
+@if (session('error'))
+    <div class="alert alert-error" role="alert">
+        {{ session('error') }}
+    </div>
+@endif
+
+
 {{-- =====================================================
-     FILTER DAN AKSI
+     FILTER FASILITAS
 ===================================================== --}}
 
-@php
-    $adaFilter = request()->filled('cari')
-        || request()->filled('moda')
-        || request()->filled('sumber_data');
-
-    $jumlahFasilitas = $fasilitas->total();
-@endphp
-
 <form
-    class="box filter-bar fasilitas-filter"
+    class="box ft-filter"
     method="GET"
     action="{{ route('fasilitas.index') }}"
+    id="ft-form"
 >
 
-    {{-- PENCARIAN --}}
-
-    <div class="filter-search">
-        <input
-            type="search"
-            name="cari"
-            value="{{ request('cari') }}"
-            placeholder="Cari nama fasilitas..."
-            aria-label="Cari nama fasilitas"
-        >
+    <div class="ft-filter-header">
+        <div>
+            <h2>Filter Data Fasilitas</h2>
+            <p>
+                Cari fasilitas berdasarkan nama, moda transportasi,
+                sumber data, dan lokasi administrasi.
+            </p>
+        </div>
     </div>
 
-    {{-- FILTER MODA --}}
+    {{-- BARIS 1 --}}
 
-    <label class="filter">
-        <span>Moda:</span>
+    <div class="ft-filter-grid">
 
-        <select
-            name="moda"
-            aria-label="Filter moda transportasi"
-            onchange="this.form.requestSubmit()"
-        >
-            <option value="">Semua Moda</option>
+        {{-- NAMA --}}
 
-            <option value="1" @selected(request('moda') == '1')>
-                Darat
-            </option>
+        <div class="ft-field">
+            <label for="ft-cari">
+                Nama Fasilitas
+            </label>
 
-            <option value="2" @selected(request('moda') == '2')>
-                Laut
-            </option>
+            <input
+                type="search"
+                id="ft-cari"
+                name="cari"
+                value="{{ $filter['cari'] }}"
+                placeholder="Cari nama fasilitas..."
+            >
+        </div>
 
-            <option value="3" @selected(request('moda') == '3')>
-                Udara
-            </option>
+        {{-- MODA --}}
 
-            <option value="4" @selected(request('moda') == '4')>
-                Kereta Api
-            </option>
-        </select>
-    </label>
+        <div class="ft-field">
+            <label for="ft-moda">
+                Moda Transportasi
+            </label>
 
-    {{-- FILTER SUMBER DATA --}}
+            <select
+                id="ft-moda"
+                name="moda"
+                data-autosubmit-ft
+            >
+                <option value="">Semua Moda</option>
 
-    <label class="filter filter-source">
-        <span>Sumber:</span>
-
-        <select
-            name="sumber_data"
-            aria-label="Filter sumber data"
-            onchange="this.form.requestSubmit()"
-        >
-            <option value="">Semua Sumber Data</option>
-
-            @foreach ($sumberData as $sumber)
-                <option
-                    value="{{ $sumber }}"
-                    @selected(request('sumber_data') === $sumber)
-                >
-                    {{ $sumber }}
+                <option value="1" @selected($filter['moda'] === '1')>
+                    Darat
                 </option>
-            @endforeach
-        </select>
-    </label>
 
-    {{-- TOMBOL CARI --}}
+                <option value="2" @selected($filter['moda'] === '2')>
+                    Laut
+                </option>
 
-    <button
-        type="submit"
-        class="btn btn-outline fasilitas-cari"
-    >
+                <option value="3" @selected($filter['moda'] === '3')>
+                    Udara
+                </option>
+
+                <option value="4" @selected($filter['moda'] === '4')>
+                    Kereta Api
+                </option>
+            </select>
+        </div>
+
+        {{-- SUMBER DATA --}}
+
+        <div class="ft-field">
+            <label for="ft-sumber">
+                Sumber Data
+            </label>
+
+            <select
+                id="ft-sumber"
+                name="sumber_data"
+                data-autosubmit-ft
+            >
+                <option value="">Semua Sumber Data</option>
+
+                @foreach ($sumberData as $sumber)
+                    <option
+                        value="{{ $sumber }}"
+                        @selected($filter['sumber_data'] === $sumber)
+                    >
+                        {{ $sumber }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+    </div>
+
+    <div class="ft-filter-divider"></div>
+
+    <div class="ft-filter-section-title">
         <svg
             viewBox="0 0 24 24"
             width="17"
@@ -399,59 +482,168 @@
             stroke-linejoin="round"
             aria-hidden="true"
         >
-            <circle cx="10.8" cy="10.8" r="6.8"/>
-            <path d="m16 16 5 5"/>
+            <path d="M3 10l9-6 9 6"/>
+            <path d="M5 10v10h14V10"/>
+            <path d="M9 20v-7h6v7"/>
         </svg>
 
-        Cari
-    </button>
+        Lokasi Administrasi
+    </div>
 
-    {{-- INFORMASI JUMLAH DATA --}}
+    {{-- BARIS 2 --}}
 
-    <span class="count">
-        Menampilkan
-        {{ number_format($fasilitas->count(), 0, ',', '.') }}
-        dari
-        {{ number_format($jumlahFasilitas, 0, ',', '.') }}
-        entri
-    </span>
+    <div class="ft-filter-grid">
 
-    {{-- RESET FILTER --}}
+        {{-- WILAYAH REGIONAL --}}
 
-    @if ($adaFilter)
+        <div class="ft-field">
+            <label for="ft-wilayah">
+                Wilayah Regional
+            </label>
+
+            <select
+                id="ft-wilayah"
+                name="wilayah"
+            >
+                <option value="">Semua Wilayah</option>
+
+                @foreach ($wilayah as $w)
+                    <option
+                        value="{{ $w->id_wilayah }}"
+                        @selected($filter['wilayah'] === (string) $w->id_wilayah)
+                    >
+                        {{ $w->nama_wilayah }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- PROVINSI --}}
+
+        <div class="ft-field">
+            <label for="ft-provinsi">
+                Provinsi
+            </label>
+
+            <select
+                id="ft-provinsi"
+                name="provinsi"
+            >
+                <option value="">Semua Provinsi</option>
+
+                @foreach ($provinsi as $p)
+                    <option
+                        value="{{ $p->id_provinsi }}"
+                        @selected($filter['provinsi'] === (string) $p->id_provinsi)
+                    >
+                        {{ $p->nama_provinsi }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- KABUPATEN/KOTA --}}
+
+        <div class="ft-field">
+            <label for="ft-kab-kota">
+                Kabupaten/Kota
+            </label>
+
+            <select
+                id="ft-kab-kota"
+                name="kab_kota"
+            >
+                <option value="">Semua Kabupaten/Kota</option>
+
+                <option
+                    value="belum"
+                    @selected($filter['kab_kota'] === 'belum')
+                >
+                    Belum Ditentukan
+                </option>
+
+                @foreach ($kabKotaFilter as $kab)
+                    <option
+                        value="{{ $kab->id_kab_kota }}"
+                        @selected($filter['kab_kota'] === (string) $kab->id_kab_kota)
+                    >
+                        {{ $kab->nama_lengkap }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+    </div>
+
+    {{-- AKSI FILTER --}}
+
+    <div class="ft-filter-actions">
+
+        <span class="count">
+            Menampilkan
+            {{ number_format($fasilitas->count(), 0, ',', '.') }}
+            dari
+            {{ number_format($fasilitas->total(), 0, ',', '.') }}
+            entri
+        </span>
+
+        @if ($adaFilter)
+            <a
+                href="{{ route('fasilitas.index') }}"
+                class="reset"
+            >
+                Reset Filter
+            </a>
+        @endif
+
+        <button
+            type="submit"
+            class="btn btn-outline"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <circle cx="10.8" cy="10.8" r="6.8"/>
+                <path d="m16 16 5 5"/>
+            </svg>
+
+            Terapkan Filter
+        </button>
+
         <a
-            class="reset"
-            href="{{ route('fasilitas.index') }}"
+            href="{{ route('fasilitas.create') }}"
+            class="btn btn-new"
         >
-            Reset
+            <svg
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 8v8M8 12h8"/>
+            </svg>
+
+            Tambah Fasilitas
         </a>
-    @endif
 
-    {{-- TAMBAH FASILITAS --}}
-
-    <a
-        class="btn btn-new"
-        href="{{ route('fasilitas.create') }}"
-    >
-        <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-        >
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M12 8v8M8 12h8"/>
-        </svg>
-
-        Tambah Fasilitas
-    </a>
+    </div>
 
 </form>
+
 
 {{-- =====================================================
      TABEL FASILITAS
@@ -487,15 +679,15 @@
                             {{ $fasilitas->firstItem() + $loop->index }}
                         </td>
 
-                        {{-- NAMA FASILITAS DAN SUMBER DATA --}}
+                        {{-- NAMA --}}
 
                         <td data-label="Fasilitas">
 
-                            <strong class="fasilitas-nama">
+                            <strong class="ft-nama">
                                 {{ $item->nama }}
                             </strong>
 
-                            <span class="fasilitas-sumber">
+                            <span class="ft-sumber">
                                 {{ $item->sumber_data ?: 'Sumber tidak diketahui' }}
                             </span>
 
@@ -509,17 +701,26 @@
 
                         {{-- KABUPATEN/KOTA --}}
 
-                        <td
-                            data-label="Kabupaten/Kota"
-                            class="fasilitas-wilayah"
-                        >
+                        <td data-label="Kabupaten/Kota">
+
                             @if ($item->kabKota)
-                                {{ $item->kabKota->nama_lengkap }}
+
+                                <strong class="ft-lokasi">
+                                    {{ $item->kabKota->nama_lengkap }}
+                                </strong>
+
+                                <span class="ft-provinsi">
+                                    {{ $item->kabKota->provinsi?->nama_provinsi ?? '-' }}
+                                </span>
+
                             @else
+
                                 <span class="muted">
                                     Belum ditetapkan
                                 </span>
+
                             @endif
+
                         </td>
 
                         {{-- KOORDINAT --}}
@@ -527,11 +728,11 @@
                         <td data-label="Koordinat">
 
                             @if (
-                                $item->latitude !== null
-                                && $item->longitude !== null
+                                $item->latitude !== null &&
+                                $item->longitude !== null
                             )
 
-                                <span class="fasilitas-koordinat">
+                                <span class="ft-koordinat">
                                     {{ $item->latitude }},
                                     {{ $item->longitude }}
                                 </span>
@@ -550,13 +751,13 @@
 
                             @if ($item->aktif)
 
-                                <span class="fasilitas-status is-active">
+                                <span class="ft-status aktif">
                                     Aktif
                                 </span>
 
                             @else
 
-                                <span class="fasilitas-status is-inactive">
+                                <span class="ft-status nonaktif">
                                     Nonaktif
                                 </span>
 
@@ -602,7 +803,6 @@
                                         method="POST"
                                         action="{{ route('fasilitas.destroy', $item) }}"
                                         data-confirm="Nonaktifkan fasilitas {{ $item->nama }}?"
-                                        onsubmit="return confirm('Nonaktifkan fasilitas ini?')"
                                     >
                                         @csrf
                                         @method('DELETE')
@@ -628,7 +828,6 @@
                                                 <path d="M5.7 5.7 18.3 18.3"/>
                                             </svg>
                                         </button>
-
                                     </form>
 
                                 @endif
@@ -644,8 +843,8 @@
                     <tr>
                         <td colspan="7" class="empty">
 
-                            Tidak ada fasilitas yang sesuai dengan
-                            pencarian atau filter.
+                            Tidak ada fasilitas yang sesuai
+                            dengan pencarian atau filter.
 
                             @if ($adaFilter)
                                 <a
@@ -667,8 +866,9 @@
 
     </div>
 
+
     {{-- =====================================================
-         FOOTER TABEL DAN PAGINATION
+         PAGINATION
     ===================================================== --}}
 
     <div class="table-foot">
@@ -705,19 +905,13 @@
                 );
             @endphp
 
-            <nav
-                class="pager-num"
-                aria-label="Halaman fasilitas"
-            >
+            <nav class="pager-num" aria-label="Halaman fasilitas">
 
-                {{-- SEBELUMNYA --}}
+                {{-- PREVIOUS --}}
 
                 @if ($fasilitas->onFirstPage())
 
-                    <span
-                        class="pg pg-nav is-disabled"
-                        aria-hidden="true"
-                    >
+                    <span class="pg pg-nav is-disabled" aria-hidden="true">
                         &lsaquo;
                     </span>
 
@@ -733,15 +927,11 @@
 
                 @endif
 
-                {{-- HALAMAN PERTAMA --}}
+                {{-- FIRST PAGE --}}
 
                 @if ($halamanAwal > 1)
 
-                    <a
-                        class="pg"
-                        href="{{ $fasilitas->url(1) }}"
-                        aria-label="Halaman 1"
-                    >
+                    <a class="pg" href="{{ $fasilitas->url(1) }}">
                         1
                     </a>
 
@@ -751,16 +941,13 @@
 
                 @endif
 
-                {{-- NOMOR HALAMAN --}}
+                {{-- PAGE NUMBERS --}}
 
                 @for ($page = $halamanAwal; $page <= $halamanAkhir; $page++)
 
                     @if ($page === $fasilitas->currentPage())
 
-                        <span
-                            class="pg active"
-                            aria-current="page"
-                        >
+                        <span class="pg active" aria-current="page">
                             {{ $page }}
                         </span>
 
@@ -778,7 +965,7 @@
 
                 @endfor
 
-                {{-- HALAMAN TERAKHIR --}}
+                {{-- LAST PAGE --}}
 
                 @if ($halamanAkhir < $fasilitas->lastPage())
 
@@ -789,14 +976,13 @@
                     <a
                         class="pg"
                         href="{{ $fasilitas->url($fasilitas->lastPage()) }}"
-                        aria-label="Halaman {{ $fasilitas->lastPage() }}"
                     >
                         {{ $fasilitas->lastPage() }}
                     </a>
 
                 @endif
 
-                {{-- BERIKUTNYA --}}
+                {{-- NEXT --}}
 
                 @if ($fasilitas->hasMorePages())
 
@@ -810,10 +996,7 @@
 
                 @else
 
-                    <span
-                        class="pg pg-nav is-disabled"
-                        aria-hidden="true"
-                    >
+                    <span class="pg pg-nav is-disabled" aria-hidden="true">
                         &rsaquo;
                     </span>
 
@@ -826,5 +1009,205 @@
     </div>
 
 </section>
+
+
+{{-- =====================================================
+     FILTER BERTINGKAT
+===================================================== --}}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const form = document.getElementById('ft-form');
+
+    const wilayahSelect = document.getElementById('ft-wilayah');
+    const provinsiSelect = document.getElementById('ft-provinsi');
+    const kabKotaSelect = document.getElementById('ft-kab-kota');
+
+    if (!form || !wilayahSelect || !provinsiSelect || !kabKotaSelect) {
+        return;
+    }
+
+    /*
+     * Data berasal dari controller.
+     */
+    const daftarKabKota = @json($dataKabKotaJs);
+    const daftarProvinsi = @json($dataProvinsiJs);
+
+    /*
+     * Menyimpan nilai filter awal.
+     */
+    const nilaiAwal = {
+        provinsi: provinsiSelect.value,
+        kabKota: kabKotaSelect.value
+    };
+
+    /*
+     * Membuat option dropdown.
+     */
+    function tambahOption(select, value, label) {
+        const option = document.createElement('option');
+
+        option.value = value;
+        option.textContent = label;
+
+        select.appendChild(option);
+    }
+
+    /*
+     * Memeriksa apakah pilihan masih tersedia.
+     */
+    function pilihanTersedia(select, value) {
+        return Array.from(select.options).some(function (option) {
+            return option.value === value;
+        });
+    }
+
+    /*
+     * Filter provinsi berdasarkan regional.
+     */
+    function perbaruiProvinsi(nilaiDipilih = '') {
+
+        const wilayahId = wilayahSelect.value;
+
+        provinsiSelect.innerHTML = '';
+
+        tambahOption(
+            provinsiSelect,
+            '',
+            'Semua Provinsi'
+        );
+
+        const provinsiTersedia = new Set();
+
+        daftarKabKota.forEach(function (kab) {
+
+            if (wilayahId && kab.wilayah !== wilayahId) {
+                return;
+            }
+
+            provinsiTersedia.add(kab.provinsi);
+        });
+
+        daftarProvinsi.forEach(function (provinsi) {
+
+            if (!provinsiTersedia.has(provinsi.id)) {
+                return;
+            }
+
+            tambahOption(
+                provinsiSelect,
+                provinsi.id,
+                provinsi.nama
+            );
+        });
+
+        provinsiSelect.value = pilihanTersedia(
+            provinsiSelect,
+            nilaiDipilih
+        ) ? nilaiDipilih : '';
+    }
+
+    /*
+     * Filter kabupaten/kota berdasarkan
+     * regional dan provinsi.
+     */
+    function perbaruiKabKota(nilaiDipilih = '') {
+
+        const wilayahId = wilayahSelect.value;
+        const provinsiId = provinsiSelect.value;
+
+        kabKotaSelect.innerHTML = '';
+
+        tambahOption(
+            kabKotaSelect,
+            '',
+            'Semua Kabupaten/Kota'
+        );
+
+        /*
+         * Fasilitas tanpa wilayah hanya dapat dipilih
+         * ketika filter regional dan provinsi kosong.
+         */
+        if (!wilayahId && !provinsiId) {
+            tambahOption(
+                kabKotaSelect,
+                'belum',
+                'Belum Ditentukan'
+            );
+        }
+
+        daftarKabKota.forEach(function (kab) {
+
+            if (wilayahId && kab.wilayah !== wilayahId) {
+                return;
+            }
+
+            if (provinsiId && kab.provinsi !== provinsiId) {
+                return;
+            }
+
+            tambahOption(
+                kabKotaSelect,
+                kab.id,
+                kab.nama
+            );
+        });
+
+        kabKotaSelect.value = pilihanTersedia(
+            kabKotaSelect,
+            nilaiDipilih
+        ) ? nilaiDipilih : '';
+    }
+
+    /*
+     * Inisialisasi ketika halaman dibuka.
+     */
+    perbaruiProvinsi(nilaiAwal.provinsi);
+    perbaruiKabKota(nilaiAwal.kabKota);
+
+    /*
+     * Regional berubah.
+     */
+    wilayahSelect.addEventListener('change', function () {
+
+        perbaruiProvinsi('');
+        perbaruiKabKota('');
+
+        form.requestSubmit();
+    });
+
+    /*
+     * Provinsi berubah.
+     */
+    provinsiSelect.addEventListener('change', function () {
+
+        perbaruiKabKota('');
+
+        form.requestSubmit();
+    });
+
+    /*
+     * Kabupaten/kota berubah.
+     */
+    kabKotaSelect.addEventListener('change', function () {
+
+        form.requestSubmit();
+    });
+
+    /*
+     * Moda dan sumber data berubah.
+     */
+    document.querySelectorAll('[data-autosubmit-ft]')
+        .forEach(function (select) {
+
+            select.addEventListener('change', function () {
+
+                form.requestSubmit();
+            });
+        });
+
+});
+</script>
 
 @endsection
