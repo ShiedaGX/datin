@@ -1,89 +1,260 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title') | Subsidi Transportasi</title>
+    <meta name="theme-color" content="#0b1830">
+
+    <title>@yield('title', 'Masuk') | INTRAM - Transportasi Bersubsidi</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/login.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ asset('css/login.css') }}?v=5">
 </head>
-<body>
-<div class="shell">
 
-    {{-- ===== Panel kiri (branding) ===== --}}
-    <aside class="hero">
-        <a class="hero-brand" href="{{ route('login') }}">
-            <svg class="logo" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
-                <rect width="40" height="40" rx="10" fill="#0f8678"/>
-                <path d="M13 27L27 12" stroke="#fff" stroke-opacity=".35" stroke-width="1.6"/>
-                <circle cx="27" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/>
-                <circle cx="13" cy="27" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/>
-            </svg>
-            <span>
-                <strong>Subsidi transportasi</strong>
-                <small>TRANSPORTASI BERSUBSIDI</small>
-            </span>
-        </a>
+<body class="auth-page">
 
-        <div class="hero-body">
-            <p class="eyebrow"><i></i>PLATFORM DATA NASIONAL</p>
-            <h2>Data terhubung untuk layanan transportasi yang lebih tepat.</h2>
-            <p class="hero-sub">Satu portal untuk mengelola data wilayah dan pengajuan subsidi transportasi.</p>
+<div class="auth-shell">
 
-            <div class="network">
-                <p>JARINGAN LAYANAN TERINTEGRASI</p>
-                <svg viewBox="0 0 520 210" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-                    <g stroke="#2dd4bf" stroke-opacity=".28" stroke-width="1.4" fill="none">
-                        <path d="M60 150L150 90L250 120L330 60L450 100"/>
-                        <path d="M150 90L210 40L330 60"/>
-                        <path d="M250 120L300 175L420 160L450 100"/>
-                        <path d="M60 150L120 185L300 175"/>
-                    </g>
-                    <g fill="#2dd4bf">
-                        <circle cx="60" cy="150" r="5" fill-opacity=".55"/>
-                        <circle cx="150" cy="90" r="7" fill-opacity=".9"/>
-                        <circle cx="250" cy="120" r="5" fill-opacity=".55"/>
-                        <circle cx="330" cy="60" r="8" fill-opacity=".9"/>
-                        <circle cx="450" cy="100" r="5" fill-opacity=".55"/>
-                        <circle cx="210" cy="40" r="4" fill-opacity=".45"/>
-                        <circle cx="300" cy="175" r="6" fill-opacity=".75"/>
-                        <circle cx="420" cy="160" r="4" fill-opacity=".45"/>
-                        <circle cx="120" cy="185" r="4" fill-opacity=".45"/>
-                    </g>
-                </svg>
-                <span class="pill"><i></i>Sistem terhubung</span>
+    {{-- PANEL KIRI --}}
+    <aside class="auth-hero">
+
+        <div class="hero-glow hero-glow-one"></div>
+        <div class="hero-glow hero-glow-two"></div>
+
+        <div class="hero-content">
+
+            {{-- IDENTITAS INSTANSI --}}
+            <div class="institution">
+
+                <div class="institution-logos">
+
+                    <div class="institution-logo">
+                        <img
+                            src="{{ asset('images/logo-kemenhub.png') }}"
+                            alt="Logo Kementerian Perhubungan"
+                            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                        >
+                        <span class="logo-fallback" style="display:none">K</span>
+                    </div>
+
+                    <div class="institution-divider"></div>
+
+                    <div class="institution-logo">
+                        <img
+                            src="{{ asset('images/logo-intram.png') }}"
+                            alt="Logo INTRAM"
+                            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                        >
+                        <span class="logo-fallback" style="display:none">I</span>
+                    </div>
+
+                </div>
+
+                <div class="institution-name">
+                    <strong>KEMENTERIAN PERHUBUNGAN</strong>
+                    <span>
+                        Direktorat Jenderal Integrasi Transportasi dan Multimoda
+                    </span>
+                </div>
+
             </div>
 
-            <dl class="stats">
-                <div><dt>{{ number_format($stats['provinsi'], 0, ',', '.') }}</dt><dd>provinsi tercakup</dd></div>
-                <div><dt>{{ number_format($stats['wilayah'], 0, ',', '.') }}</dt><dd>wilayah terpetakan</dd></div>
-                <div><dt>{{ $stats['kelengkapan'] }}%</dt><dd>kelengkapan data</dd></div>
-            </dl>
+            {{-- KONTEN UTAMA --}}
+            <div class="hero-main">
+
+                <div class="hero-badge">
+                    <span class="badge-dot"></span>
+                    SISTEM INFORMASI NASIONAL
+                </div>
+
+                <h1>
+                    Menghubungkan
+                    <span>Wilayah.</span>
+                    Memperkuat
+                    <span>Konektivitas.</span>
+                </h1>
+
+                <p class="hero-description">
+                    Platform terintegrasi untuk pengelolaan data wilayah,
+                    identifikasi potensi daerah, dan kebutuhan konektivitas
+                    transportasi bersubsidi di Indonesia.
+                </p>
+
+                {{-- ILUSTRASI JARINGAN --}}
+                <div class="network-visual">
+
+                    <svg viewBox="0 0 600 250" fill="none" aria-hidden="true">
+
+                        <defs>
+                            <linearGradient
+                                id="lineGradient"
+                                x1="0"
+                                y1="0"
+                                x2="600"
+                                y2="250"
+                            >
+                                <stop stop-color="#38BDF8" stop-opacity=".15"/>
+                                <stop offset=".5" stop-color="#2DD4BF" stop-opacity=".8"/>
+                                <stop offset="1" stop-color="#38BDF8" stop-opacity=".2"/>
+                            </linearGradient>
+                        </defs>
+
+                        <g stroke="url(#lineGradient)" stroke-width="1.5">
+                            <path d="M40 185L130 115L230 150L325 70L430 110L555 40"/>
+                            <path d="M130 115L180 45L325 70"/>
+                            <path d="M230 150L315 215L450 185L555 40"/>
+                            <path d="M40 185L115 220L315 215"/>
+                            <path d="M325 70L450 185"/>
+                            <path d="M180 45L430 110"/>
+                        </g>
+
+                        <g fill="#5EEAD4">
+                            <circle cx="40" cy="185" r="5" opacity=".5"/>
+                            <circle cx="130" cy="115" r="7"/>
+                            <circle cx="230" cy="150" r="5" opacity=".7"/>
+                            <circle cx="325" cy="70" r="8"/>
+                            <circle cx="430" cy="110" r="6"/>
+                            <circle cx="555" cy="40" r="5"/>
+                            <circle cx="180" cy="45" r="4" opacity=".6"/>
+                            <circle cx="315" cy="215" r="6"/>
+                            <circle cx="450" cy="185" r="5"/>
+                            <circle cx="115" cy="220" r="4" opacity=".5"/>
+                        </g>
+
+                        <g fill="#5EEAD4" opacity=".1">
+                            <circle cx="130" cy="115" r="20"/>
+                            <circle cx="325" cy="70" r="25"/>
+                            <circle cx="315" cy="215" r="20"/>
+                        </g>
+
+                    </svg>
+
+                    <div class="network-caption">
+                        <span class="network-indicator"></span>
+                        INTEGRASI DATA TRANSPORTASI REGIONAL
+                    </div>
+
+                </div>
+
+                {{-- STATISTIK --}}
+                <div class="hero-stats">
+
+                    <div class="hero-stat">
+                        <strong>
+                            {{ number_format($stats['provinsi'] ?? 0, 0, ',', '.') }}
+                        </strong>
+                        <span>
+                            Provinsi<br>tercakup
+                        </span>
+                    </div>
+
+                    <div class="hero-stat">
+                        <strong>
+                            {{ number_format($stats['wilayah'] ?? 0, 0, ',', '.') }}
+                        </strong>
+                        <span>
+                            Wilayah<br>terpetakan
+                        </span>
+                    </div>
+
+                    <div class="hero-stat">
+                        <strong>
+                            {{ $stats['kelengkapan'] ?? 0 }}%
+                        </strong>
+                        <span>
+                            Kelengkapan<br>data
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            {{-- FOOTER KIRI --}}
+            <footer class="hero-footer">
+                <span>
+                    INTRAM · Sistem Informasi Transportasi Bersubsidi
+                </span>
+
+                <span>
+                    © {{ date('Y') }} Kementerian Perhubungan
+                </span>
+            </footer>
+
         </div>
 
-        <p class="hero-foot">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
-            Akses terbatas untuk instansi dan mitra terverifikasi
-        </p>
     </aside>
 
-    {{-- ===== Panel kanan ===== --}}
-    <main class="panel">
-        <header class="panel-top">
-            <span class="portal"><i></i>Portal Data Transportasi Bersubsidi</span>
-            <span>Bahasa Indonesia</span>
-        </header>
+    {{-- PANEL KANAN --}}
+    <main class="auth-panel">
 
-        @yield('content')
+        <div class="panel-inner">
 
-        <footer class="panel-foot">
-            <span>Butuh bantuan akses? <a class="link" href="#">Hubungi administrator</a></span>
-            @yield('foot-right')
-        </footer>
+            {{-- HEADER KANAN --}}
+            <header class="panel-top">
+
+                <div class="portal-brand">
+
+                    <span class="portal-mark">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <circle cx="5" cy="17" r="2"/>
+                            <circle cx="12" cy="7" r="2"/>
+                            <circle cx="19" cy="15" r="2"/>
+                            <path d="M6.2 15.4L10.8 8.7M13.6 8.1L17.5 13.3"/>
+                        </svg>
+                    </span>
+
+                    <span>
+                        <strong>INTRAM</strong>
+                        <small>
+                            Sistem Informasi Transportasi Bersubsidi
+                        </small>
+                    </span>
+
+                </div>
+
+                <span class="language-pill">
+                    ID · Indonesia
+                </span>
+
+            </header>
+
+            {{-- FORM LOGIN --}}
+            <div class="panel-body">
+                @yield('content')
+            </div>
+
+            {{-- FOOTER KANAN --}}
+            <footer class="panel-footer">
+
+                <span>
+                    © {{ date('Y') }} Kementerian Perhubungan
+                </span>
+
+                <span>
+                    Direktorat Jenderal Integrasi Transportasi dan Multimoda
+                </span>
+
+            </footer>
+
+        </div>
+
     </main>
+
 </div>
-<script src="{{ asset('js/login.js') }}" defer></script>
+
 </body>
 </html>

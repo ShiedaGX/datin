@@ -354,9 +354,36 @@ class PetaGeospasialController extends Controller
 
                     'sumber' => $f->sumber_data,
 
-                    'perlu_verifikasi' => $perluVerifikasi,
 
-                    'layak_rekomendasi' => ! $perluVerifikasi,
+                    'perlu_verifikasi' =>
+                        $perluVerifikasi ||
+                        str_starts_with(
+                            (string) $f->referensi_sumber,
+                            'osm:'
+                        ),
+
+                    'layak_rekomendasi' =>
+                        ! $perluVerifikasi &&
+                        ! str_starts_with(
+                            (string) $f->referensi_sumber,
+                            'osm:'
+                        ),
+
+
+
+                        'tipe_terminal' => $f->tipe_terminal,
+
+                        'status_verifikasi' => $f->status_verifikasi,
+
+                        'jenis_fasilitas_osm' => $f->jenis_fasilitas_osm,
+
+                        'status_pencocokan' => $f->status_pencocokan,
+
+                        'is_osm' => str_starts_with(
+                            (string) $f->referensi_sumber,
+                            'osm:'
+                        ),
+
                 ];
             })
             ->values();

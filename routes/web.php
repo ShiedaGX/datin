@@ -78,6 +78,14 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
     Route::get('/peta-geospasial/data/{layer}', [PetaGeospasialController::class, 'data'])
         ->name('peta.geospasial.data');
 
+
+    Route::get(
+        '/peta-geospasial/terminal-osm/geojson',
+        [\App\Http\Controllers\TerminalOsmController::class, 'geojson']
+    )->name('peta.terminal-osm.geojson');
+
+
+
     // Data fasilitas referensi dapat dikelola hanya oleh Super Admin.
     Route::get('/fasilitas-transportasi', [FasilitasTransportasiController::class, 'index'])->name('fasilitas.index');
     Route::get('/fasilitas-transportasi/tambah', [FasilitasTransportasiController::class, 'create'])->name('fasilitas.create');
