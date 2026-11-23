@@ -44,6 +44,8 @@
   .pk-land:hover{fill:#f9f5e9}
   .pk-line{stroke-opacity:.68;stroke-width:2;vector-effect:non-scaling-stroke;cursor:pointer;transition:stroke-opacity .18s,stroke-width .18s}
   .pk-line:hover,.pk-line.pk-selected{stroke-opacity:1;stroke-width:3.6}
+  .pk-cluster{fill:#173b63;fill-opacity:.92;stroke:#fff;stroke-width:2;vector-effect:non-scaling-stroke;cursor:pointer}.pk-cluster:hover{fill:#0f2a47}
+  .pk-cluster-n{fill:#fff;font:700 11px Inter,system-ui,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
   .pk-point{stroke:#fff;stroke-width:1.7;vector-effect:non-scaling-stroke;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(23,42,65,.32))}
   .pk-label{fill:#243951;font-size:11px;paint-order:stroke;stroke:#d8ebf5;stroke-width:3px;pointer-events:none}
   .pk-city-dot{fill:#52677a;stroke:#fff;stroke-width:1.2;vector-effect:non-scaling-stroke;pointer-events:none}
@@ -111,6 +113,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="{{ asset('js/peta-cluster.js') }}"></script>
 <script>
 (() => {
   'use strict';
@@ -210,8 +213,8 @@
   const dots = root.append('g'); // Titik pengajuan berada di atas label kota.
   const projection = d3.geoMercator();
   const path = d3.geoPath(projection);
-  let currentZoom = 1;
-  const zoom = d3.zoom().scaleExtent([1,12]).on('zoom',e=>{root.attr('transform',e.transform);currentZoom=e.transform.k;gambarLabelKota();gambarLabelPerairan()});
+  let currentZoom = 1, currentT = d3.zoomIdentity, pkState = null, raf = 0;
+  const zoom = d3.zoom().scaleExtent([1,12]).on('zoom',e=>{root.attr('transform',e.transform);currentZoom=e.transform.k;currentT=e.transform;if(!raf)raf=requestAnimationFrame(()=>{raf=0;drawDots();gambarLabelKota();gambarLabelPerairan()})});
   svg.call(zoom);
   let selected=null;
   let geo=null;
@@ -253,44 +256,73 @@
       .select('title').text(r=>`${byId.get(r.asal)?.nama} → ${byId.get(r.tujuan)?.nama}: ${r.jarak} km`);
 
     const p=points.filter(p=>ids.has(p.id));
-    const circles=dots.selectAll('circle').data(p,p=>p.id);
-    circles.exit().remove();
-    circles.enter().append('circle').attr('class','pk-point').on('click',(e,p)=>{selected=rs.find(r=>r.asal===p.id)??rs.find(r=>r.tujuan===p.id)??null;detail(selected);update()}).append('title');
-    dots.selectAll('circle')
-      .attr('cx',p=>projection([p.lon,p.lat])[0])
-      .attr('cy',p=>projection([p.lon,p.lat])[1])
-      .attr('r',p=>destinations.has(p.id)?5:4)
-      .attr('fill',p=>origins.has(p.id)?color(rs.find(r=>r.asal===p.id)?.klasifikasi||''):'#15263f')
-      .select('title').text(p=>p.nama);
+    pkState={p,origins,destinations,rs};drawDots();
     if(selected&&!rs.some(r=>r.id===selected.id&&r.tujuan===selected.tujuan)){selected=null;detail(null)}
   }
 
+  const xy = d => projection([d.lon,d.lat]);
+  // Titik dikelompokkan pada zoom rendah; ukuran titik/label tetap di layar (dibagi k).
+  function drawDots(){
+    if(!pkState||!geo)return;
+    const {p,origins,destinations,rs}=pkState,k=currentZoom,w=svg.node().clientWidth||900,h=svg.node().clientHeight||650;
+    const g=PetaCluster.group(p,xy,{k,tx:currentT.x,ty:currentT.y,w,h,cell:38,pinned:selected?(selected.asal):null});
+    const markers=[...g.clusters.map(c=>({key:'c:'+c.key,type:'c',x:c.x,y:c.y,c})),...g.singles.map(d=>{const [x,y]=xy(d);return {key:'p:'+d.id,type:'p',x,y,d}})];
+    const nodes=dots.selectAll('g.pk-mk').data(markers,d=>d.key).join(en=>{const n=en.append('g').attr('class','pk-mk');n.append('circle');n.append('text').attr('class','pk-cluster-n');n.append('title');return n});
+    nodes.attr('transform',d=>`translate(${d.x},${d.y}) scale(${1/k})`);
+    nodes.select('circle').attr('class',d=>d.type==='c'?'pk-cluster':'pk-point')
+      .attr('r',d=>d.type==='c'?11+Math.min(6,Math.log2(d.c.items.length)*1.5):(destinations.has(d.d.id)?5:4))
+      .attr('fill',d=>d.type==='c'?null:(origins.has(d.d.id)?color(rs.find(r=>r.asal===d.d.id)?.klasifikasi||''):'#15263f'));
+    nodes.select('text').text(d=>d.type==='c'?(d.c.items.length>999?'999+':d.c.items.length):'');
+    nodes.select('title').text(d=>d.type==='c'?`${d.c.items.length} titik. Klik untuk memperbesar`:d.d.nama);
+    nodes.on('click',(e,d)=>{
+      e.stopPropagation();
+      if(d.type==='p'){selected=rs.find(r=>r.asal===d.d.id)??rs.find(r=>r.tujuan===d.d.id)??null;detail(selected);update();return}
+      const [x0,y0,x1,y1]=PetaCluster.bounds(d.c.items,xy),k2=Math.min(12,Math.max(k*1.9,.8*Math.min(w/Math.max(x1-x0,1e-3),h/Math.max(y1-y0,1e-3))));
+      if(k2<=k*1.05){select('pk-detail').innerHTML=`<h3>${d.c.items.length} titik berdekatan</h3><ul>${d.c.items.slice(0,40).map(i=>`<li>${esc(i.nama)}</li>`).join('')}</ul>`;return}
+      svg.transition().duration(450).call(zoom.transform,d3.zoomIdentity.translate(w/2-k2*(x0+x1)/2,h/2-k2*(y0+y1)/2).scale(k2));
+    });
+  }
+
+  // Penempatan label di koordinat layar: label yang bertumpuk disembunyikan (yang utama didahulukan).
+  function penempat(){
+    const k=currentZoom,w=svg.node().clientWidth||900,h=svg.node().clientHeight||650,placed=[];
+    return (d,size,centered)=>{
+      const [x,y]=xy(d),sx=currentT.x+k*x,sy=currentT.y+k*y;
+      if(sx<-80||sy<-30||sx>w+80||sy>h+30)return false;
+      const tw=d.nama.length*size*.6+(centered?0:8),b=centered?[sx-tw/2,sy-size,sx+tw/2,sy+4]:[sx+4,sy-size-6,sx+4+tw,sy+3];
+      if(placed.some(q=>b[0]<q[2]&&b[2]>q[0]&&b[1]<q[3]&&b[3]>q[1]))return false;
+      placed.push(b);return true;
+    };
+  }
+  let tempat=null;
+
   function gambarLabelKota(){
     if(!geo)return;
-    const mode=select('pk-kota').value;
-    const tampil=mode==='sembunyi'?[]:kotaReferensi.filter(k=>mode==='semua'||(mode==='utama'&&k.utama)||(mode==='otomatis'&&(k.utama||currentZoom>=2.2)));
-    // Urutan layer: label geografis di bawah titik pengajuan, tidak dapat diklik.
+    const mode=select('pk-kota').value,k=currentZoom,tp=penempat();tempat=tp;
+    const tampil=(mode==='sembunyi'?[]:kotaReferensi.filter(d=>mode==='semua'||(mode==='utama'&&d.utama)||(mode==='otomatis'&&(d.utama||currentZoom>=2.2))))
+      .slice().sort((a,b)=>(b.utama?1:0)-(a.utama?1:0)).filter(d=>tp(d,d.utama?12:10,false));
     cityLayer.selectAll('circle').data(tampil,d=>d.nama).join('circle')
-      .attr('class','pk-city-dot').attr('cx',d=>projection([d.lon,d.lat])[0]).attr('cy',d=>projection([d.lon,d.lat])[1]).attr('r',d=>d.utama?3:2);
+      .attr('class','pk-city-dot').attr('cx',d=>xy(d)[0]).attr('cy',d=>xy(d)[1]).attr('r',d=>(d.utama?3:2)/k);
     cityLayer.selectAll('text').data(tampil,d=>d.nama).join('text')
       .attr('class',d=>'pk-city-label'+(d.utama?' pk-city-major':''))
-      .attr('x',d=>projection([d.lon,d.lat])[0]+6)
-      .attr('y',d=>projection([d.lon,d.lat])[1]-5)
+      .attr('x',d=>xy(d)[0]+6/k).attr('y',d=>xy(d)[1]-5/k)
+      .style('font-size',d=>(d.utama?12:10)/k+'px').style('stroke-width',3/k+'px')
       .text(d=>d.nama);
   }
 
   function gambarLabelPerairan(){
     if(!geo)return;
-    const mode=select('pk-perairan').value;
-    const tampil=mode==='sembunyi'?[]:perairanReferensi.filter(d=>
+    const mode=select('pk-perairan').value,k=currentZoom,tp=penempat();
+    const ukuran=d=>d.jenis==='samudra'?13:(d.jenis==='selat'?9:11);
+    const tampil=(mode==='sembunyi'?[]:perairanReferensi.filter(d=>
       mode==='semua' ||
       (mode==='utama' && d.utama) ||
       (mode==='otomatis' && (d.utama || (d.jenis==='laut' && currentZoom>=1.8) || (d.jenis==='selat' && currentZoom>=3.2)))
-    );
+    )).slice().sort((a,b)=>(b.utama?1:0)-(a.utama?1:0)).filter(d=>tp(d,ukuran(d),true));
     waterLayer.selectAll('text').data(tampil,d=>d.nama).join('text')
       .attr('class',d=>'pk-water-label'+(d.jenis==='samudra'?' pk-water-ocean':'')+(d.jenis==='selat'?' pk-water-strait':''))
-      .attr('x',d=>projection([d.lon,d.lat])[0])
-      .attr('y',d=>projection([d.lon,d.lat])[1])
+      .attr('x',d=>xy(d)[0]).attr('y',d=>xy(d)[1])
+      .style('font-size',d=>ukuran(d)/k+'px').style('stroke-width',3/k+'px')
       .text(d=>d.nama);
   }
 
