@@ -1,4 +1,3 @@
-
 @extends('layouts.app')
 
 @section('title', 'Dashboard Konektivitas Regional')
@@ -529,6 +528,30 @@
         height: 190px;
     }
 }
+
+/* ANALISIS KONEKTIVITAS — tambahan, tidak mengganti KPI lama */
+.intram-dashboard .intram-connect-section{margin:26px 0 22px}
+.intram-dashboard .intram-connect-title{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 16px}
+.intram-dashboard .intram-connect-title h2{font-size:21px;font-weight:800;color:#18324d;margin:0 0 5px}
+.intram-dashboard .intram-connect-title p{font-size:12px;color:#8392a4;margin:0;line-height:1.6}
+.intram-dashboard .intram-connect-pill{display:inline-flex;align-items:center;padding:7px 12px;background:#e8f5f4;border:1px solid #cde8e4;color:#087f83;border-radius:30px;font-size:11px;font-weight:750}
+.intram-dashboard .intram-connect-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.intram-dashboard .intram-connect-kpi{border:1px solid #e5edf4;background:#fff;border-radius:14px;padding:19px;box-shadow:0 5px 20px rgba(19,49,79,.035)}
+.intram-dashboard .intram-connect-kpi span{display:block;color:#73859a;font-size:12px;font-weight:650}
+.intram-dashboard .intram-connect-kpi strong{display:block;font-size:29px;font-weight:800;color:#18324d;margin:8px 0 5px;line-height:1.2}
+.intram-dashboard .intram-connect-kpi small{font-size:11px;color:#8796a8;line-height:1.5}
+.intram-dashboard .intram-connect-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.intram-dashboard .intram-connect-bar{height:10px;border-radius:20px;background:#edf2f7;overflow:hidden;margin-top:8px}
+.intram-dashboard .intram-connect-fill{height:100%;border-radius:20px;background:#087f83}
+.intram-dashboard .intram-connect-row{margin-bottom:16px}
+.intram-dashboard .intram-connect-row:last-child{margin-bottom:0}
+.intram-dashboard .intram-connect-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#40566e;font-size:12px;font-weight:650}
+.intram-dashboard .intram-connect-row-head strong{color:#18324d;font-variant-numeric:tabular-nums;white-space:nowrap}
+.intram-dashboard .intram-connect-note{margin-top:15px;font-size:11px;color:#8796a8;line-height:1.65}
+@media(max-width:1100px){.intram-dashboard .intram-connect-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:768px){.intram-dashboard .intram-connect-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.intram-dashboard .intram-connect-kpis{grid-template-columns:1fr 1fr;gap:9px}.intram-dashboard .intram-connect-kpi{padding:13px}.intram-dashboard .intram-connect-kpi strong{font-size:24px}}
+
 </style>
 
 <div class="intram-dashboard">
@@ -810,6 +833,140 @@
         </section>
 
     </div>
+
+
+    {{-- =====================================
+         ANALISIS KONEKTIVITAS (VERIFIKASI FINAL)
+         KPI dan grafik dashboard sebelumnya tetap utuh.
+    ===================================== --}}
+    <section class="intram-connect-section" aria-labelledby="intram-connect-heading">
+        <div class="intram-connect-title">
+            <div>
+                <h2 id="intram-connect-heading">Analisis Konektivitas Regional</h2>
+                <p>Ringkasan hubungan kebutuhan angkutan bersubsidi yang dapat dipetakan sesuai hak akses akun.</p>
+            </div>
+            <span class="intram-connect-pill">Verifikasi Final</span>
+        </div>
+
+        <div class="intram-connect-kpis">
+            <article class="intram-connect-kpi">
+                <span>Total Hubungan</span>
+                <strong>{{ number_format($konektivitas['hubungan'], 0, ',', '.') }}</strong>
+                <small>Pasangan laporan dan tujuan</small>
+            </article>
+            <article class="intram-connect-kpi">
+                <span>Daerah Asal</span>
+                <strong>{{ number_format($konektivitas['asal'], 0, ',', '.') }}</strong>
+                <small>Kabupaten/kota asal unik</small>
+            </article>
+            <article class="intram-connect-kpi">
+                <span>Simpul Tujuan</span>
+                <strong>{{ number_format($konektivitas['tujuan'], 0, ',', '.') }}</strong>
+                <small>Kabupaten/kota tujuan unik</small>
+            </article>
+            <article class="intram-connect-kpi">
+                <span>Wilayah Terhubung</span>
+                <strong>{{ number_format($konektivitas['wilayah_unik'], 0, ',', '.') }}</strong>
+                <small>Gabungan asal dan tujuan unik</small>
+            </article>
+        </div>
+
+        <div class="intram-connect-grid">
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Distribusi Moda Transportasi</h2>
+                    <p>Jumlah hubungan berdasarkan moda pada pengajuan final.</p>
+                </div>
+                @forelse ($konektivitas['moda'] as $item)
+                    @php
+                        $warnaModa = match (mb_strtolower($item['nama'])) {
+                            'darat' => '#e67e22',
+                            'laut' => '#1688dc',
+                            'udara' => '#8b5cf6',
+                            'kereta api' => '#159b68',
+                            default => '#64748b',
+                        };
+                    @endphp
+                    <div class="intram-connect-row">
+                        <div class="intram-connect-row-head">
+                            <span>{{ $item['nama'] }}</span>
+                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }} ({{ number_format($item['persen'], 1, ',', '.') }}%)</strong>
+                        </div>
+                        <div class="intram-connect-bar">
+                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['persen'])) }}%;background:{{ $warnaModa }}"></div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="intram-empty">Belum ada hubungan konektivitas Verifikasi Final yang dapat dipetakan.</div>
+                @endforelse
+            </article>
+
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Top 5 Daerah Asal</h2>
+                    <p>Daerah dengan jumlah hubungan konektivitas terbanyak.</p>
+                </div>
+                @php $maksAsal = max(1, $konektivitas['top_asal'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($konektivitas['top_asal'] as $index => $item)
+                    <div class="intram-connect-row">
+                        <div class="intram-connect-row-head">
+                            <span>{{ $index + 1 }}. {{ $item['nama'] }}</span>
+                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }}</strong>
+                        </div>
+                        <div class="intram-connect-bar">
+                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksAsal * 100)) }}%"></div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="intram-empty">Belum ada data daerah asal yang dapat ditampilkan.</div>
+                @endforelse
+            </article>
+        </div>
+        <div class="intram-connect-grid" style="margin-top:18px">
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Top 5 Sektor Komoditas</h2>
+                    <p>Sektor dengan entri komoditas terbanyak pada hubungan Verifikasi Final yang dapat dipetakan.</p>
+                </div>
+                @php $maksSektor = max(1, $konektivitas['top_sektor'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($konektivitas['top_sektor'] as $index => $item)
+                    <div class="intram-connect-row">
+                        <div class="intram-connect-row-head">
+                            <span>{{ $index + 1 }}. {{ $item['nama'] }}</span>
+                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }}</strong>
+                        </div>
+                        <div class="intram-connect-bar">
+                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksSektor * 100)) }}%;background:#0d9488"></div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="intram-empty">Belum ada data sektor komoditas pada hubungan yang dapat dipetakan.</div>
+                @endforelse
+            </article>
+
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Top 5 Komoditas</h2>
+                    <p>Komoditas yang paling sering tercatat pada tujuan pengajuan Verifikasi Final.</p>
+                </div>
+                @php $maksKomoditas = max(1, $konektivitas['top_komoditas'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($konektivitas['top_komoditas'] as $index => $item)
+                    <div class="intram-connect-row">
+                        <div class="intram-connect-row-head">
+                            <span>{{ $index + 1 }}. {{ $item['nama'] }}</span>
+                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }}</strong>
+                        </div>
+                        <div class="intram-connect-bar">
+                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksKomoditas * 100)) }}%;background:#2563eb"></div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="intram-empty">Belum ada data komoditas pada hubungan yang dapat dipetakan.</div>
+                @endforelse
+            </article>
+        </div>
+        <p class="intram-connect-note">Top sektor dan komoditas dihitung berdasarkan frekuensi entri komoditas, bukan total volume (satuan dapat berbeda). Sektor yang tidak dapat dipetakan secara unik dikelompokkan sebagai belum terpetakan / ambigu. Statistik ini hanya menghitung pengajuan Verifikasi Final dengan koordinat asal dan tujuan valid. Satu pengajuan dengan beberapa tujuan dihitung sebagai beberapa hubungan. Data menunjukkan kebutuhan konektivitas, bukan layanan transportasi aktual.</p>
+    </section>
 
     {{-- =====================================
          DATA TERBARU

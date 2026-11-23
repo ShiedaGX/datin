@@ -21,6 +21,15 @@
   .pk-section-title:after{content:'';flex:1;height:1px;background:#e9eef4}
   .pk-field{margin:0 0 17px}
   .pk-field label{display:block;color:#334760;font-size:12px;margin-bottom:7px;font-weight:700}
+  .pk-field input{display:block;width:100%;min-height:41px;padding:9px 12px;background:#f8fafc;color:#1d344f;border:1px solid #dfe7f0;border-radius:10px;font:inherit;font-size:12px;outline:none;box-sizing:border-box}
+  .pk-field input:focus{border-color:#4c88df;box-shadow:0 0 0 3px rgba(37,99,235,.11);background:#fff}
+  .pk-search-results{max-height:220px;overflow-y:auto;border:1px solid #e0e8f1;border-radius:10px;margin-top:7px;background:#fff}
+  .pk-search-results[hidden]{display:none}
+  .pk-search-item{width:100%;display:block;text-align:left;border:0;border-bottom:1px solid #edf1f6;background:#fff;padding:10px 12px;color:#243950;cursor:pointer;font:inherit;font-size:12px}
+  .pk-search-item:last-child{border-bottom:0}
+  .pk-search-item:hover,.pk-search-item:focus-visible{background:#eff6ff}
+  .pk-search-item small{display:block;color:#7c8da1;margin-top:3px;font-size:10px}
+  .pk-search-hint{padding:10px 12px;color:#7c8da1;font-size:11px}
   .pk-field select{display:block;width:100%;min-height:41px;padding:9px 34px 9px 12px;background-color:#f8fafc;color:#1d344f;border:1px solid #dfe7f0;border-radius:10px;font:inherit;font-size:12px;font-weight:550;outline:none;transition:border-color .18s,box-shadow .18s;cursor:pointer}
   .pk-field select:hover{border-color:#afc4dc;background-color:#fff}
   .pk-field select:focus{border-color:#4c88df;box-shadow:0 0 0 3px rgba(37,99,235,.11);background-color:#fff}
@@ -84,6 +93,8 @@
     <p>Data berstatus <strong>Verifikasi Final</strong> sesuai hak akses akun yang sedang login. Titik menggunakan koordinat kabupaten/kota dalam database DATIN.</p>
     </div>
     <div class="pk-panel-body">
+    <div class="pk-section-title">Cari konektivitas</div>
+    <div class="pk-field"><label for="pk-search">Cari wilayah, tujuan, atau nomor laporan</label><input id="pk-search" type="search" placeholder="Contoh: Ambon, Sorong, laporan..." autocomplete="off" aria-controls="pk-search-results" aria-expanded="false"><div id="pk-search-results" class="pk-search-results" hidden></div></div>
     <div class="pk-section-title">Filter konektivitas</div>
     <div class="pk-field"><label>Klasifikasi daerah</label><div id="pk-klas" class="pk-toggles"></div></div>
     <div class="pk-field"><label for="pk-moda">Moda transportasi</label><select id="pk-moda" @if($modaTerkunci) disabled @endif><option value="">{{ $modaTerkunci ? 'Moda akun saya' : 'Semua moda' }}</option></select></div>
@@ -201,7 +212,7 @@
 
   const classes = unique(routes.map(r=>r.klasifikasi));
   const enabled = new Set(classes);
-  classes.forEach(k=>{const b=document.createElement('button');b.type='button';b.className='pk-toggle';b.textContent=k;b.style.borderLeft='4px solid '+color(k);b.setAttribute('aria-pressed','true');b.addEventListener('click',()=>{enabled.has(k)?enabled.delete(k):enabled.add(k);b.setAttribute('aria-pressed',String(enabled.has(k)));update()});select('pk-klas').appendChild(b)});
+  classes.forEach(k=>{const b=document.createElement('button');b.type='button';b.className='pk-toggle';b.textContent=k;b.style.borderLeft='4px solid '+color(k);b.setAttribute('aria-pressed','true');b.addEventListener('click',()=>{enabled.has(k)?enabled.delete(k):enabled.add(k);b.setAttribute('aria-pressed',String(enabled.has(k)));update();cariKonektivitas()});select('pk-klas').appendChild(b)});
 
   const svg = d3.select('#pk-map');
   const root = svg.append('g');
@@ -213,10 +224,11 @@
   const projection = d3.geoMercator();
   const path = d3.geoPath(projection);
   let currentZoom = 1;
+  let activeOrigins = new Set();
   // Ukuran penanda dikompensasi terhadap transform zoom SVG.
   // Radius layar sedikit mengecil saat zoom bertambah, tanpa mengubah koordinat.
   function radiusTitik(p) {
-    const isOrigin = shown().some(r => r.asal === p.id);
+    const isOrigin = activeOrigins.has(p.id);
     const base = selectedOrigin === p.id ? 8 : (isOrigin ? 6 : 5);
     const shrink = 1 + 0.14 * Math.log2(Math.max(1, currentZoom));
     return base / (currentZoom * shrink);
@@ -235,6 +247,25 @@
   let selected=null;
   let selectedOrigin=null;
   let geo=null;
+
+  function fokusKoordinat(coords, maxScale=8){
+    if(!coords.length)return;
+    const w=svg.node().clientWidth||900,h=svg.node().clientHeight||650;
+    const xs=coords.map(c=>c[0]),ys=coords.map(c=>c[1]);
+    const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+    const dx=Math.max(maxX-minX,25),dy=Math.max(maxY-minY,25);
+    const k=Math.max(1,Math.min(maxScale,.77*Math.min(w/dx,h/dy)));
+    const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+    const target=d3.zoomIdentity.translate(w/2-k*cx,h/2-k*cy).scale(k);
+    svg.transition().duration(650).call(zoom.transform,target);
+  }
+  function fokusRute(r){
+    const a=byId.get(r.asal),b=byId.get(r.tujuan);
+    if(a&&b)fokusKoordinat([projection([a.lon,a.lat]),projection([b.lon,b.lat])],8);
+  }
+  function fokusWilayah(p){
+    if(p)fokusKoordinat([projection([p.lon,p.lat])],7);
+  }
 
   const shown = () => routes.filter(r=>
     enabled.has(r.klasifikasi)
@@ -322,6 +353,7 @@
       selectedOrigin=null;
       detail(r);
       update();
+      fokusRute(r);
     });
     links.selectAll('path.pk-line')
       .attr('d',curvePath)
@@ -339,12 +371,13 @@
       .select('title').text(r=>`${byId.get(r.asal)?.nama} → ${byId.get(r.tujuan)?.nama}: ${r.jarak} km`);
 
     const p=points.filter(p=>ids.has(p.id));
+    activeOrigins=origins;
     const circles=dots.selectAll('circle').data(p,p=>p.id);
     circles.exit().remove();
     circles.enter().append('circle').attr('class','pk-point').append('title');
 
     // Pasang ulang handler setiap update agar selalu memakai hasil filter terbaru.
-    dots.selectAll('circle')
+    dots.selectAll('circle.pk-point')
       .on('click',(e,p)=>{
         if(origins.has(p.id)){
           selected=null;
@@ -356,6 +389,7 @@
           detail(selected);
         }
         update();
+        fokusWilayah(p);
       })
       .attr('cx',p=>projection([p.lon,p.lat])[0])
       .attr('cy',p=>projection([p.lon,p.lat])[1])
@@ -377,6 +411,44 @@
       }
     }
   }
+
+  const searchInput=select('pk-search');
+  const searchResults=select('pk-search-results');
+  const normalize=s=>String(s??'').toLocaleLowerCase('id-ID').trim();
+  function tutupHasil(){searchResults.hidden=true;searchInput.setAttribute('aria-expanded','false');}
+  function cariKonektivitas(){
+    const q=normalize(searchInput.value);
+    searchResults.replaceChildren();
+    if(!q){tutupHasil();return;}
+    const rs=shown();
+    const ids=new Set(rs.flatMap(r=>[r.asal,r.tujuan]));
+    const wilayah=points.filter(p=>ids.has(p.id)&&normalize(`${p.nama} ${p.provinsi??''}`).includes(q)).slice(0,8);
+    const rute=rs.filter(r=>normalize(`${r.laporan??''} ${byId.get(r.asal)?.nama??''} ${byId.get(r.tujuan)?.nama??''}`).includes(q)).slice(0,10);
+    const add=(title,sub,fn)=>{
+      const b=document.createElement('button');b.type='button';b.className='pk-search-item';
+      b.textContent=title;
+      const small=document.createElement('small');small.textContent=sub;b.appendChild(small);
+      b.addEventListener('click',()=>{fn();searchInput.value=title;tutupHasil();});
+      searchResults.appendChild(b);
+    };
+    wilayah.forEach(p=>add(p.nama,p.provinsi?`Wilayah · ${p.provinsi}`:'Wilayah',()=>{
+      selected=null;selectedOrigin=null;
+      const related=shown().filter(r=>r.asal===p.id||r.tujuan===p.id);
+      if(related.some(r=>r.asal===p.id)){
+        selectedOrigin=p.id;detailOrigin(p.id,shown());
+      }else{selected=related[0]??null;detail(selected);}
+      update();fokusWilayah(p);
+    }));
+    rute.forEach(r=>add(`${byId.get(r.asal)?.nama??'Asal'} → ${byId.get(r.tujuan)?.nama??'Tujuan'}`,
+      `Rute · ${r.laporan??'Tanpa nomor laporan'} · ${r.moda??''}`,()=>{
+        selected=r;selectedOrigin=null;detail(r);update();fokusRute(r);
+      }));
+    if(!wilayah.length&&!rute.length){const hint=document.createElement('div');hint.className='pk-search-hint';hint.textContent='Tidak ada hasil pada filter aktif.';searchResults.appendChild(hint);}
+    searchResults.hidden=false;searchInput.setAttribute('aria-expanded','true');
+  }
+  searchInput.addEventListener('input',cariKonektivitas);
+  searchInput.addEventListener('keydown',e=>{if(e.key==='Escape')tutupHasil();});
+  document.addEventListener('click',e=>{if(!searchInput.contains(e.target)&&!searchResults.contains(e.target))tutupHasil();});
 
   // Smart labels: saat zoom detail, label referensi tidak menutupi titik/rute.
   // Mode manual (utama/semua) tetap tersedia; ukuran teks dijaga konstan di layar.
@@ -441,7 +513,7 @@
     gambarLabelPerairan();
   }
 
-  for(const id of ['pk-moda','pk-prov','pk-sektor','pk-jarak'])select(id).addEventListener('change',update);
+  for(const id of ['pk-moda','pk-prov','pk-sektor','pk-jarak'])select(id).addEventListener('change',()=>{update();cariKonektivitas();});
   select('pk-kota').addEventListener('change',gambarLabelKota);
   select('pk-perairan').addEventListener('change',gambarLabelPerairan);
   select('pk-plus').addEventListener('click',()=>svg.transition().call(zoom.scaleBy,1.5));

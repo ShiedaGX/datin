@@ -10,7 +10,7 @@ class MasterKomoditas extends Model
 {
     protected $table = 'master_komoditas';
     protected $primaryKey = 'id_komoditas';
-    protected $fillable = ['id_sektor', 'nama_komoditas'];
+    protected $fillable = ['id_sektor', 'nama_komoditas', 'satuan_default'];
 
     protected static function booted(): void
     {

@@ -31,16 +31,21 @@ class Sektor
     public static function komoditas(): array
     {
         return Cache::rememberForever(self::CACHE_KEY_KOMODITAS, function () {
-            return MasterSektor::with('komoditas:id_komoditas,id_sektor,nama_komoditas')
+            return MasterSektor::with('komoditas:id_komoditas,id_sektor,nama_komoditas,satuan_default')
                 ->orderBy('urutan')->get()
                 ->flatMap(fn ($s) => $s->komoditas->map(fn ($k) => [
                     'nama'   => $k->nama_komoditas,
                     'sektor' => $s->nama_sektor,
+                    'satuan_default' => $k->satuan_default,
                 ]))
                 ->groupBy(fn ($r) => mb_strtolower($r['nama']))
                 ->map(fn ($g) => [
                     'nama'   => $g->first()['nama'],
                     'sektor' => $g->pluck('sektor')->unique()->values()->all(),
+                    // Nama sama lintas sektor hanya disarankan jika semua default identik dan terisi.
+                    'satuan_default' => $g->pluck('satuan_default')->filter(fn ($v) => $v !== null && $v !== '')->unique()->count() === 1
+                        && $g->every(fn ($r) => ! empty($r['satuan_default']))
+                        ? $g->first()['satuan_default'] : null,
                 ])
                 ->sortBy('nama', SORT_NATURAL | SORT_FLAG_CASE)
                 ->values()->all();

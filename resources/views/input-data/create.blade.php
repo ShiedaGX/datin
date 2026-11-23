@@ -755,7 +755,8 @@
                 ).map(k => ({
                     nama: k.nama ?? '',
                     jumlah: k.jumlah ?? '',
-                    satuan_data: k.satuan_data ?? ''
+                    satuan_data: k.satuan_data ?? '',
+                    satuanOtomatis: k.satuanOtomatis === true
                 }))
             }
         ])
@@ -805,6 +806,17 @@
         }
     }
 
+    // Rekomendasi berasal dari Master Komoditas yang diatur Super Admin.
+    // Nama harus cocok persis; satuan tidak aktif atau nama ambigu tidak disarankan.
+    function satuanRekomendasi(nama) {
+        const key = String(nama || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const item = komoditas.find(k =>
+            String(k.nama || '').trim().toLowerCase().replace(/\s+/g, ' ') === key
+        );
+        const s = item?.satuan_default;
+        return s ? (satuanData.find(x => String(x).toLowerCase() === String(s).toLowerCase()) || '') : '';
+    }
+
     // Membuat dropdown satuan.
     function buatDropdownSatuan(k, i, m, namaTujuan) {
         const satuan = document.createElement('select');
@@ -841,6 +853,7 @@
 
         satuan.addEventListener('change', () => {
             k.satuan_data = satuan.value;
+            k.satuanOtomatis = false;
         });
 
         return satuan;
@@ -941,8 +954,15 @@
                 tampilSektor(sek, k.nama);
 
                 kom.addEventListener('input', () => {
+                    const rekomendasiLama = satuanRekomendasi(k.nama);
                     k.nama = kom.value;
                     tampilSektor(sek, kom.value);
+                    const rekomendasiBaru = satuanRekomendasi(k.nama);
+                    if (!k.satuan_data || (k.satuanOtomatis && k.satuan_data === rekomendasiLama)) {
+                        k.satuan_data = rekomendasiBaru || '';
+                        k.satuanOtomatis = Boolean(rekomendasiBaru);
+                        satuan.value = k.satuan_data;
+                    }
                 });
 
                 // Jumlah (type text + inputmode decimal supaya tampil sama dengan kolom lain)
@@ -976,6 +996,13 @@
                 });
 
                 // Satuan data.
+                if (!k.satuan_data) {
+                    const otomatis = satuanRekomendasi(k.nama);
+                    if (otomatis) {
+                        k.satuan_data = otomatis;
+                        k.satuanOtomatis = true;
+                    }
+                }
                 const satuan = buatDropdownSatuan(
                     k,
                     i,

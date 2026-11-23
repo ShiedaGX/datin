@@ -524,6 +524,83 @@
             justify-content: center;
         }
     }
+
+/* Tab navigasi */
+.ms-tabs{display:flex;gap:8px;margin:0 0 18px;flex-wrap:wrap;border-bottom:1px solid #e5edf2;padding-bottom:12px}
+.ms-tabs a{padding:10px 17px;border-radius:9px;background:#f1f5f9;color:#43566d;text-decoration:none;font-weight:700;font-size:13px;transition:.2s}
+.ms-tabs a:hover{background:#dff3f0;color:#087f83}
+.ms-tabs a.is-active{background:#087f83;color:#fff}
+/* Pencarian komoditas lintas sektor */
+.ms-search-komoditas{margin:0 0 18px;padding:16px;border:1px solid #dcebe8;background:#f5fbf9;border-radius:12px}
+.ms-search-komoditas-title{font-weight:700;color:#18324f;font-size:13px;margin:0 0 9px}
+.ms-search-komoditas form{display:flex;gap:9px;flex-wrap:wrap}
+.ms-search-komoditas input{flex:1 1 240px;min-width:0;height:43px;padding:0 13px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit;font-size:13px}
+.ms-search-komoditas input:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.ms-search-komoditas button{height:43px}
+.ms-search-komoditas small{display:block;color:#64748b;margin-top:9px;line-height:1.6}
+/* Analisis: seluruh style dibatasi agar tidak mengganggu CRUD */
+.ms-analytics{padding:26px;min-width:0;color:#18324f}
+.ms-analytics *{box-sizing:border-box}
+.ms-analytics-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px}
+.ms-analytics-head h2{font-size:20px;color:#18324f;margin:0 0 8px;line-height:1.35}
+.ms-analytics-head p{font-size:13px;line-height:1.65;color:#718096;margin:0}
+.ms-analytics-kicker{display:inline-flex;align-items:center;gap:7px;color:#087f83;font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;margin-bottom:10px}
+.ms-analytics-kicker:before{content:'';width:7px;height:7px;border-radius:50%;background:#0d9488}
+.ms-analytics-panel{border:1px solid #e4edf3;border-radius:14px;background:#f9fbfc;padding:18px;margin-bottom:18px}
+.ms-analytics-panel-title{font-size:13px;font-weight:800;color:#18324f;margin:0 0 14px}
+.ms-analytics-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;align-items:end;gap:12px;margin:0}
+.ms-analytics-filters label{font-size:12px;font-weight:700;color:#52657a;display:flex;flex-direction:column;gap:8px;min-width:0}
+.ms-analytics-filters select{width:100%;height:43px;border:1px solid #cbd5e1;border-radius:9px;padding:0 12px;background:#fff;color:#18324f;font:inherit;font-size:12px;outline:none;transition:border-color .2s,box-shadow .2s}
+.ms-analytics-filters select:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.ms-analytics-filters button{height:43px;min-width:94px;border-radius:9px}
+.ms-analytics-context{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px;align-items:center}
+.ms-analytics-chip{display:inline-flex;align-items:center;border:1px solid #d7e8e7;background:#effaf8;color:#087c73;border-radius:99px;padding:7px 11px;font-size:11px;font-weight:700;max-width:100%;overflow-wrap:anywhere}
+.ms-analytics-context-caption{font-size:11px;color:#7a8b9c;margin-right:3px}
+.ms-analytics .ms-hint{margin:0 0 22px;background:#f1f6f8;border-left:3px solid #0d9488;padding:12px 14px;border-radius:8px;color:#5b6d7c;font-size:12px;line-height:1.7}
+.ms-analysis-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.ms-analysis-stats article{position:relative;border:1px solid #e4edf3;border-radius:13px;padding:20px;background:#fff;display:flex;flex-direction:column;gap:8px;min-width:0;box-shadow:0 5px 18px rgba(24,50,79,.035)}
+.ms-analysis-stats article:first-child{background:linear-gradient(135deg,#effaf8,#fff 70%);border-color:#ccece5}
+.ms-analysis-stats span{font-size:12px;color:#718096;font-weight:700}
+.ms-analysis-stats strong{font-size:clamp(19px,2.3vw,29px);line-height:1.25;color:#18324f;overflow-wrap:anywhere}
+.ms-analysis-stats small{color:#087f83;font-size:12px;line-height:1.5}
+.ms-analysis-ranking{border:1px solid #e4edf3;border-radius:13px;padding:22px;background:#fff}
+.ms-analysis-ranking-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:21px;flex-wrap:wrap}
+.ms-analysis-ranking h3{font-size:16px;color:#18324f;margin:0 0 6px}
+.ms-analysis-ranking-header p{font-size:12px;color:#718096;margin:0}
+.ms-analysis-ranking-tag{border-radius:99px;background:#edf7f5;color:#087c73;font-size:11px;font-weight:700;padding:7px 11px}
+.ms-analysis-item{margin:0 0 18px;padding-bottom:18px;border-bottom:1px solid #eef2f6}
+.ms-analysis-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.ms-analysis-item-top{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:#40566e;margin-bottom:10px}
+.ms-analysis-name{display:flex;align-items:center;gap:10px;min-width:0;font-weight:700}
+.ms-analysis-rank{width:28px;height:28px;flex:0 0 28px;display:inline-flex;align-items:center;justify-content:center;background:#edf4f7;border-radius:8px;color:#456177;font-size:12px}
+.ms-analysis-item:first-of-type .ms-analysis-rank{background:#d9f3eb;color:#087f83}
+.ms-analysis-item-top b{color:#18324f;font-size:13px;text-align:right;overflow-wrap:anywhere}
+.ms-analysis-track{height:9px;background:#edf2f7;border-radius:99px;overflow:hidden;margin-bottom:7px}
+.ms-analysis-track div{height:100%;background:linear-gradient(90deg,#0d9488,#2bb7a8);border-radius:99px}
+.ms-analysis-item small{font-size:11px;color:#718096;margin-left:38px}
+.ms-analysis-note{padding:16px;background:#f1f5f9;border-radius:9px;color:#64748b;font-size:13px;line-height:1.7}
+.ms-analysis-footnote{margin:18px 0 0;font-size:12px;line-height:1.8;color:#718096;border-top:1px solid #edf2f6;padding-top:15px}
+@media(max-width:950px){.ms-analytics-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.ms-analytics-filters button{width:100%}}
+@media(max-width:700px){.ms-analysis-stats{grid-template-columns:1fr}.ms-analytics{padding:18px}.ms-analytics-head h2{font-size:18px}}
+@media(max-width:520px){.ms-analytics-filters{grid-template-columns:1fr}.ms-analysis-item-top{align-items:flex-start;flex-direction:column}.ms-analysis-item small{margin-left:0}.ms-analytics-panel{padding:14px}}
+
+
+/* Rincian potensi per Pemda: semua satuan tanpa peringkat lintas unit */
+.ms-pemda-table-wrap{overflow-x:auto}
+.ms-pemda-table{width:100%;border-collapse:collapse;font-size:13px;min-width:460px}
+.ms-pemda-table th{text-align:left;color:#64748b;font-size:11px;letter-spacing:.03em;text-transform:uppercase;padding:12px 14px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.ms-pemda-table td{padding:14px;border-bottom:1px solid #edf2f7;vertical-align:top;color:#23344d}
+.ms-pemda-table tbody tr:last-child td{border-bottom:0}
+.ms-pemda-table-right{text-align:right!important;white-space:nowrap}
+.ms-pemda-unit{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:5px}
+.ms-pemda-unit:last-child{margin-bottom:0}
+.ms-pemda-unit span{color:#64748b;font-size:12px}
+.ms-pemda-empty{text-align:center;color:#64748b!important;padding:24px!important}
+.ms-select-satuan{height:39px;min-width:135px;max-width:210px;padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#1e293b;font:inherit;font-size:12px;box-sizing:border-box}
+.ms-tambah-k{flex-wrap:wrap}
+.ms-tambah-k .ms-select-satuan{flex:0 1 190px}
+.baris-form .ms-select-satuan{flex:0 1 170px;height:35px}
+@media(max-width:650px){.ms-tambah-k .ms-select-satuan,.baris-form .ms-select-satuan{max-width:none;flex:1 1 100%}}
 </style>
 
 
@@ -531,6 +608,11 @@
      LAYOUT
 ===================================================== --}}
 
+<div class="ms-tabs" role="navigation" aria-label="Menu master sektor">
+    <a class="{{ $tab === 'master' ? 'is-active' : '' }}" href="{{ route('admin.sektor.index', ['sektor' => $idTerpilih]) }}">Data Master</a>
+    <a class="{{ $tab === 'analisis' ? 'is-active' : '' }}" href="{{ route('admin.sektor.index', ['tab' => 'analisis']) }}">Analisis Potensi</a>
+</div>
+@if ($tab === 'master')
 <div class="ms-grid">
 
     {{-- =====================================================
@@ -753,6 +835,13 @@
                         aria-label="Komoditas baru"
                     >
 
+                    <select name="satuan_default" aria-label="Satuan default komoditas baru" class="ms-select-satuan">
+                        <option value="">Satuan default (opsional)</option>
+                        @foreach ($pilihanSatuanDefault as $unit)
+                            <option value="{{ $unit }}" @selected(old('satuan_default') === $unit)>{{ $unit }}</option>
+                        @endforeach
+                    </select>
+
                     <button type="submit" class="btn btn-new">
                         <svg
                             viewBox="0 0 24 24"
@@ -868,7 +957,7 @@
 
                 <thead>
                     <tr>
-                        <th>Komoditas</th>
+                        <th>Komoditas &amp; Satuan Default</th>
 
                         @unless ($terpilih)
                             <th>Sektor</th>
@@ -906,6 +995,16 @@
                                         value="{{ $k->nama_komoditas }}"
                                         aria-label="Nama komoditas"
                                     >
+
+                                    <select name="satuan_default" class="ms-select-satuan" aria-label="Satuan default {{ $k->nama_komoditas }}">
+                                        <option value="">Tanpa default</option>
+                                        @foreach ($pilihanSatuanDefault as $unit)
+                                            <option value="{{ $unit }}" @selected($k->satuan_default === $unit)>{{ $unit }}</option>
+                                        @endforeach
+                                        @if ($k->satuan_default && ! $pilihanSatuanDefault->contains($k->satuan_default))
+                                            <option value="{{ $k->satuan_default }}" selected disabled>{{ $k->satuan_default }} (nonaktif)</option>
+                                        @endif
+                                    </select>
 
                                     <button
                                         type="submit"
@@ -1112,5 +1211,151 @@
     </section>
 
 </div>
+@else
+<section class="box ms-analytics">
+    <div class="ms-analytics-head">
+        <div>
+            <span class="ms-analytics-kicker">Ringkasan data terverifikasi</span>
+            <h2>Analisis Potensi Komoditas per Pemda</h2>
+            <p>Bandingkan jumlah komoditas yang tercatat pada tujuan pengajuan berstatus Verifikasi Final.</p>
+        </div>
+    </div>
+
+    <div class="ms-search-komoditas">
+        <p class="ms-search-komoditas-title">Cari komoditas langsung</p>
+        <form method="GET" action="{{ route('admin.sektor.index') }}" role="search">
+            <input type="hidden" name="tab" value="analisis">
+            <input type="search" name="cari_komoditas" list="ms-saran-komoditas" placeholder="Ketik nama komoditas, misalnya mangga ciemas..." aria-label="Cari komoditas dari semua sektor" required maxlength="100" autocomplete="off">
+            <datalist id="ms-saran-komoditas">
+                @foreach ($semuaKomoditasCari as $item)
+                    <option value="{{ $item->nama_komoditas }}">{{ $item->sektor?->nama_sektor }}</option>
+                @endforeach
+            </datalist>
+            <button class="btn btn-soft" type="submit">Cari Komoditas</button>
+        </form>
+        <small>Pencarian berlaku untuk semua sektor. Ketik sebagian nama lalu pilih saran, atau tekan Cari Komoditas.</small>
+        @if (session('cari_komoditas_info'))
+            <p class="ms-hint" style="margin:10px 0 0">{{ session('cari_komoditas_info') }}</p>
+        @endif
+        @if (request()->filled('cari_komoditas') && ! $hasilCariKomoditas)
+            <p class="ms-hint" style="margin:10px 0 0">Komoditas "{{ request('cari_komoditas') }}" tidak ditemukan di master.</p>
+        @endif
+    </div>
+
+    <div class="ms-analytics-panel">
+        <p class="ms-analytics-panel-title">Filter Analisis</p>
+        <form method="GET" action="{{ route('admin.sektor.index') }}" class="ms-analytics-filters">
+            <input type="hidden" name="tab" value="analisis">
+            <label for="ms-analisis-sektor">Sektor
+                <select id="ms-analisis-sektor" name="analisis_sektor" onchange="this.form.elements['analisis_komoditas'].value='';this.form.submit()">
+                    @foreach ($semuaSektor as $s)
+                        <option value="{{ $s->id_sektor }}" @selected($analisis['sektor']?->id_sektor == $s->id_sektor)>{{ $s->nama_sektor }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label for="ms-analisis-komoditas">Komoditas
+                <select id="ms-analisis-komoditas" name="analisis_komoditas" onchange="this.form.submit()">
+                    @foreach ($analisis['daftar_komoditas'] as $k)
+                        <option value="{{ $k->id_komoditas }}" @selected($analisis['komoditas']?->id_komoditas == $k->id_komoditas)>{{ $k->nama_komoditas }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <button class="btn btn-soft" type="submit">Terapkan</button>
+        </form>
+    </div>
+
+    <div class="ms-analytics-context" aria-label="Filter aktif">
+        <span class="ms-analytics-context-caption">Menampilkan:</span>
+        @if ($analisis['sektor']) <span class="ms-analytics-chip">{{ $analisis['sektor']->nama_sektor }}</span> @endif
+        @if ($analisis['komoditas']) <span class="ms-analytics-chip">{{ $analisis['komoditas']->nama_komoditas }}</span> @endif
+        <span class="ms-analytics-chip">Semua satuan</span>
+    </div>
+
+    <p class="ms-hint">Semua rincian komoditas dari pengajuan <strong>Verifikasi Final</strong> ditampilkan, termasuk data lama tanpa satuan. Total dihitung <strong>terpisah untuk setiap satuan</strong>; tidak ada penjumlahan lintas satuan.</p>
+
+    @if ($analisis['ambigu'])
+        <p class="ms-analysis-note">Nama komoditas ini terdapat pada beberapa sektor. Data tidak dijumlahkan agar tidak salah mengatribusikan sektor. Diperlukan pengaitan ID komoditas pada rincian tujuan.</p>
+    @else
+        <div class="ms-analysis-stats">
+            <article>
+                <span>Pemda Tercatat</span>
+                <strong>{{ number_format($analisis['jumlah_pemda'], 0, ',', '.') }}</strong>
+                <small>Kabupaten/kota asal pengajuan</small>
+            </article>
+            <article>
+                <span>Total Entri</span>
+                <strong>{{ number_format($analisis['jumlah_entri'], 0, ',', '.') }}</strong>
+                <small>Entri dengan jumlah terisi</small>
+            </article>
+            <article>
+                <span>Jenis Satuan Tercatat</span>
+                <strong>{{ number_format($analisis['jumlah_satuan'], 0, ',', '.') }}</strong>
+                <small>Termasuk satuan belum diketahui</small>
+            </article>
+        </div>
+
+        <div class="ms-analysis-ranking" style="margin-bottom:18px">
+            <div class="ms-analysis-ranking-header">
+                <div>
+                    <h3>Rincian Potensi Komoditas per Pemda</h3>
+                    <p>Seluruh Pemda ditampilkan. Jumlah tetap dipisahkan berdasarkan satuan, tanpa peringkat lintas satuan.</p>
+                </div>
+                <span class="ms-analysis-ranking-tag">{{ $analisis['jumlah_pemda'] }} Pemda</span>
+            </div>
+
+            <div class="ms-pemda-table-wrap">
+                <table class="ms-pemda-table">
+                    <thead>
+                        <tr>
+                            <th>Pemda</th>
+                            <th>Jumlah Tercatat</th>
+                            <th class="ms-pemda-table-right">Entri</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($analisis['pemda_semua'] as $pemda)
+                            <tr>
+                                <td><strong>{{ $pemda['nama'] }}</strong></td>
+                                <td>
+                                    @foreach ($pemda['rincian'] as $rincian)
+                                        <div class="ms-pemda-unit">
+                                            <strong>{{ number_format($rincian['total'], 2, ',', '.') }}</strong>
+                                            <span>{{ $rincian['satuan'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </td>
+                                <td class="ms-pemda-table-right">{{ number_format($pemda['entri'], 0, ',', '.') }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3" class="ms-pemda-empty">Belum ada Pemda dengan data jumlah komoditas final.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="ms-analysis-ranking">
+            <div class="ms-analysis-ranking-header">
+                <div>
+                    <h3>Ringkasan berdasarkan Satuan</h3>
+                    <p>Setiap total hanya menjumlahkan entri yang menggunakan satuan yang sama.</p>
+                </div>
+            </div>
+            @forelse ($analisis['kelompok_satuan'] as $kelompok)
+                <div class="ms-analysis-item">
+                    <div class="ms-analysis-item-top">
+                        <span class="ms-analysis-name">{{ $kelompok['satuan'] }}</span>
+                        <b>{{ number_format($kelompok['total'], 2, ',', '.') }} {{ $kelompok['satuan'] }}</b>
+                    </div>
+                    <small>{{ $kelompok['jumlah_pemda'] }} Pemda · {{ $kelompok['jumlah_entri'] }} entri</small>
+                </div>
+            @empty
+                <p class="ms-analysis-note">Belum ada jumlah komoditas yang tercatat pada pengajuan Verifikasi Final.</p>
+            @endforelse
+        </div>
+    @endif
+    <p class="ms-analysis-footnote"><strong>Catatan data:</strong> Angka berasal dari rincian komoditas tujuan pada pengajuan Verifikasi Final, bukan otomatis total produksi daerah. Data format baru dan format lama yang belum memiliki pengganti dibaca. Satuan berbeda tidak digabungkan. Pemda dikelompokkan berdasarkan kabupaten/kota asal pengajuan.</p>
+</section>
+@endif
 
 @endsection
