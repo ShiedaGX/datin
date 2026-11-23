@@ -42,10 +42,10 @@
   #pk-map:active{cursor:grabbing}
   .pk-land{fill:#f6f2e6;stroke:#bdcfc6;stroke-width:.75;vector-effect:non-scaling-stroke;transition:fill .18s}
   .pk-land:hover{fill:#f9f5e9}
-  .pk-line{stroke-opacity:.68;stroke-width:2;vector-effect:non-scaling-stroke;cursor:pointer;transition:stroke-opacity .18s,stroke-width .18s}
-  .pk-line:hover,.pk-line.pk-selected{stroke-opacity:1;stroke-width:3.6}
-  .pk-cluster{fill:#173b63;fill-opacity:.92;stroke:#fff;stroke-width:2;vector-effect:non-scaling-stroke;cursor:pointer}.pk-cluster:hover{fill:#0f2a47}
-  .pk-cluster-n{fill:#fff;font:700 11px Inter,system-ui,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+  .pk-line{fill:none;stroke-opacity:.16;stroke-width:1;vector-effect:non-scaling-stroke;stroke-linecap:round;cursor:pointer;transition:stroke-opacity .22s,stroke-width .22s}
+  .pk-line.pk-dimmed{stroke-opacity:.04;stroke-width:1}
+  .pk-line.pk-selected{stroke-opacity:.9;stroke-width:2}
+  .pk-line:hover{stroke-opacity:.9;stroke-width:2}
   .pk-point{stroke:#fff;stroke-width:1.7;vector-effect:non-scaling-stroke;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(23,42,65,.32))}
   .pk-label{fill:#243951;font-size:11px;paint-order:stroke;stroke:#d8ebf5;stroke-width:3px;pointer-events:none}
   .pk-city-dot{fill:#52677a;stroke:#fff;stroke-width:1.2;vector-effect:non-scaling-stroke;pointer-events:none}
@@ -113,7 +113,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script src="{{ asset('js/peta-cluster.js') }}"></script>
 <script>
 (() => {
   'use strict';
@@ -213,10 +212,28 @@
   const dots = root.append('g'); // Titik pengajuan berada di atas label kota.
   const projection = d3.geoMercator();
   const path = d3.geoPath(projection);
-  let currentZoom = 1, currentT = d3.zoomIdentity, pkState = null, raf = 0;
-  const zoom = d3.zoom().scaleExtent([1,12]).on('zoom',e=>{root.attr('transform',e.transform);currentZoom=e.transform.k;currentT=e.transform;if(!raf)raf=requestAnimationFrame(()=>{raf=0;drawDots();gambarLabelKota();gambarLabelPerairan()})});
+  let currentZoom = 1;
+  // Ukuran penanda dikompensasi terhadap transform zoom SVG.
+  // Radius layar sedikit mengecil saat zoom bertambah, tanpa mengubah koordinat.
+  function radiusTitik(p) {
+    const isOrigin = shown().some(r => r.asal === p.id);
+    const base = selectedOrigin === p.id ? 8 : (isOrigin ? 6 : 5);
+    const shrink = 1 + 0.14 * Math.log2(Math.max(1, currentZoom));
+    return base / (currentZoom * shrink);
+  }
+  function sesuaikanUkuranTitik() {
+    dots.selectAll('circle.pk-point').attr('r', radiusTitik);
+  }
+  const zoom = d3.zoom().scaleExtent([1,12]).on('zoom',e=>{
+    root.attr('transform',e.transform);
+    currentZoom=e.transform.k;
+    sesuaikanUkuranTitik();
+    gambarLabelKota();
+    gambarLabelPerairan();
+  });
   svg.call(zoom);
   let selected=null;
+  let selectedOrigin=null;
   let geo=null;
 
   const shown = () => routes.filter(r=>
@@ -234,6 +251,60 @@
     select('pk-detail').innerHTML=`<h3>${esc(a?.nama)} → ${esc(b?.nama)}</h3><p>${esc(r.laporan)} · ${esc(r.klasifikasi)} · ${esc(r.moda)}</p><p>Jarak lurus: <strong>${esc(r.jarak)} km</strong></p><table><thead><tr><th>Komoditas / sektor</th><th>Jumlah</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
+  function detailOrigin(originId, rs){
+    const asal=byId.get(originId);
+    const relasi=rs.filter(r=>r.asal===originId);
+
+    if(!asal || !relasi.length){
+      detail(null);
+      return;
+    }
+
+    const tujuanUnik=[...new Map(relasi.map(r=>[r.tujuan,r])).values()];
+    const jumlahRelasi=tujuanUnik.length;
+
+    const daftarTujuan=tujuanUnik.map((r,index)=>{
+      const tujuan=byId.get(r.tujuan);
+      const rows=(r.komoditas || []).length
+        ? r.komoditas.map(k=>`<tr>
+            <td>${esc(k.nama)}<div class="pk-muted">${esc(k.sektor || 'Sektor belum terpetakan')}</div></td>
+            <td>${k.jumlah===null?'–':new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(k.jumlah)} ${esc(k.satuan || '(satuan belum tersedia)')}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="2">Belum ada detail komoditas</td></tr>';
+
+      return `<div style="padding-top:${index ? '13px' : '0'};margin-top:${index ? '13px' : '0'};border-top:${index ? '1px solid #e7edf5' : '0'}">
+        <h3 style="margin-bottom:5px">${index+1}. ${esc(tujuan?.nama || 'Tujuan tidak diketahui')}</h3>
+        <p>${esc(r.laporan)} · ${esc(r.klasifikasi)} · ${esc(r.moda)}</p>
+        <p>Jarak lurus: <strong>${esc(r.jarak)} km</strong></p>
+        <table><thead><tr><th>Komoditas / sektor</th><th>Jumlah</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>`;
+    }).join('');
+
+    select('pk-detail').innerHTML=`
+      <h3>Daerah asal: ${esc(asal.nama)}</h3>
+      <p>${jumlahRelasi} tujuan terhubung melalui pengajuan yang tampil sesuai filter.</p>
+      ${daftarTujuan}
+    `;
+  }
+
+  // Kurva Bézier kuadratik seperti peta referensi konsultan.
+  // Titik asal dan tujuan tetap memakai koordinat geografis aslinya;
+  // titik kontrol digeser tegak lurus agar relasi tidak tampak kaku.
+  function curvePath(r){
+    const a=byId.get(r.asal);
+    const b=byId.get(r.tujuan);
+    if(!a || !b) return '';
+
+    const [x1,y1]=projection([a.lon,a.lat]);
+    const [x2,y2]=projection([b.lon,b.lat]);
+    const mx=(x1+x2)/2;
+    const my=(y1+y2)/2;
+    const dx=x2-x1;
+    const dy=y2-y1;
+    const bend=.18;
+    return `M${x1},${y1}Q${mx-dy*bend},${my+dx*bend} ${x2},${y2}`;
+  }
+
   function update(){
     const rs=shown();
     const origins=new Set(rs.map(r=>r.asal));
@@ -243,86 +314,119 @@
     select('pk-empty').style.display=rs.length?'none':'block';
     select('pk-empty').textContent='Belum ada rute Verifikasi Final yang sesuai filter dan memiliki koordinat lengkap.';
 
-    const line=links.selectAll('line').data(rs,r=>`${r.id}:${r.tujuan}`);
+    const line=links.selectAll('path.pk-line').data(rs,r=>`${r.id}:${r.tujuan}`);
     line.exit().remove();
-    line.enter().append('line').attr('class','pk-line').on('click',(e,r)=>{selected=r;detail(r);update()}).append('title');
-    links.selectAll('line')
-      .attr('x1',r=>projection([byId.get(r.asal).lon,byId.get(r.asal).lat])[0])
-      .attr('y1',r=>projection([byId.get(r.asal).lon,byId.get(r.asal).lat])[1])
-      .attr('x2',r=>projection([byId.get(r.tujuan).lon,byId.get(r.tujuan).lat])[0])
-      .attr('y2',r=>projection([byId.get(r.tujuan).lon,byId.get(r.tujuan).lat])[1])
+    line.enter().append('path').attr('class','pk-line').append('title');
+    links.selectAll('path.pk-line').on('click',(e,r)=>{
+      selected=r;
+      selectedOrigin=null;
+      detail(r);
+      update();
+    });
+    links.selectAll('path.pk-line')
+      .attr('d',curvePath)
       .attr('stroke',r=>warnaGaris(r))
-      .classed('pk-selected',r=>selected?.id===r.id&&selected?.tujuan===r.tujuan)
+      .classed('pk-selected',r=>
+        selected
+          ? selected.id===r.id && selected.tujuan===r.tujuan
+          : selectedOrigin!==null && r.asal===selectedOrigin
+      )
+      .classed('pk-dimmed',r=>
+        selected !== null
+          ? !(selected.id===r.id && selected.tujuan===r.tujuan)
+          : selectedOrigin !== null && r.asal!==selectedOrigin
+      )
       .select('title').text(r=>`${byId.get(r.asal)?.nama} → ${byId.get(r.tujuan)?.nama}: ${r.jarak} km`);
 
     const p=points.filter(p=>ids.has(p.id));
-    pkState={p,origins,destinations,rs};drawDots();
-    if(selected&&!rs.some(r=>r.id===selected.id&&r.tujuan===selected.tujuan)){selected=null;detail(null)}
+    const circles=dots.selectAll('circle').data(p,p=>p.id);
+    circles.exit().remove();
+    circles.enter().append('circle').attr('class','pk-point').append('title');
+
+    // Pasang ulang handler setiap update agar selalu memakai hasil filter terbaru.
+    dots.selectAll('circle')
+      .on('click',(e,p)=>{
+        if(origins.has(p.id)){
+          selected=null;
+          selectedOrigin=p.id;
+          detailOrigin(p.id,rs);
+        }else{
+          selectedOrigin=null;
+          selected=rs.find(r=>r.tujuan===p.id)??null;
+          detail(selected);
+        }
+        update();
+      })
+      .attr('cx',p=>projection([p.lon,p.lat])[0])
+      .attr('cy',p=>projection([p.lon,p.lat])[1])
+      .attr('r',radiusTitik)
+      .attr('fill',p=>origins.has(p.id)?color(rs.find(r=>r.asal===p.id)?.klasifikasi||''):'#15263f')
+      .select('title').text(p=>p.nama);
+
+    if(selected&&!rs.some(r=>r.id===selected.id&&r.tujuan===selected.tujuan)){
+      selected=null;
+      detail(null);
+    }
+
+    if(selectedOrigin!==null){
+      if(!origins.has(selectedOrigin)){
+        selectedOrigin=null;
+        detail(null);
+      }else{
+        detailOrigin(selectedOrigin,rs);
+      }
+    }
   }
 
-  const xy = d => projection([d.lon,d.lat]);
-  // Titik dikelompokkan pada zoom rendah; ukuran titik/label tetap di layar (dibagi k).
-  function drawDots(){
-    if(!pkState||!geo)return;
-    const {p,origins,destinations,rs}=pkState,k=currentZoom,w=svg.node().clientWidth||900,h=svg.node().clientHeight||650;
-    const g=PetaCluster.group(p,xy,{k,tx:currentT.x,ty:currentT.y,w,h,cell:38,pinned:selected?(selected.asal):null});
-    const markers=[...g.clusters.map(c=>({key:'c:'+c.key,type:'c',x:c.x,y:c.y,c})),...g.singles.map(d=>{const [x,y]=xy(d);return {key:'p:'+d.id,type:'p',x,y,d}})];
-    const nodes=dots.selectAll('g.pk-mk').data(markers,d=>d.key).join(en=>{const n=en.append('g').attr('class','pk-mk');n.append('circle');n.append('text').attr('class','pk-cluster-n');n.append('title');return n});
-    nodes.attr('transform',d=>`translate(${d.x},${d.y}) scale(${1/k})`);
-    nodes.select('circle').attr('class',d=>d.type==='c'?'pk-cluster':'pk-point')
-      .attr('r',d=>d.type==='c'?11+Math.min(6,Math.log2(d.c.items.length)*1.5):(destinations.has(d.d.id)?5:4))
-      .attr('fill',d=>d.type==='c'?null:(origins.has(d.d.id)?color(rs.find(r=>r.asal===d.d.id)?.klasifikasi||''):'#15263f'));
-    nodes.select('text').text(d=>d.type==='c'?(d.c.items.length>999?'999+':d.c.items.length):'');
-    nodes.select('title').text(d=>d.type==='c'?`${d.c.items.length} titik. Klik untuk memperbesar`:d.d.nama);
-    nodes.on('click',(e,d)=>{
-      e.stopPropagation();
-      if(d.type==='p'){selected=rs.find(r=>r.asal===d.d.id)??rs.find(r=>r.tujuan===d.d.id)??null;detail(selected);update();return}
-      const [x0,y0,x1,y1]=PetaCluster.bounds(d.c.items,xy),k2=Math.min(12,Math.max(k*1.9,.8*Math.min(w/Math.max(x1-x0,1e-3),h/Math.max(y1-y0,1e-3))));
-      if(k2<=k*1.05){select('pk-detail').innerHTML=`<h3>${d.c.items.length} titik berdekatan</h3><ul>${d.c.items.slice(0,40).map(i=>`<li>${esc(i.nama)}</li>`).join('')}</ul>`;return}
-      svg.transition().duration(450).call(zoom.transform,d3.zoomIdentity.translate(w/2-k2*(x0+x1)/2,h/2-k2*(y0+y1)/2).scale(k2));
-    });
-  }
-
-  // Penempatan label di koordinat layar: label yang bertumpuk disembunyikan (yang utama didahulukan).
-  function penempat(){
-    const k=currentZoom,w=svg.node().clientWidth||900,h=svg.node().clientHeight||650,placed=[];
-    return (d,size,centered)=>{
-      const [x,y]=xy(d),sx=currentT.x+k*x,sy=currentT.y+k*y;
-      if(sx<-80||sy<-30||sx>w+80||sy>h+30)return false;
-      const tw=d.nama.length*size*.6+(centered?0:8),b=centered?[sx-tw/2,sy-size,sx+tw/2,sy+4]:[sx+4,sy-size-6,sx+4+tw,sy+3];
-      if(placed.some(q=>b[0]<q[2]&&b[2]>q[0]&&b[1]<q[3]&&b[3]>q[1]))return false;
-      placed.push(b);return true;
-    };
-  }
-  let tempat=null;
-
+  // Smart labels: saat zoom detail, label referensi tidak menutupi titik/rute.
+  // Mode manual (utama/semua) tetap tersedia; ukuran teks dijaga konstan di layar.
   function gambarLabelKota(){
     if(!geo)return;
-    const mode=select('pk-kota').value,k=currentZoom,tp=penempat();tempat=tp;
-    const tampil=(mode==='sembunyi'?[]:kotaReferensi.filter(d=>mode==='semua'||(mode==='utama'&&d.utama)||(mode==='otomatis'&&(d.utama||currentZoom>=2.2))))
-      .slice().sort((a,b)=>(b.utama?1:0)-(a.utama?1:0)).filter(d=>tp(d,d.utama?12:10,false));
+    const mode=select('pk-kota').value;
+    let tampil=[];
+    if(mode==='semua'){
+      tampil=kotaReferensi;
+    }else if(mode==='utama'){
+      tampil=kotaReferensi.filter(k=>k.utama);
+    }else if(mode==='otomatis'){
+      if(currentZoom<1.8){
+        tampil=kotaReferensi.filter(k=>k.utama);
+      }else if(currentZoom<3){
+        tampil=kotaReferensi.filter(k=>k.utama).filter((k,i)=>i%2===0);
+      }
+      // Zoom >= 3: tidak ada label kota referensi.
+    }
+
     cityLayer.selectAll('circle').data(tampil,d=>d.nama).join('circle')
-      .attr('class','pk-city-dot').attr('cx',d=>xy(d)[0]).attr('cy',d=>xy(d)[1]).attr('r',d=>(d.utama?3:2)/k);
+      .attr('class','pk-city-dot')
+      .attr('cx',d=>projection([d.lon,d.lat])[0])
+      .attr('cy',d=>projection([d.lon,d.lat])[1])
+      .attr('r',d=>(d.utama?3:2)/currentZoom)
+      .style('stroke-width',1.2/currentZoom);
+
     cityLayer.selectAll('text').data(tampil,d=>d.nama).join('text')
       .attr('class',d=>'pk-city-label'+(d.utama?' pk-city-major':''))
-      .attr('x',d=>xy(d)[0]+6/k).attr('y',d=>xy(d)[1]-5/k)
-      .style('font-size',d=>(d.utama?12:10)/k+'px').style('stroke-width',3/k+'px')
+      .attr('x',d=>projection([d.lon,d.lat])[0]+6/currentZoom)
+      .attr('y',d=>projection([d.lon,d.lat])[1]-5/currentZoom)
+      .style('font-size',d=>`${(d.utama?12:10)/currentZoom}px`)
+      .style('stroke-width',`${3/currentZoom}px`)
       .text(d=>d.nama);
   }
 
   function gambarLabelPerairan(){
     if(!geo)return;
-    const mode=select('pk-perairan').value,k=currentZoom,tp=penempat();
-    const ukuran=d=>d.jenis==='samudra'?13:(d.jenis==='selat'?9:11);
-    const tampil=(mode==='sembunyi'?[]:perairanReferensi.filter(d=>
+    const mode=select('pk-perairan').value;
+    const tampil=mode==='sembunyi'?[]:perairanReferensi.filter(d=>
       mode==='semua' ||
       (mode==='utama' && d.utama) ||
-      (mode==='otomatis' && (d.utama || (d.jenis==='laut' && currentZoom>=1.8) || (d.jenis==='selat' && currentZoom>=3.2)))
-    )).slice().sort((a,b)=>(b.utama?1:0)-(a.utama?1:0)).filter(d=>tp(d,ukuran(d),true));
+      (mode==='otomatis' && currentZoom<3 && d.utama)
+    );
     waterLayer.selectAll('text').data(tampil,d=>d.nama).join('text')
       .attr('class',d=>'pk-water-label'+(d.jenis==='samudra'?' pk-water-ocean':'')+(d.jenis==='selat'?' pk-water-strait':''))
-      .attr('x',d=>xy(d)[0]).attr('y',d=>xy(d)[1])
-      .style('font-size',d=>ukuran(d)/k+'px').style('stroke-width',3/k+'px')
+      .attr('x',d=>projection([d.lon,d.lat])[0])
+      .attr('y',d=>projection([d.lon,d.lat])[1])
+      .style('font-size',d=>`${(d.jenis==='samudra'?13:d.jenis==='selat'?9:11)/currentZoom}px`)
+      .style('stroke-width',`${3/currentZoom}px`)
       .text(d=>d.nama);
   }
 
