@@ -1,66 +1,731 @@
+
+
+
 @extends('layouts.app')
 @section('title', 'Peta Geospasial')
 @section('heading', 'Peta Geospasial')
 @section('subheading', 'Sebaran fasilitas transportasi dan analisis konektivitas regional')
 @section('content')
 <style>
-.gs-shell{--navy:#10243e;--muted:#91a5bd;--line:#e2e9f1;font-family:Inter,'Barlow Semi Condensed',system-ui,sans-serif;color:#20334b}
-.gs-intro{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 19px;margin-bottom:15px;border:1px solid #d9e6f0;border-radius:14px;background:linear-gradient(115deg,#f5faff,#edf5fb)}
-.gs-intro strong{display:block;font-size:14px;color:#183a5c;margin-bottom:4px}.gs-intro p{font-size:12px;line-height:1.6;color:#60748c;margin:0}.gs-pill{flex-shrink:0;background:#e1f4ed;color:#137353;border:1px solid #c3e9d9;border-radius:100px;padding:7px 12px;font-size:11px;font-weight:700}
-.gs-layout{display:grid;grid-template-columns:322px minmax(0,1fr);height:min(810px,calc(100vh - 166px));min-height:640px;overflow:hidden;border-radius:17px;border:1px solid #d5e0eb;box-shadow:0 12px 38px rgba(16,36,62,.09)}
-.gs-sidebar{background:linear-gradient(175deg,#132b49 0%,#10243e 55%,#0d2037 100%);color:#fff;padding:21px 18px;overflow:auto;scrollbar-color:#516983 transparent;scrollbar-width:thin}
-.gs-eyebrow{font-size:10px;letter-spacing:.15em;font-weight:800;color:#8ed5ec;text-transform:uppercase;margin-bottom:8px}.gs-sidebar h2{font-size:23px;letter-spacing:-.03em;line-height:1.15;margin:0 0 8px}.gs-sidebar p{font-size:12px;color:#b7c9dc;line-height:1.6;margin:0 0 12px}
-.gs-links{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 18px}.gs-links a{font-size:11px;text-decoration:none;color:#d9efff;background:#ffffff12;border:1px solid #ffffff23;border-radius:8px;padding:8px 10px}.gs-links a:hover{background:#ffffff23}
-.gs-section{font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:#91aeca;margin:21px 0 10px;display:flex;align-items:center;gap:9px}.gs-section:after{content:'';height:1px;flex:1;background:#ffffff1f}
-.gs-statgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gs-stat{padding:12px;border:1px solid #ffffff20;border-radius:11px;background:#ffffff0c}.gs-stat span{font-size:11px;display:block;color:#aec3d8;line-height:1.4}.gs-stat strong{font-size:21px;display:block;margin-top:5px;letter-spacing:-.04em;font-variant-numeric:tabular-nums}.gs-stat-wide{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(105deg,#194b65,#155777);border-color:#2b7595}.gs-stat-wide strong{margin:0;color:#fff}.gs-footnote{font-size:10px!important;color:#9fb5cc!important;margin-top:9px!important}
-.gs-layer{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;background:#ffffff0a;border:1px solid #ffffff1b;border-radius:10px;margin:7px 0;cursor:pointer}.gs-layer:hover{background:#ffffff14}.gs-layer input{accent-color:#44c6e7;margin-top:3px}.gs-layer strong{display:block;font-size:12px}.gs-layer small{display:block;font-size:10px;color:#9fb5cc;line-height:1.5;margin-top:4px}
-.gs-field{margin:13px 0}.gs-field label{display:block;font-size:11px;font-weight:750;color:#dce8f6;margin-bottom:7px}.gs-field select{width:100%;background:#1c3858;color:#f4f9ff;border:1px solid #49617c;border-radius:9px;padding:11px 12px;font:inherit;font-size:12px;outline:none}.gs-field select:focus{border-color:#7ccfeb;box-shadow:0 0 0 3px #62c7e524}.gs-field select:disabled{opacity:.45;cursor:not-allowed}.gs-field small{font-size:10px;color:#9fb5cc;line-height:1.5;display:block;margin-top:6px}
-.gs-summary{margin:12px 0;padding:12px 13px;background:#ffffff0d;border:1px solid #ffffff1d;border-radius:10px;color:#e2f2ff;font-size:12px;line-height:1.65}
-.gs-detail{background:#f9fbfe;color:#1e344e;border:1px solid #dce6f0;border-radius:12px;padding:15px;font-size:12px;line-height:1.6;max-height:320px;overflow:auto;overflow-wrap:anywhere}.gs-detail h3{font-size:16px;margin:0 0 10px;line-height:1.3;letter-spacing:-.02em}.gs-detail p{margin:6px 0}.gs-detail dl{margin:0}.gs-detail dt{font-size:10px;text-transform:uppercase;letter-spacing:.055em;color:#70859b;font-weight:800;margin-top:11px}.gs-detail dd{margin:3px 0;color:#223c55}.gs-warning{color:#c62828!important;font-weight:800}
-.gs-mapbox{position:relative;overflow:hidden;background:radial-gradient(ellipse at 70% 30%,#e3f4f9 0%,#cce5f0 70%,#bcd9e8 100%)}#gs-map{width:100%;height:100%;display:block}.gs-land{fill:#f3ead2;stroke:#c6ba9b;stroke-width:.65;vector-effect:non-scaling-stroke}
-.gs-connection{fill:none;stroke:#277da7;stroke-opacity:.3;stroke-width:1.3;vector-effect:non-scaling-stroke;cursor:pointer}.gs-connection.gs-facility-link{stroke:#e2933e;stroke-dasharray:5 3;stroke-opacity:.46}.gs-connection.gs-highlight,.gs-connection:hover{stroke:#c76b13;stroke-opacity:1;stroke-width:2.8}
-.gs-recommend{stroke:#df8724;stroke-width:2.6;stroke-dasharray:6 4;vector-effect:non-scaling-stroke}.gs-recommend.gs-service{stroke:#17466c;stroke-width:3;stroke-dasharray:none}.gs-route-point{stroke:#fff;stroke-width:1.7;vector-effect:non-scaling-stroke}.gs-rail{fill:none;stroke:#586d7f;stroke-width:1;stroke-opacity:.5;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}.gs-point{stroke:#fff;stroke-width:1;cursor:pointer;vector-effect:non-scaling-stroke}.gs-point:hover{stroke:#fff;stroke-width:2.5}
-.gs-cluster{fill:#173b63;fill-opacity:.92;stroke:#fff;stroke-width:2;cursor:pointer;vector-effect:non-scaling-stroke}.gs-cluster:hover{fill:#0f2a47}.gs-cluster-n{fill:#fff;font:700 11px Inter,system-ui,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
-.gs-mapbadge{position:absolute;top:17px;left:17px;z-index:2;background:#ffffffeb;border:1px solid #ffffff;color:#284660;border-radius:11px;padding:10px 13px;box-shadow:0 5px 22px #2949681b;pointer-events:none}.gs-mapbadge strong{font-size:12px;display:block}.gs-mapbadge small{font-size:10px;color:#748ba0}
-.gs-legend{position:absolute;bottom:17px;left:17px;z-index:2;background:#fffffff0;backdrop-filter:blur(14px);border:1px solid #ffffff;box-shadow:0 7px 25px #23465d24;color:#263d52;padding:12px 14px;border-radius:12px;font-size:11px;line-height:1.8;pointer-events:none;max-width:275px}.gs-legend-title{font-weight:800;margin-bottom:6px;font-size:11px}.gs-legend span.gs-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}.gs-legend small{display:block;border-top:1px solid #dbe4eb;padding-top:7px;margin-top:7px;color:#72869b;font-size:10px;line-height:1.45}
-.gs-zoom{position:absolute;bottom:17px;right:17px;z-index:3;display:grid;gap:6px;padding:5px;background:#ffffffeb;border:1px solid #fff;border-radius:12px;box-shadow:0 7px 25px #23465d24}.gs-zoom button{width:36px;height:36px;background:#fff;border:0;border-radius:8px;font-size:19px;color:#24435f;cursor:pointer}.gs-zoom button:hover{background:#eaf4fb}.gs-alert{position:absolute;top:18px;left:18px;right:18px;z-index:5;background:#fff9e8;border:1px solid #f0dbad;border-radius:10px;padding:12px;color:#775519;font-size:12px}
-.gs-city-dot{fill:#38546a;stroke:#fff;stroke-width:1;pointer-events:none;vector-effect:non-scaling-stroke}.gs-city-label{fill:#33495e;font-size:10px;font-weight:650;paint-order:stroke;stroke:#f1ead9;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.gs-water-label{fill:#4286a6;font-size:12px;font-style:italic;letter-spacing:.06em;opacity:.82;paint-order:stroke;stroke:#d6eaf3;stroke-width:3px;pointer-events:none}
-.gs-mapcontrols{position:absolute;top:17px;right:17px;z-index:3;display:flex;gap:6px}.gs-mapcontrols select{background:#fffffff0;border:1px solid #d5e3ed;color:#284760;border-radius:9px;padding:9px 11px;font-size:11px;box-shadow:0 4px 18px #29496818;max-width:160px}
-@media(max-width:1000px){.gs-layout{grid-template-columns:290px minmax(0,1fr)}}@media(max-width:820px){.gs-layout{grid-template-columns:1fr;height:auto}.gs-sidebar{max-height:630px}.gs-mapbox{height:65vh;min-height:460px}}@media(max-width:520px){.gs-intro{align-items:flex-start}.gs-pill{display:none}.gs-legend{max-width:195px;font-size:10px}.gs-mapcontrols{top:65px;left:17px;right:auto;flex-direction:column}.gs-mapbadge{right:17px}.gs-mapcontrols select{max-width:200px}}
+.gs-shell {
+        --navy:#10243e;
+        --muted:#91a5bd;
+        --line:#e2e9f1;
+        font-family:Inter,'Barlow Semi Condensed',system-ui,sans-serif;
+        color:#20334b
+}
+.gs-intro {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        padding:15px 19px;
+        margin-bottom:15px;
+        border:1px solid #d9e6f0;
+        border-radius:14px;
+        background:linear-gradient(115deg,#f5faff,#edf5fb)
+}
+.gs-intro strong {
+        display:block;
+        font-size:14px;
+        color:#183a5c;
+        margin-bottom:4px
+}
+.gs-intro p {
+        font-size:12px;
+        line-height:1.6;
+        color:#60748c;
+        margin:0
+}
+.gs-pill {
+        flex-shrink:0;
+        background:#e1f4ed;
+        color:#137353;
+        border:1px solid #c3e9d9;
+        border-radius:100px;
+        padding:7px 12px;
+        font-size:11px;
+        font-weight:700
+}
+.gs-layout {
+        display:grid;
+        grid-template-columns:322px minmax(0,1fr);
+        height:min(810px,calc(100vh - 166px));
+        min-height:640px;
+        overflow:hidden;
+        border-radius:17px;
+        border:1px solid #d5e0eb;
+        box-shadow:0 12px 38px rgba(16,36,62,.09)
+}
+.gs-sidebar {
+        background:linear-gradient(175deg,#132b49 0%,#10243e 55%,#0d2037 100%);
+        color:#fff;
+        padding:21px 18px;
+        overflow:auto;
+        scrollbar-color:#516983 transparent;
+        scrollbar-width:thin
+}
+.gs-eyebrow {
+        font-size:10px;
+        letter-spacing:.15em;
+        font-weight:800;
+        color:#8ed5ec;
+        text-transform:uppercase;
+        margin-bottom:8px
+}
+.gs-sidebar h2 {
+        font-size:23px;
+        letter-spacing:-.03em;
+        line-height:1.15;
+        margin:0 0 8px
+}
+.gs-sidebar p {
+        font-size:12px;
+        color:#b7c9dc;
+        line-height:1.6;
+        margin:0 0 12px
+}
+.gs-links {
+        display:flex;
+        flex-wrap:wrap;
+        gap:7px;
+        margin:14px 0 18px
+}
+.gs-links a {
+        font-size:11px;
+        text-decoration:none;
+        color:#d9efff;
+        background:#ffffff12;
+        border:1px solid #ffffff23;
+        border-radius:8px;
+        padding:8px 10px
+}
+.gs-links a:hover {
+        background:#ffffff23
+}
+.gs-section {
+        font-size:10px;
+        letter-spacing:.13em;
+        text-transform:uppercase;
+        font-weight:800;
+        color:#91aeca;
+        margin:21px 0 10px;
+        display:flex;
+        align-items:center;
+        gap:9px
+}
+.gs-section:after {
+        content:'';
+        height:1px;
+        flex:1;
+        background:#ffffff1f
+}
+.gs-statgrid {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px
+}
+.gs-stat {
+        padding:12px;
+        border:1px solid #ffffff20;
+        border-radius:11px;
+        background:#ffffff0c
+}
+.gs-stat span {
+        font-size:11px;
+        display:block;
+        color:#aec3d8;
+        line-height:1.4
+}
+.gs-stat strong {
+        font-size:21px;
+        display:block;
+        margin-top:5px;
+        letter-spacing:-.04em;
+        font-variant-numeric:tabular-nums
+}
+.gs-stat-wide {
+        grid-column:1/-1;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        background:linear-gradient(105deg,#194b65,#155777);
+        border-color:#2b7595
+}
+.gs-stat-wide strong {
+        margin:0;
+        color:#fff
+}
+.gs-footnote {
+        font-size:10px!important;
+        color:#9fb5cc!important;
+        margin-top:9px!important
+}
+.gs-layer {
+        display:flex;
+        align-items:flex-start;
+        gap:10px;
+        padding:11px 12px;
+        background:#ffffff0a;
+        border:1px solid #ffffff1b;
+        border-radius:10px;
+        margin:7px 0;
+        cursor:pointer
+}
+.gs-layer:hover {
+        background:#ffffff14
+}
+.gs-layer input {
+        accent-color:#44c6e7;
+        margin-top:3px
+}
+.gs-layer strong {
+        display:block;
+        font-size:12px
+}
+.gs-layer small {
+        display:block;
+        font-size:10px;
+        color:#9fb5cc;
+        line-height:1.5;
+        margin-top:4px
+}
+.gs-field {
+        margin:13px 0
+}
+.gs-field label {
+        display:block;
+        font-size:11px;
+        font-weight:750;
+        color:#dce8f6;
+        margin-bottom:7px
+}
+.gs-field select {
+        width:100%;
+        background:#1c3858;
+        color:#f4f9ff;
+        border:1px solid #49617c;
+        border-radius:9px;
+        padding:11px 12px;
+        font:inherit;
+        font-size:12px;
+        outline:none
+}
+.gs-field select:focus {
+        border-color:#7ccfeb;
+        box-shadow:0 0 0 3px #62c7e524
+}
+.gs-field select:disabled {
+        opacity:.45;
+        cursor:not-allowed
+}
+.gs-field small {
+        font-size:10px;
+        color:#9fb5cc;
+        line-height:1.5;
+        display:block;
+        margin-top:6px
+}
+.gs-summary {
+        margin:12px 0;
+        padding:12px 13px;
+        background:#ffffff0d;
+        border:1px solid #ffffff1d;
+        border-radius:10px;
+        color:#e2f2ff;
+        font-size:12px;
+        line-height:1.65
+}
+.gs-detail {
+        background:#f9fbfe;
+        color:#1e344e;
+        border:1px solid #dce6f0;
+        border-radius:12px;
+        padding:15px;
+        font-size:12px;
+        line-height:1.6;
+        max-height:320px;
+        overflow:auto;
+        overflow-wrap:anywhere
+}
+.gs-detail h3 {
+        font-size:16px;
+        margin:0 0 10px;
+        line-height:1.3;
+        letter-spacing:-.02em
+}
+.gs-detail p {
+        margin:6px 0
+}
+.gs-detail dl {
+        margin:0
+}
+.gs-detail dt {
+        font-size:10px;
+        text-transform:uppercase;
+        letter-spacing:.055em;
+        color:#70859b;
+        font-weight:800;
+        margin-top:11px
+}
+.gs-detail dd {
+        margin:3px 0;
+        color:#223c55
+}
+.gs-warning {
+        color:#c62828!important;
+        font-weight:800
+}
+.gs-mapbox {
+        position:relative;
+        overflow:hidden;
+        background:radial-gradient(ellipse at 70% 30%,#e3f4f9 0%,#cce5f0 70%,#bcd9e8 100%)
+}
+#gs-map {
+        width:100%;
+        height:100%;
+        display:block
+}
+.gs-land {
+        fill:#f3ead2;
+        stroke:#c6ba9b;
+        stroke-width:.65;
+        vector-effect:non-scaling-stroke
+}
+.gs-connection {
+        fill:none;
+        stroke:#277da7;
+        stroke-opacity:.3;
+        stroke-width:1.3;
+        vector-effect:non-scaling-stroke;
+        cursor:pointer
+}
+.gs-connection.gs-facility-link {
+        stroke:#e2933e;
+        stroke-dasharray:5 3;
+        stroke-opacity:.46
+}
+.gs-connection.gs-highlight,.gs-connection:hover {
+        stroke:#c76b13;
+        stroke-opacity:1;
+        stroke-width:2.8
+}
+.gs-recommend {
+        stroke:#df8724;
+        stroke-width:2.6;
+        stroke-dasharray:6 4;
+        vector-effect:non-scaling-stroke
+}
+.gs-recommend.gs-service {
+        stroke:#17466c;
+        stroke-width:3;
+        stroke-dasharray:none
+}
+.gs-route-point {
+        stroke:#fff;
+        stroke-width:1.7;
+        vector-effect:non-scaling-stroke
+}
+.gs-rail {
+        fill:none;
+        stroke:#586d7f;
+        stroke-width:1;
+        stroke-opacity:.5;
+        stroke-dasharray:3 3;
+        vector-effect:non-scaling-stroke
+}
+.gs-point {
+        stroke:#fff;
+        stroke-width:1;
+        cursor:pointer;
+        vector-effect:non-scaling-stroke
+}
+.gs-point:hover {
+        stroke:#fff;
+        stroke-width:2.5
+}
+.gs-cluster {
+        fill:#173b63;
+        fill-opacity:.92;
+        stroke:#fff;
+        stroke-width:2;
+        cursor:pointer;
+        vector-effect:non-scaling-stroke
+}
+.gs-cluster:hover {
+        fill:#0f2a47
+}
+.gs-cluster-n {
+        fill:#fff;
+        font:700 11px Inter,system-ui,sans-serif;
+        text-anchor:middle;
+        dominant-baseline:central;
+        pointer-events:none
+}
+.gs-mapbadge {
+        position:absolute;
+        top:17px;
+        left:17px;
+        z-index:2;
+        background:#ffffffeb;
+        border:1px solid #ffffff;
+        color:#284660;
+        border-radius:11px;
+        padding:10px 13px;
+        box-shadow:0 5px 22px #2949681b;
+        pointer-events:none
+}
+.gs-mapbadge strong {
+        font-size:12px;
+        display:block
+}
+.gs-mapbadge small {
+        font-size:10px;
+        color:#748ba0
+}
+.gs-legend {
+        position:absolute;
+        bottom:17px;
+        left:17px;
+        z-index:2;
+        background:#fffffff0;
+        backdrop-filter:blur(14px);
+        border:1px solid #ffffff;
+        box-shadow:0 7px 25px #23465d24;
+        color:#263d52;
+        padding:12px 14px;
+        border-radius:12px;
+        font-size:11px;
+        line-height:1.8;
+        pointer-events:none;
+        max-width:275px
+}
+.gs-legend-title {
+        font-weight:800;
+        margin-bottom:6px;
+        font-size:11px
+}
+.gs-legend span.gs-dot {
+        display:inline-block;
+        width:9px;
+        height:9px;
+        border-radius:50%;
+        margin-right:7px
+}
+.gs-legend small {
+        display:block;
+        border-top:1px solid #dbe4eb;
+        padding-top:7px;
+        margin-top:7px;
+        color:#72869b;
+        font-size:10px;
+        line-height:1.45
+}
+.gs-zoom {
+        position:absolute;
+        bottom:17px;
+        right:17px;
+        z-index:3;
+        display:grid;
+        gap:6px;
+        padding:5px;
+        background:#ffffffeb;
+        border:1px solid #fff;
+        border-radius:12px;
+        box-shadow:0 7px 25px #23465d24
+}
+.gs-zoom button {
+        width:36px;
+        height:36px;
+        background:#fff;
+        border:0;
+        border-radius:8px;
+        font-size:19px;
+        color:#24435f;
+        cursor:pointer
+}
+.gs-zoom button:hover {
+        background:#eaf4fb
+}
+.gs-alert {
+        position:absolute;
+        top:18px;
+        left:18px;
+        right:18px;
+        z-index:5;
+        background:#fff9e8;
+        border:1px solid #f0dbad;
+        border-radius:10px;
+        padding:12px;
+        color:#775519;
+        font-size:12px
+}
+.gs-city-dot {
+        fill:#38546a;
+        stroke:#fff;
+        stroke-width:1;
+        pointer-events:none;
+        vector-effect:non-scaling-stroke
+}
+.gs-city-label {
+        fill:#33495e;
+        font-size:10px;
+        font-weight:650;
+        paint-order:stroke;
+        stroke:#f1ead9;
+        stroke-width:3px;
+        stroke-linejoin:round;
+        pointer-events:none
+}
+.gs-water-label {
+        fill:#4286a6;
+        font-size:12px;
+        font-style:italic;
+        letter-spacing:.06em;
+        opacity:.82;
+        paint-order:stroke;
+        stroke:#d6eaf3;
+        stroke-width:3px;
+        pointer-events:none
+}
+.gs-mapcontrols {
+        position:absolute;
+        top:17px;
+        right:17px;
+        z-index:3;
+        display:flex;
+        gap:6px
+}
+.gs-mapcontrols select {
+        background:#fffffff0;
+        border:1px solid #d5e3ed;
+        color:#284760;
+        border-radius:9px;
+        padding:9px 11px;
+        font-size:11px;
+        box-shadow:0 4px 18px #29496818;
+        max-width:160px
+}
+@media(max-width:1000px) {
+    .gs-layout {
+            grid-template-columns:290px minmax(0,1fr)
+    }
+}
+@media(max-width:820px) {
+    .gs-layout {
+            grid-template-columns:1fr;
+            height:auto
+    }
+    .gs-sidebar {
+            max-height:630px
+    }
+    .gs-mapbox {
+            height:65vh;
+            min-height:460px
+    }
+}
+@media(max-width:520px) {
+    .gs-intro {
+            align-items:flex-start
+    }
+    .gs-pill {
+            display:none
+    }
+    .gs-legend {
+            max-width:195px;
+            font-size:10px
+    }
+    .gs-mapcontrols {
+            top:65px;
+            left:17px;
+            right:auto;
+            flex-direction:column
+    }
+    .gs-mapbadge {
+            right:17px
+    }
+    .gs-mapcontrols select {
+            max-width:200px
+    }
+}
 </style>
 <div class="gs-shell">
-<div class="gs-intro"><div><strong>Analisis spasial &amp; konektivitas transportasi</strong><p>Data Kemenhub menjadi referensi utama, GeoJSON Tim Statistika sebagai tambahan, dan OSM sebagai kandidat indikatif yang belum diverifikasi. Garis rekomendasi adalah jarak geografis, bukan layanan aktual.</p></div><span class="gs-pill">● Peta interaktif</span></div>
+<div class="gs-intro">
+<div>
+<strong>Analisis spasial &amp; konektivitas transportasi</strong>
+<p>Data Kemenhub menjadi referensi utama, GeoJSON Tim Statistika sebagai tambahan, dan OSM sebagai kandidat indikatif yang belum diverifikasi. Garis rekomendasi adalah jarak geografis, bukan layanan aktual.</p>
+</div>
+<span class="gs-pill">● Peta interaktif</span>
+</div>
 <div class="gs-layout">
 <aside class="gs-sidebar">
-<div class="gs-eyebrow">DATIN / Geospatial Intelligence</div><h2>Eksplorasi Fasilitas</h2><p>Jelajahi sebaran simpul transportasi, pilih sumber data, dan analisis kebutuhan konektivitas regional.</p>
-<div class="gs-links"><a href="{{ route('peta.index') }}">↗ Peta Konektivitas Pemda</a>@if(auth()->user()->isSuperAdmin())<a href="{{ route('fasilitas.index') }}">↗ Kelola Fasilitas</a>@endif</div>
+<div class="gs-eyebrow">DATIN / Geospatial Intelligence</div>
+<h2>Eksplorasi Fasilitas</h2>
+<p>Jelajahi sebaran simpul transportasi, pilih sumber data, dan analisis kebutuhan konektivitas regional.</p>
+<div class="gs-links">
+<a href="{{ route('peta.index') }}">↗ Peta Konektivitas Pemda</a>@if(auth()->user()->isSuperAdmin())<a href="{{ route('fasilitas.index') }}">↗ Kelola Fasilitas</a>@endif</div>
 <div class="gs-section">Ringkasan data</div>
-<div class="gs-statgrid"><div class="gs-stat"><span>Fasilitas Kemenhub</span><strong>{{ number_format($statistikFasilitas['kemenhub'],0,',','.') }}</strong></div><div class="gs-stat"><span>GeoJSON tambahan</span><strong>{{ number_format($statistikFasilitas['geojson_tambahan'],0,',','.') }}</strong></div><div class="gs-stat"><span>GeoJSON kandidat duplikat</span><strong>{{ number_format($statistikFasilitas['geojson_kandidat_duplikat'],0,',','.') }}</strong></div><div class="gs-stat"><span>Total di database</span><strong>{{ number_format($statistikFasilitas['total_database'],0,',','.') }}</strong></div><div class="gs-stat gs-stat-wide"><span>Total fasilitas di peta</span><strong>{{ number_format($statistikFasilitas['ditampilkan'],0,',','.') }}</strong></div></div>
+<div class="gs-statgrid">
+<div class="gs-stat">
+<span>Fasilitas Kemenhub</span>
+<strong>{{ number_format($statistikFasilitas['kemenhub'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat">
+<span>GeoJSON tambahan</span>
+<strong>{{ number_format($statistikFasilitas['geojson_tambahan'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat">
+<span>GeoJSON kandidat duplikat</span>
+<strong>{{ number_format($statistikFasilitas['geojson_kandidat_duplikat'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat">
+<span>Total di database</span>
+<strong>{{ number_format($statistikFasilitas['total_database'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat gs-stat-wide">
+<span>Total fasilitas di peta</span>
+<strong>{{ number_format($statistikFasilitas['ditampilkan'],0,',','.') }}</strong>
+</div>
+</div>
 <p class="gs-footnote">Penyaringan duplikat hanya memengaruhi visualisasi. Angka mengikuti hak akses pengguna.</p>
 <div class="gs-section">Lapisan peta</div>
-<div id="gs-layers"><label class="gs-layer"><input type="checkbox" data-layer="fasilitas" checked><span><strong>Titik fasilitas transportasi</strong><small>Kemenhub, GeoJSON tambahan, dan OpenStreetMap</small></span></label><label class="gs-layer"><input type="checkbox" data-layer="akses-fasilitas"><span><strong>Garis akses GeoJSON</strong><small>Referensi konektivitas dari tim statistika</small></span></label></div>
+<div id="gs-layers">
+<label class="gs-layer">
+<input type="checkbox" data-layer="fasilitas" checked>
+<span>
+<strong>Titik fasilitas transportasi</strong>
+<small>Kemenhub, GeoJSON tambahan, dan OpenStreetMap</small>
+</span>
+</label>
+<label class="gs-layer">
+<input type="checkbox" data-layer="akses-fasilitas">
+<span>
+<strong>Garis akses GeoJSON</strong>
+<small>Referensi konektivitas dari tim statistika</small>
+</span>
+</label>
+</div>
 <div class="gs-section">Filter eksplorasi</div>
-<div class="gs-field"><label for="gs-moda">Moda transportasi</label><select id="gs-moda"><option value="">Semua moda</option><option value="1">Darat / Terminal</option><option value="2">Laut / Pelabuhan</option><option value="3">Udara / Bandara</option><option value="4">Kereta Api / Stasiun</option></select></div>
-<div class="gs-field"><label for="gs-sumber">Sumber data fasilitas</label><select id="gs-sumber"><option value="SEMUA">Semua sumber data</option><option value="KEMENHUB">Kemenhub</option><option value="GEOJSON">GeoJSON Tim Statistika</option><option value="OSM">OpenStreetMap</option></select></div>
-<div class="gs-field"><label for="gs-jenis-osm">Kategori fasilitas OSM</label><select id="gs-jenis-osm"><option value="SEMUA">Semua jenis OSM</option><option value="KANDIDAT_TERMINAL">Kandidat Terminal</option><option value="PERLU_REVIEW">Perlu Pemeriksaan</option><option value="HALTE">Halte</option><option value="POOL">Pool</option><option value="SHUTTLE">Shuttle</option><option value="TERKAIT_PELABUHAN">Terkait Pelabuhan</option></select><small>Data OSM bersifat indikatif dan tidak otomatis menjadi fasilitas resmi.</small></div>
+<div class="gs-field">
+<label for="gs-moda">Moda transportasi</label>
+<select id="gs-moda">
+<option value="">Semua moda</option>
+<option value="1">Darat / Terminal</option>
+<option value="2">Laut / Pelabuhan</option>
+<option value="3">Udara / Bandara</option>
+<option value="4">Kereta Api / Stasiun</option>
+</select>
+</div>
+<div class="gs-field">
+<label for="gs-sumber">Sumber data fasilitas</label>
+<select id="gs-sumber">
+<option value="SEMUA">Semua sumber data</option>
+<option value="KEMENHUB">Kemenhub</option>
+<option value="GEOJSON">GeoJSON Tim Statistika</option>
+<option value="OSM">OpenStreetMap</option>
+</select>
+</div>
+<div class="gs-field">
+<label for="gs-jenis-osm">Kategori fasilitas OSM</label>
+<select id="gs-jenis-osm">
+<option value="SEMUA">Semua jenis OSM</option>
+<option value="KANDIDAT_TERMINAL">Kandidat Terminal</option>
+<option value="PERLU_REVIEW">Perlu Pemeriksaan</option>
+<option value="HALTE">Halte</option>
+<option value="POOL">Pool</option>
+<option value="SHUTTLE">Shuttle</option>
+<option value="TERKAIT_PELABUHAN">Terkait Pelabuhan</option>
+</select>
+<small>Data OSM bersifat indikatif dan tidak otomatis menjadi fasilitas resmi.</small>
+</div>
 <div class="gs-section">Analisis konektivitas</div>
-<div class="gs-field"><label for="gs-pengajuan">Pengajuan Pemda (Verifikasi Final)</label><select id="gs-pengajuan"><option value="">Pilih kebutuhan konektivitas...</option></select></div>
-<label class="gs-layer"><input type="checkbox" id="gs-show-rail"><span><strong>Jaringan rel Kemenhub</strong><small>Skema segmen, bukan geometri jalur rel sebenarnya</small></span></label>
+<div class="gs-field">
+<label for="gs-pengajuan">Pengajuan Pemda (Verifikasi Final)</label>
+<select id="gs-pengajuan">
+<option value="">Pilih kebutuhan konektivitas...</option>
+</select>
+</div>
+<label class="gs-layer">
+<input type="checkbox" id="gs-show-rail">
+<span>
+<strong>Jaringan rel Kemenhub</strong>
+<small>Skema segmen, bukan geometri jalur rel sebenarnya</small>
+</span>
+</label>
 <div class="gs-summary" id="gs-summary" aria-live="polite">Memuat data geospasial...</div>
-<section class="gs-detail" id="gs-detail" aria-live="polite"><h3>Informasi lokasi</h3><p>Klik titik fasilitas atau garis untuk melihat detailnya. Pilih pengajuan untuk melihat rekomendasi spasial awal.</p></section>
+<section class="gs-detail" id="gs-detail" aria-live="polite">
+<h3>Informasi lokasi</h3>
+<p>Klik titik fasilitas atau garis untuk melihat detailnya. Pilih pengajuan untuk melihat rekomendasi spasial awal.</p>
+</section>
 </aside>
-<div class="gs-mapbox"><svg id="gs-map" role="img" aria-label="Peta fasilitas transportasi Indonesia"></svg><div class="gs-mapbadge"><strong>Peta Fasilitas Indonesia</strong><small>Referensi geospasial · DATIN</small></div><div class="gs-mapcontrols"><select id="gs-label-kota" aria-label="Tampilan label kota"><option value="OTOMATIS">Kota · Otomatis</option><option value="UTAMA">Kota utama</option><option value="SEMUA">Semua kota</option><option value="HIDE">Sembunyikan kota</option></select><select id="gs-label-air" aria-label="Tampilan label perairan"><option value="OTOMATIS">Perairan · Otomatis</option><option value="UTAMA">Perairan utama</option><option value="SEMUA">Semua perairan</option><option value="HIDE">Sembunyikan perairan</option></select></div><div class="gs-alert" id="gs-alert">Memuat peta...</div>
-<div class="gs-legend"><div class="gs-legend-title">Legenda fasilitas</div><div><span class="gs-dot" style="background:#e67e22"></span>Darat non-OSM</div><div><span class="gs-dot" style="background:#1688dc"></span>Pelabuhan</div><div><span class="gs-dot" style="background:#8b5cf6"></span>Bandara</div><div><span class="gs-dot" style="background:#159b68"></span>Stasiun kereta api</div><div><span class="gs-dot" style="background:#f59e0b"></span>Kandidat terminal OSM</div><div><span class="gs-dot" style="background:#94a3b8"></span>Objek OSM lainnya</div><div><span class="gs-dot" style="background:#dc2626"></span>Perlu pemeriksaan</div><div style="color:#d18a3a">┄ Akses fasilitas pilihan</div><div style="color:#17466c">━ Relasi antarfasilitas indikatif</div><small>Garis bukan jalur transportasi aktual. Label geografis bersifat referensi.</small></div>
-<div class="gs-zoom"><button type="button" id="gs-in" aria-label="Perbesar">+</button><button type="button" id="gs-out" aria-label="Perkecil">−</button><button type="button" id="gs-home" aria-label="Atur ulang">⟲</button></div></div>
-</div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<div class="gs-mapbox">
+<svg id="gs-map" role="img" aria-label="Peta fasilitas transportasi Indonesia">
+</svg>
+<div class="gs-mapbadge">
+<strong>Peta Fasilitas Indonesia</strong>
+<small>Referensi geospasial · DATIN</small>
+</div>
+<div class="gs-mapcontrols">
+<select id="gs-label-kota" aria-label="Tampilan label kota">
+<option value="OTOMATIS">Kota · Otomatis</option>
+<option value="UTAMA">Kota utama</option>
+<option value="SEMUA">Semua kota</option>
+<option value="HIDE">Sembunyikan kota</option>
+</select>
+<select id="gs-label-air" aria-label="Tampilan label perairan">
+<option value="OTOMATIS">Perairan · Otomatis</option>
+<option value="UTAMA">Perairan utama</option>
+<option value="SEMUA">Semua perairan</option>
+<option value="HIDE">Sembunyikan perairan</option>
+</select>
+</div>
+<div class="gs-alert" id="gs-alert">Memuat peta...</div>
+<div class="gs-legend">
+<div class="gs-legend-title">Legenda fasilitas</div>
+<div>
+<span class="gs-dot" style="background:#e67e22">
+</span>Darat non-OSM</div>
+<div>
+<span class="gs-dot" style="background:#1688dc">
+</span>Pelabuhan</div>
+<div>
+<span class="gs-dot" style="background:#8b5cf6">
+</span>Bandara</div>
+<div>
+<span class="gs-dot" style="background:#159b68">
+</span>Stasiun kereta api</div>
+<div>
+<span class="gs-dot" style="background:#f59e0b">
+</span>Kandidat terminal OSM</div>
+<div>
+<span class="gs-dot" style="background:#94a3b8">
+</span>Objek OSM lainnya</div>
+<div>
+<span class="gs-dot" style="background:#dc2626">
+</span>Perlu pemeriksaan</div>
+<div style="color:#d18a3a">┄ Akses fasilitas pilihan</div>
+<div style="color:#17466c">━ Relasi antarfasilitas indikatif</div>
+<small>Garis bukan jalur transportasi aktual. Label geografis bersifat referensi.</small>
+</div>
+<div class="gs-zoom">
+<button type="button" id="gs-in" aria-label="Perbesar">+</button>
+<button type="button" id="gs-out" aria-label="Perkecil">−</button>
+<button type="button" id="gs-home" aria-label="Atur ulang">⟲</button>
+</div>
+</div>
+</div>
+</div><script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="{{ asset('js/peta-cluster.js') }}"></script>
 <script>
-(() => {
-'use strict';
-const managed=@json($fasilitasDatabase),pengajuan=@json($pengajuanPeta),requestedKab=@json(request()->query('kab')),requestedModa=@json(request()->query('moda'));
-const sources={'akses-fasilitas':@json(route('peta.geospasial.data',['layer'=>'akses-fasilitas']))},all={},labels={'akses-fasilitas':'Akses fasilitas terdekat'},colors={1:'#e67e22',2:'#1688dc',3:'#8b5cf6',4:'#159b68'},modeNames={1:'Darat',2:'Laut',3:'Udara',4:'Kereta Api'},kind={1:'Terminal / Fasilitas Darat',2:'Pelabuhan',3:'Bandar Udara',4:'Stasiun Kereta Api'};
-const el=id=>document.getElementById(id),esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    (() => {
+
+    'use strict';
+
+    const managed=@json($fasilitasDatabase),pengajuan=@json($pengajuanPeta),requestedKab=@json(request()->query('kab')),requestedModa=@json(request()->query('moda'));
+
+    const sources={'akses-fasilitas':@json(route('peta.geospasial.data',['layer'=>'akses-fasilitas']))},all={},labels={'akses-fasilitas':'Akses fasilitas terdekat'},colors={1:'#e67e22',2:'#1688dc',3:'#8b5cf6',4:'#159b68'},modeNames={1:'Darat',2:'Laut',3:'Udara',4:'Kereta Api'},kind={1:'Terminal / Fasilitas Darat',2:'Pelabuhan',3:'Bandar Udara',4:'Stasiun Kereta Api'};
+
+    const el=id=>document.getElementById(id),esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cities=[['Jakarta',106.8456,-6.2088,1],['Banda Aceh',95.3238,5.5483,0],['Medan',98.6722,3.5952,1],['Padang',100.3543,-.9471,0],['Pekanbaru',101.4478,.5071,0],['Palembang',104.7566,-2.9761,0],['Bandar Lampung',105.2667,-5.4292,0],['Bandung',107.6191,-6.9175,1],['Semarang',110.4203,-6.9667,0],['Yogyakarta',110.3695,-7.7956,0],['Surabaya',112.7521,-7.2575,1],['Denpasar',115.2126,-8.6705,0],['Pontianak',109.3414,-.0263,0],['Banjarmasin',114.5908,-3.3186,0],['Balikpapan',116.8312,-1.2379,0],['Makassar',119.4327,-5.1477,1],['Manado',124.8421,1.4748,0],['Palu',119.8707,-.8917,0],['Kendari',122.5149,-3.9985,0],['Ambon',128.1814,-3.6954,0],['Jayapura',140.7181,-2.5337,0],['Kupang',123.607,-10.1772,0]].map(([name,lon,lat,major])=>({name,lon,lat,major:!!major}));
 const waters=[['Samudra Hindia',103,-12.5,1],['Samudra Pasifik',138,4.4,1],['Laut Jawa',112,-5.2,1],['Laut Banda',127,-5.3,1],['Laut Sulawesi',123,3.2,1],['Laut Arafura',135,-8.3,1],['Laut Flores',120,-7.5,0],['Laut Seram',130,-2.5,0],['Laut Halmahera',129.2,1.2,0],['Laut Natuna',108.5,4.2,0],['Laut Timor',125.5,-11.3,0],['Selat Malaka',99,4.4,0],['Selat Sunda',105.7,-5.9,0],['Selat Karimata',108,-2.4,0],['Selat Makassar',118.4,-2.1,0],['Selat Lombok',115.7,-8.5,0],['Selat Bali',114.45,-8.2,0],['Selat Alas',116.8,-8.6,0],['Selat Ombai',125,-8.7,0]].map(([name,lon,lat,major])=>({name,lon,lat,major:!!major}));
 const mercatorToLonLat=([x,y])=>[x*180/20037508.342789244,(2*Math.atan(Math.exp(y*Math.PI/20037508.342789244))-Math.PI/2)*180/Math.PI];
@@ -118,3 +783,7 @@ Promise.all([fetch(@json(asset('data/indonesia-provinsi.json'))).then(r=>{if(!r.
 })();
 </script>
 @endsection
+
+
+
+
