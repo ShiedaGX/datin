@@ -548,6 +548,34 @@
 .intram-dashboard .intram-connect-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#40566e;font-size:12px;font-weight:650}
 .intram-dashboard .intram-connect-row-head strong{color:#18324d;font-variant-numeric:tabular-nums;white-space:nowrap}
 .intram-dashboard .intram-connect-note{margin-top:15px;font-size:11px;color:#8796a8;line-height:1.65}
+.intram-dashboard .intram-connect-kpis{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
+.intram-dashboard .intram-connect-kpi strong em{font-style:normal;font-size:14px;font-weight:700;color:#73859a}
+.intram-dashboard .intram-insight{border:1px solid #d6e9e7;background:linear-gradient(135deg,#f1faf9,#f8fbff);border-radius:14px;padding:15px 19px;margin-bottom:18px;font-size:12.5px;color:#40566e}
+.intram-dashboard .intram-insight>strong{display:block;color:#0b6f73;font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:7px}
+.intram-dashboard .intram-insight ul{margin:0;padding-left:18px;line-height:1.85}
+.intram-dashboard .intram-insight b{color:#18324d}
+.intram-dashboard .intram-muted{color:#8796a8;font-weight:600;font-size:11px}
+.intram-dashboard .intram-cdonut{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+.intram-dashboard .intram-cdonut-chart{position:relative;width:190px;height:190px;flex:0 0 190px}
+.intram-dashboard .intram-cdonut-chart svg{width:100%;height:100%;display:block}
+.intram-dashboard .intram-cdonut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.intram-dashboard .intram-cdonut-center strong{font-size:26px;font-weight:800;color:#18324d;line-height:1.1}
+.intram-dashboard .intram-cdonut-center span{font-size:11px;color:#8796a8}
+.intram-dashboard .intram-cdonut-legend{flex:1 1 170px;min-width:0}
+.intram-dashboard .intram-cdonut-item{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #eef3f8;font-size:13px;color:#40566e}
+.intram-dashboard .intram-cdonut-item:last-child{border-bottom:0}
+.intram-dashboard .intram-cdonut-dot{width:11px;height:11px;border-radius:4px;flex:0 0 11px}
+.intram-dashboard .intram-cdonut-name{flex:1;font-weight:650}
+.intram-dashboard .intram-cdonut-val{font-weight:800;color:#18324d;font-variant-numeric:tabular-nums;white-space:nowrap}
+.intram-dashboard .intram-cdonut-val small{font-weight:600;color:#8796a8;font-size:11px}
+.intram-dashboard .intram-cols{display:flex;align-items:stretch;gap:12px;height:230px;padding-top:6px}
+.intram-dashboard .intram-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.intram-dashboard .intram-col-val{font-size:13px;font-weight:800;color:#18324d;font-variant-numeric:tabular-nums}
+.intram-dashboard .intram-col-track{flex:1;width:100%;max-width:62px;background:#f1f5f9;border-radius:9px 9px 4px 4px;display:flex;align-items:flex-end;overflow:hidden}
+.intram-dashboard .intram-col-fill{width:100%;background:linear-gradient(180deg,#14b8a6,#087f83);border-radius:9px 9px 0 0}
+.intram-dashboard .intram-col-label{font-size:11px;font-weight:650;color:#40566e;text-align:center;line-height:1.3}
+.intram-dashboard .intram-col-pct{font-size:10.5px;color:#8796a8}
+@media(max-width:520px){.intram-dashboard .intram-cdonut{justify-content:center}.intram-dashboard .intram-cols{gap:6px}.intram-dashboard .intram-col-label{font-size:9.5px}}
 @media(max-width:1100px){.intram-dashboard .intram-connect-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:768px){.intram-dashboard .intram-connect-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.intram-dashboard .intram-connect-kpis{grid-template-columns:1fr 1fr;gap:9px}.intram-dashboard .intram-connect-kpi{padding:13px}.intram-dashboard .intram-connect-kpi strong{font-size:24px}}
@@ -848,96 +876,168 @@
             <span class="intram-connect-pill">Verifikasi Final</span>
         </div>
 
+        @php
+            $kv = $konektivitas;
+            $warnaModaDari = static fn (string $nama): string => match (mb_strtolower($nama)) {
+                'darat' => '#e67e22', 'laut' => '#1688dc', 'udara' => '#8b5cf6', 'kereta api' => '#159b68', default => '#64748b',
+            };
+            $fmt = static fn ($n, int $d = 0): string => number_format((float) $n, $d, ',', '.');
+            $modaTop = $kv['moda'][0] ?? null;
+            $asalTop = $kv['top_asal'][0] ?? null;
+            $tujuanTop = $kv['top_tujuan'][0] ?? null;
+            $kelasTop = collect($kv['kelas_jarak'])->sortByDesc('jumlah')->first();
+            $maksKelas = max(1, (int) collect($kv['kelas_jarak'])->max('jumlah'));
+        @endphp
+
         <div class="intram-connect-kpis">
             <article class="intram-connect-kpi">
                 <span>Total Hubungan</span>
-                <strong>{{ number_format($konektivitas['hubungan'], 0, ',', '.') }}</strong>
+                <strong>{{ $fmt($kv['hubungan']) }}</strong>
                 <small>Pasangan laporan dan tujuan</small>
             </article>
             <article class="intram-connect-kpi">
                 <span>Daerah Asal</span>
-                <strong>{{ number_format($konektivitas['asal'], 0, ',', '.') }}</strong>
+                <strong>{{ $fmt($kv['asal']) }}</strong>
                 <small>Kabupaten/kota asal unik</small>
             </article>
             <article class="intram-connect-kpi">
                 <span>Simpul Tujuan</span>
-                <strong>{{ number_format($konektivitas['tujuan'], 0, ',', '.') }}</strong>
+                <strong>{{ $fmt($kv['tujuan']) }}</strong>
                 <small>Kabupaten/kota tujuan unik</small>
             </article>
             <article class="intram-connect-kpi">
                 <span>Wilayah Terhubung</span>
-                <strong>{{ number_format($konektivitas['wilayah_unik'], 0, ',', '.') }}</strong>
+                <strong>{{ $fmt($kv['wilayah_unik']) }}</strong>
                 <small>Gabungan asal dan tujuan unik</small>
             </article>
+            <article class="intram-connect-kpi">
+                <span>Rata-rata Jarak</span>
+                <strong>{{ $fmt($kv['jarak_rata']) }}<em> km</em></strong>
+                <small>Garis lurus, terjauh {{ $fmt($kv['jarak_maks']) }} km</small>
+            </article>
+            <article class="intram-connect-kpi">
+                <span>Hubungan per Daerah</span>
+                <strong>{{ $fmt($kv['rasio'], 1) }}</strong>
+                <small>Rata-rata tujuan tiap daerah asal</small>
+            </article>
         </div>
+
+        @if ($kv['hubungan'] > 0)
+            <div class="intram-insight">
+                <strong>Temuan utama</strong>
+                <ul>
+                    @if ($modaTop)<li>Moda dominan: <b>{{ $modaTop['nama'] }}</b> ({{ $fmt($modaTop['persen'], 1) }}% dari seluruh hubungan).</li>@endif
+                    @if ($asalTop)<li>Daerah asal teraktif: <b>{{ $asalTop['nama'] }}</b> dengan {{ $fmt($asalTop['jumlah']) }} hubungan.</li>@endif
+                    @if ($tujuanTop)<li>Simpul tujuan terbanyak dituju: <b>{{ $tujuanTop['nama'] }}</b> ({{ $fmt($tujuanTop['jumlah']) }} hubungan).</li>@endif
+                    @if ($kelasTop)<li>Sebagian besar hubungan berjarak <b>{{ $kelasTop['nama'] }}</b> ({{ $fmt($kelasTop['persen'], 1) }}%).</li>@endif
+                </ul>
+            </div>
+        @endif
 
         <div class="intram-connect-grid">
             <article class="intram-card">
                 <div class="intram-card-heading">
                     <h2>Distribusi Moda Transportasi</h2>
-                    <p>Jumlah hubungan berdasarkan moda pada pengajuan final.</p>
+                    <p>Proporsi hubungan menurut moda pada pengajuan final.</p>
                 </div>
-                @forelse ($konektivitas['moda'] as $item)
-                    @php
-                        $warnaModa = match (mb_strtolower($item['nama'])) {
-                            'darat' => '#e67e22',
-                            'laut' => '#1688dc',
-                            'udara' => '#8b5cf6',
-                            'kereta api' => '#159b68',
-                            default => '#64748b',
-                        };
-                    @endphp
-                    <div class="intram-connect-row">
-                        <div class="intram-connect-row-head">
-                            <span>{{ $item['nama'] }}</span>
-                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }} ({{ number_format($item['persen'], 1, ',', '.') }}%)</strong>
+                @if ($kv['moda'])
+                    @php $awalArc = 0.0; @endphp
+                    <div class="intram-cdonut">
+                        <div class="intram-cdonut-chart">
+                            <svg viewBox="0 0 200 200" role="img" aria-label="Distribusi moda transportasi">
+                                <circle cx="100" cy="100" r="75" fill="none" stroke="#edf2f7" stroke-width="26" />
+                                @foreach ($kv['moda'] as $item)
+                                    @php $arc = max(0.0, (float) $item['persen']); @endphp
+                                    <circle cx="100" cy="100" r="75" fill="none" stroke="{{ $warnaModaDari($item['nama']) }}" stroke-width="26"
+                                        pathLength="100" stroke-dasharray="{{ $arc }} {{ 100 - $arc }}" stroke-dashoffset="-{{ $awalArc }}"
+                                        transform="rotate(-90 100 100)"><title>{{ $item['nama'] }}: {{ $fmt($item['jumlah']) }} hubungan</title></circle>
+                                    @php $awalArc += $arc; @endphp
+                                @endforeach
+                            </svg>
+                            <div class="intram-cdonut-center"><strong>{{ $fmt($kv['hubungan']) }}</strong><span>Hubungan</span></div>
                         </div>
-                        <div class="intram-connect-bar">
-                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['persen'])) }}%;background:{{ $warnaModa }}"></div>
+                        <div class="intram-cdonut-legend">
+                            @foreach ($kv['moda'] as $item)
+                                <div class="intram-cdonut-item">
+                                    <span class="intram-cdonut-dot" style="background:{{ $warnaModaDari($item['nama']) }}"></span>
+                                    <span class="intram-cdonut-name">{{ $item['nama'] }}</span>
+                                    <span class="intram-cdonut-val">{{ $fmt($item['jumlah']) }}<small> · {{ $fmt($item['persen'], 1) }}%</small></span>
+                                </div>
+                            @endforeach
                         </div>
                     </div>
-                @empty
+                @else
                     <div class="intram-empty">Belum ada hubungan konektivitas Verifikasi Final yang dapat dipetakan.</div>
-                @endforelse
+                @endif
             </article>
 
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Sebaran Jarak Hubungan</h2>
+                    <p>Jumlah hubungan menurut kelas jarak garis lurus asal–tujuan.</p>
+                </div>
+                @if ($kv['hubungan'] > 0)
+                    <div class="intram-cols" role="img" aria-label="Sebaran jarak hubungan">
+                        @foreach ($kv['kelas_jarak'] as $item)
+                            <div class="intram-col">
+                                <span class="intram-col-val">{{ $fmt($item['jumlah']) }}</span>
+                                <div class="intram-col-track"><div class="intram-col-fill" style="height:{{ $item['jumlah'] > 0 ? max(3, $item['jumlah'] / $maksKelas * 100) : 0 }}%"></div></div>
+                                <span class="intram-col-label">{{ $item['nama'] }}</span>
+                                <span class="intram-col-pct">{{ $fmt($item['persen'], 1) }}%</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="intram-empty">Belum ada data jarak yang dapat ditampilkan.</div>
+                @endif
+            </article>
+        </div>
+
+        <div class="intram-connect-grid" style="margin-top:18px">
             <article class="intram-card">
                 <div class="intram-card-heading">
                     <h2>Top 5 Daerah Asal</h2>
                     <p>Daerah dengan jumlah hubungan konektivitas terbanyak.</p>
                 </div>
-                @php $maksAsal = max(1, $konektivitas['top_asal'][0]['jumlah'] ?? 0); @endphp
-                @forelse ($konektivitas['top_asal'] as $index => $item)
+                @php $maksAsal = max(1, $kv['top_asal'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($kv['top_asal'] as $index => $item)
                     <div class="intram-connect-row">
-                        <div class="intram-connect-row-head">
-                            <span>{{ $index + 1 }}. {{ $item['nama'] }}</span>
-                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }}</strong>
-                        </div>
-                        <div class="intram-connect-bar">
-                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksAsal * 100)) }}%"></div>
-                        </div>
+                        <div class="intram-connect-row-head"><span>{{ $index + 1 }}. {{ $item['nama'] }}</span><strong>{{ $fmt($item['jumlah']) }}</strong></div>
+                        <div class="intram-connect-bar"><div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksAsal * 100)) }}%"></div></div>
                     </div>
                 @empty
                     <div class="intram-empty">Belum ada data daerah asal yang dapat ditampilkan.</div>
                 @endforelse
             </article>
+
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Top 5 Simpul Tujuan</h2>
+                    <p>Daerah yang paling banyak menjadi tujuan hubungan.</p>
+                </div>
+                @php $maksTujuan = max(1, $kv['top_tujuan'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($kv['top_tujuan'] as $index => $item)
+                    <div class="intram-connect-row">
+                        <div class="intram-connect-row-head"><span>{{ $index + 1 }}. {{ $item['nama'] }}</span><strong>{{ $fmt($item['jumlah']) }}</strong></div>
+                        <div class="intram-connect-bar"><div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksTujuan * 100)) }}%;background:#7c3aed"></div></div>
+                    </div>
+                @empty
+                    <div class="intram-empty">Belum ada data simpul tujuan yang dapat ditampilkan.</div>
+                @endforelse
+            </article>
         </div>
+
         <div class="intram-connect-grid" style="margin-top:18px">
             <article class="intram-card">
                 <div class="intram-card-heading">
                     <h2>Top 5 Sektor Komoditas</h2>
-                    <p>Sektor dengan entri komoditas terbanyak pada hubungan Verifikasi Final yang dapat dipetakan.</p>
+                    <p>Porsi sektor dari seluruh entri komoditas pada hubungan Verifikasi Final.</p>
                 </div>
-                @php $maksSektor = max(1, $konektivitas['top_sektor'][0]['jumlah'] ?? 0); @endphp
-                @forelse ($konektivitas['top_sektor'] as $index => $item)
+                @php $maksSektor = max(1, $kv['top_sektor'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($kv['top_sektor'] as $index => $item)
                     <div class="intram-connect-row">
-                        <div class="intram-connect-row-head">
-                            <span>{{ $index + 1 }}. {{ $item['nama'] }}</span>
-                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }}</strong>
-                        </div>
-                        <div class="intram-connect-bar">
-                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksSektor * 100)) }}%;background:#0d9488"></div>
-                        </div>
+                        <div class="intram-connect-row-head"><span>{{ $index + 1 }}. {{ $item['nama'] }}</span><strong>{{ $fmt($item['jumlah']) }}<small class="intram-muted"> · {{ $fmt($item['persen'], 1) }}%</small></strong></div>
+                        <div class="intram-connect-bar"><div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksSektor * 100)) }}%;background:#0d9488"></div></div>
                     </div>
                 @empty
                     <div class="intram-empty">Belum ada data sektor komoditas pada hubungan yang dapat dipetakan.</div>
@@ -949,19 +1049,48 @@
                     <h2>Top 5 Komoditas</h2>
                     <p>Komoditas yang paling sering tercatat pada tujuan pengajuan Verifikasi Final.</p>
                 </div>
-                @php $maksKomoditas = max(1, $konektivitas['top_komoditas'][0]['jumlah'] ?? 0); @endphp
-                @forelse ($konektivitas['top_komoditas'] as $index => $item)
+                @php $maksKomoditas = max(1, $kv['top_komoditas'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($kv['top_komoditas'] as $index => $item)
                     <div class="intram-connect-row">
-                        <div class="intram-connect-row-head">
-                            <span>{{ $index + 1 }}. {{ $item['nama'] }}</span>
-                            <strong>{{ number_format($item['jumlah'], 0, ',', '.') }}</strong>
-                        </div>
-                        <div class="intram-connect-bar">
-                            <div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksKomoditas * 100)) }}%;background:#2563eb"></div>
-                        </div>
+                        <div class="intram-connect-row-head"><span>{{ $index + 1 }}. {{ $item['nama'] }}</span><strong>{{ $fmt($item['jumlah']) }}</strong></div>
+                        <div class="intram-connect-bar"><div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksKomoditas * 100)) }}%;background:#2563eb"></div></div>
                     </div>
                 @empty
                     <div class="intram-empty">Belum ada data komoditas pada hubungan yang dapat dipetakan.</div>
+                @endforelse
+            </article>
+        </div>
+
+        <div class="intram-connect-grid" style="margin-top:18px">
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Top 5 Provinsi Asal</h2>
+                    <p>Provinsi dengan hubungan konektivitas terbanyak.</p>
+                </div>
+                @php $maksProv = max(1, $kv['top_provinsi'][0]['jumlah'] ?? 0); @endphp
+                @forelse ($kv['top_provinsi'] as $index => $item)
+                    <div class="intram-connect-row">
+                        <div class="intram-connect-row-head"><span>{{ $index + 1 }}. {{ $item['nama'] }}</span><strong>{{ $fmt($item['jumlah']) }}</strong></div>
+                        <div class="intram-connect-bar"><div class="intram-connect-fill" style="width:{{ max(0, min(100, $item['jumlah'] / $maksProv * 100)) }}%;background:#d97706"></div></div>
+                    </div>
+                @empty
+                    <div class="intram-empty">Belum ada data provinsi asal yang dapat ditampilkan.</div>
+                @endforelse
+            </article>
+
+            <article class="intram-card">
+                <div class="intram-card-heading">
+                    <h2>Rata-rata Jarak per Moda</h2>
+                    <p>Jarak garis lurus rata-rata hubungan pada tiap moda (km).</p>
+                </div>
+                @php $maksJarakModa = max(1, (int) collect($kv['jarak_moda'])->max('rata')); @endphp
+                @forelse ($kv['jarak_moda'] as $item)
+                    <div class="intram-connect-row">
+                        <div class="intram-connect-row-head"><span>{{ $item['nama'] }}</span><strong>{{ $fmt($item['rata']) }} km</strong></div>
+                        <div class="intram-connect-bar"><div class="intram-connect-fill" style="width:{{ max(2, min(100, $item['rata'] / $maksJarakModa * 100)) }}%;background:{{ $warnaModaDari($item['nama']) }}"></div></div>
+                    </div>
+                @empty
+                    <div class="intram-empty">Belum ada data jarak per moda.</div>
                 @endforelse
             </article>
         </div>

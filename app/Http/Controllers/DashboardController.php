@@ -107,6 +107,13 @@ class DashboardController extends Controller
         $daerahTujuan = [];
         $distribusiModa = [];
         $peringkatAsal = [];
+        $peringkatTujuan = [];
+        $peringkatProvinsi = [];
+        $kelasJarak = ['<100 km' => 0, '100–300 km' => 0, '300–700 km' => 0, '700–1500 km' => 0, '>1500 km' => 0];
+        $jarakModa = [];
+        $totalJarak = 0.0;
+        $jarakMaks = 0.0;
+        $totalEntri = 0;
 
         $punyaKoordinat = static fn ($kab): bool => $kab !== null
             && is_numeric($kab->latitude)
@@ -114,11 +121,12 @@ class DashboardController extends Controller
             && abs((float) $kab->latitude) <= 90
             && abs((float) $kab->longitude) <= 180;
 
-        $queryKonektivitas->with(['moda', 'kabKotaAsal', 'tujuan', 'detailKomoditasTujuan'])
+        $queryKonektivitas->with(['moda', 'kabKotaAsal.provinsi', 'tujuan', 'detailKomoditasTujuan'])
             ->orderBy('id_rute_subsidi')
             ->chunk(150, function ($pengajuan) use (
                 &$jumlahHubungan, &$daerahAsal, &$daerahTujuan,
                 &$distribusiModa, &$peringkatAsal, &$peringkatSektor, &$peringkatKomoditas,
+                &$peringkatTujuan, &$peringkatProvinsi, &$kelasJarak, &$jarakModa, &$totalJarak, &$jarakMaks, &$totalEntri,
                 $sektorPerKomoditas, $punyaKoordinat
             ) {
                 foreach ($pengajuan as $rute) {
@@ -153,6 +161,25 @@ class DashboardController extends Controller
                         }
                         $peringkatAsal[$idAsal]['jumlah']++;
 
+                        $idTujuan = $tujuan->id_kab_kota;
+                        if (! isset($peringkatTujuan[$idTujuan])) {
+                            $peringkatTujuan[$idTujuan] = ['nama' => $tujuan->nama_lengkap, 'jumlah' => 0];
+                        }
+                        $peringkatTujuan[$idTujuan]['jumlah']++;
+
+                        $namaProvinsi = $asal->provinsi?->nama_provinsi ?: 'Tidak diketahui';
+                        $peringkatProvinsi[$namaProvinsi] = ($peringkatProvinsi[$namaProvinsi] ?? 0) + 1;
+
+                        // Jarak garis lurus (Haversine), sama dengan Peta Konektivitas.
+                        $jarak = $this->jarakKm($asal, $tujuan);
+                        $totalJarak += $jarak;
+                        $jarakMaks = max($jarakMaks, $jarak);
+                        $kelasJarak[$jarak < 100 ? '<100 km' : ($jarak < 300 ? '100–300 km' : ($jarak < 700 ? '300–700 km' : ($jarak <= 1500 ? '700–1500 km' : '>1500 km')))]++;
+                        $jarakModa[$namaModa] = [
+                            'jumlah' => ($jarakModa[$namaModa]['jumlah'] ?? 0) + 1,
+                            'total' => ($jarakModa[$namaModa]['total'] ?? 0) + $jarak,
+                        ];
+
                         // Hitung setiap entri komoditas hanya pada pasangan
                         // laporan-tujuan yang valid, sama seperti Peta Konektivitas.
                         foreach ($rute->detailKomoditasTujuan as $detail) {
@@ -172,6 +199,7 @@ class DashboardController extends Controller
                             $sektor = $sektorPerKomoditas->get($key, []);
                             $namaSektor = count($sektor) === 1 ? $sektor[0] : 'Belum terpetakan / ambigu';
                             $peringkatSektor[$namaSektor] = ($peringkatSektor[$namaSektor] ?? 0) + 1;
+                            $totalEntri++;
                         }
                     }
                 }
@@ -181,6 +209,11 @@ class DashboardController extends Controller
         uasort($peringkatAsal, static fn ($a, $b) =>
             ($b['jumlah'] <=> $a['jumlah']) ?: strcmp($a['nama'], $b['nama'])
         );
+
+        uasort($peringkatTujuan, static fn ($a, $b) =>
+            ($b['jumlah'] <=> $a['jumlah']) ?: strcmp($a['nama'], $b['nama'])
+        );
+        arsort($peringkatProvinsi);
 
         arsort($peringkatSektor);
         uasort($peringkatKomoditas, static fn ($a, $b) =>
@@ -197,13 +230,46 @@ class DashboardController extends Controller
                 'jumlah' => $jumlah,
                 'persen' => $jumlahHubungan ? round($jumlah / $jumlahHubungan * 100, 1) : 0,
             ])->values()->all(),
+            'jarak_rata' => $jumlahHubungan ? round($totalJarak / $jumlahHubungan) : 0,
+            'jarak_maks' => (int) round($jarakMaks),
+            'rasio' => count($daerahAsal) ? round($jumlahHubungan / count($daerahAsal), 1) : 0,
+            'kelas_jarak' => collect($kelasJarak)->map(fn ($jumlah, $nama) => [
+                'nama' => $nama,
+                'jumlah' => $jumlah,
+                'persen' => $jumlahHubungan ? round($jumlah / $jumlahHubungan * 100, 1) : 0,
+            ])->values()->all(),
+            'jarak_moda' => collect($jarakModa)->map(fn ($v, $nama) => [
+                'nama' => $nama,
+                'rata' => (int) round($v['total'] / max(1, $v['jumlah'])),
+            ])->sortByDesc('rata')->values()->all(),
             'top_asal' => array_slice(array_values($peringkatAsal), 0, 5),
-            'top_sektor' => collect(array_slice($peringkatSektor, 0, 5, true))
+            'top_tujuan' => array_slice(array_values($peringkatTujuan), 0, 5),
+            'top_provinsi' => collect(array_slice($peringkatProvinsi, 0, 5, true))
                 ->map(fn ($jumlah, $nama) => ['nama' => $nama, 'jumlah' => $jumlah])
+                ->values()->all(),
+            'total_entri' => $totalEntri,
+            'top_sektor' => collect(array_slice($peringkatSektor, 0, 5, true))
+                ->map(fn ($jumlah, $nama) => [
+                    'nama' => $nama,
+                    'jumlah' => $jumlah,
+                    'persen' => $totalEntri ? round($jumlah / $totalEntri * 100, 1) : 0,
+                ])
                 ->values()->all(),
             'top_komoditas' => array_slice(array_values($peringkatKomoditas), 0, 5),
         ];
 
         return view('dashboard', compact('kpi', 'distribusi', 'donat', 'totalPemda', 'terbaru', 'konektivitas'));
+    }
+
+    /** Jarak garis lurus (km), bukan jarak jalan atau lintasan pelayaran/penerbangan. */
+    private function jarakKm($a, $b): float
+    {
+        $lat1 = deg2rad((float) $a->latitude);
+        $lat2 = deg2rad((float) $b->latitude);
+        $dlat = $lat2 - $lat1;
+        $dlon = deg2rad((float) $b->longitude - (float) $a->longitude);
+        $h = sin($dlat / 2) ** 2 + cos($lat1) * cos($lat2) * sin($dlon / 2) ** 2;
+
+        return 6371.0088 * 2 * asin(min(1, sqrt($h)));
     }
 }
