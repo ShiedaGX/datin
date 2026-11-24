@@ -11,10 +11,7 @@ use App\Support\Paginasi;
 use App\Support\PeranUser;
 use App\Support\XlsxExporter;
 use Illuminate\Http\Request;
-<<<<<<< HEAD
-=======
 use Illuminate\Support\Facades\DB;
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
 class UserController extends Controller
 {
@@ -63,17 +60,14 @@ class UserController extends Controller
         $user->load('role.hakAkses', 'moda', 'wilayah');
 
         return view('admin.users.show', [
-<<<<<<< HEAD
             'user'         => $user,
             'jumlahData'   => $user->dataPemda()->count(),
             'jumlahDokumen' => $user->dokumen()->count(),
             'cakupan'      => PeranUser::CAKUPAN,
-=======
             'user'          => $user,
             'jumlahData'    => $user->dataPemda()->count(),
             'jumlahDokumen' => $user->dokumen()->count(),
             'cakupan'       => PeranUser::CAKUPAN,
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ]);
     }
 
@@ -167,10 +161,8 @@ class UserController extends Controller
         )->deleteFileAfterSend(true);
     }
 
-<<<<<<< HEAD
     // ------------------------------------------------------------------
 
-=======
     /** Saran isian "Instansi / organisasi" dari tabel kab_kota (JSON, dipakai autocomplete di form user). */
     public function saranInstansi(Request $request)
     {
@@ -213,7 +205,6 @@ class UserController extends Controller
         return 'Pemda ' . $lengkap;
     }
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     private function filter(Request $r): array
     {
         $role = (string) $r->query('role', '');
@@ -241,42 +232,33 @@ class UserController extends Controller
             ->orderBy('id_user');
     }
 
-<<<<<<< HEAD
     /** Atribut akun sesuai role: cakupan yang tidak dipakai role itu dikosongkan. */
-=======
     /**
      * Atribut akun sesuai role. Untuk Pemda, kab/kota adalah sumber kebenaran:
      * teks instansi dan cakupan wilayah diisi otomatis dari tabel kab_kota.
      */
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     private function atribut(array $d): array
     {
         $role = Role::findOrFail($d['id_role']);
         $syarat = PeranUser::syarat($role->nama_role);
 
-<<<<<<< HEAD
-=======
         $kab = null;
         if ($role->nama_role === PeranUser::PEMDA && ! empty($d['id_kab_kota'])) {
             $kab = DB::table('kab_kota')->where('id_kab_kota', $d['id_kab_kota'])->first();
         }
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         return [
             'full_name'       => $d['full_name'],
             'username'        => $d['username'],
             'email'           => $d['email'],
             'id_role'         => $role->id_role,
-<<<<<<< HEAD
             'instansi'        => $d['instansi'] ?? null,
             'id_wilayah'      => in_array('wilayah', $syarat, true) ? ($d['id_wilayah'] ?? null) : null,
-=======
             'id_kab_kota'     => $kab?->id_kab_kota,
             'instansi'        => $kab ? $this->labelInstansi($kab->jenis, $kab->nama_kab_kota) : null,
             'id_wilayah'      => $kab
                 ? $kab->id_wilayah
                 : (in_array('wilayah', $syarat, true) ? ($d['id_wilayah'] ?? null) : null),
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             'id_moda'         => in_array('moda', $syarat, true) ? ($d['id_moda'] ?? null) : null,
             'diverifikasi_at' => ! empty($d['aktif']) ? now() : null,
         ];
@@ -308,8 +290,5 @@ class UserController extends Controller
             ]]),
         ];
     }
-<<<<<<< HEAD
 }
-=======
 }
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54

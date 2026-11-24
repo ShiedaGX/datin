@@ -10,11 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-<<<<<<< HEAD
 use Illuminate\Database\Eloquent\Relations\HasOne;
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
 class RuteSubsidi extends Model
 {
@@ -138,9 +135,7 @@ class RuteSubsidi extends Model
 
         return $chr ? ['CHR ' . $chr->status, 'sr-draf'] : ['Belum ada CHR', 'sr-belum'];
     }
-<<<<<<< HEAD
 }
-=======
 
     public function detailKomoditasTujuan(): HasMany
     {
@@ -151,4 +146,3 @@ class RuteSubsidi extends Model
         );
     }
 }
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54

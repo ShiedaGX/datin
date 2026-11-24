@@ -1,8 +1,5 @@
 <?php
-<<<<<<< HEAD
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 namespace App\Http\Controllers;
 
 use App\Models\DokumenPengajuan;
@@ -12,10 +9,7 @@ use App\Models\RuteSubsidi;
 use App\Models\VerifikasiPengajuan;
 use App\Support\Paginasi;
 use App\Support\Permohonan;
-<<<<<<< HEAD
-=======
 use App\Support\Sektor;
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 use App\Support\StatusPengajuan;
 use App\Support\Tanggal;
 use App\Support\XlsxExporter;
@@ -26,19 +20,15 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-<<<<<<< HEAD
 /**
  * Halaman Permohonan untuk user Moda. Setiap akun Moda hanya melihat laporan yang dipilih
  * Pemda dengan moda yang sama seperti cakupan moda akun (users.id_moda = rute_subsidi.id_moda).
  */
-=======
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 class PermohonanController extends Controller
 {
     private const PER_HALAMAN = [10, 25, 50];
 
     public const CHECKLIST = [
-<<<<<<< HEAD
         'dokumen' => ['Kelengkapan dokumen', 'Seluruh surat wajib tersedia, terbaca, ditandatangani, dan memiliki lampiran pendukung.'],
         'data'    => ['Konsistensi data', 'Identitas instansi, nomor laporan, wilayah, serta data pada seluruh dokumen saling sesuai.'],
         'teknis'  => ['Kelayakan teknis', 'Rencana layanan, trayek, sarana, jadwal, dan proyeksi kebutuhan dinilai dapat dilaksanakan.'],
@@ -51,7 +41,6 @@ class PermohonanController extends Controller
         'tolak'  => ['status' => StatusPengajuan::DITOLAK, 'hasil' => 'Ditolak',      'pesan' => 'ditolak'],
     ];
 
-=======
         'dokumen' => [
             'Kelengkapan dokumen',
             'Seluruh surat wajib tersedia, terbaca, ditandatangani, dan memiliki lampiran pendukung.'
@@ -94,14 +83,12 @@ class PermohonanController extends Controller
     |--------------------------------------------------------------------------
     */
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public function index(Request $request)
     {
         $user = $request->user();
         $f = $this->filter($request);
 
         $dasar = Permohonan::untukModa($user);
-<<<<<<< HEAD
         $periode = (clone $dasar)->pluck('created_at')->filter()
             ->map(fn ($d) => $d->format('Y-m'))->unique()->sortDesc()->values();
 
@@ -112,7 +99,6 @@ class PermohonanController extends Controller
         $kartu->select('status_pengajuan', DB::raw('COUNT(*) AS n'))->groupBy('status_pengajuan')->get()
             ->each(function ($r) use (&$hitung) {
                 $grup = StatusPengajuan::grup($r->status_pengajuan);
-=======
 
         $periode = (clone $dasar)
             ->pluck('created_at')
@@ -144,13 +130,11 @@ class PermohonanController extends Controller
                     $r->status_pengajuan
                 );
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 if (isset($hitung[$grup])) {
                     $hitung[$grup] += (int) $r->n;
                 }
             });
 
-<<<<<<< HEAD
         $data = $this->query($user, $f)->paginate($f['per'])->withQueryString();
 
         $provinsi = Provinsi::whereIn(
@@ -188,7 +172,6 @@ class PermohonanController extends Controller
             'perOpsi'      => self::PER_HALAMAN,
             'chips'        => $chips,
             'halaman'      => Paginasi::nomor($data->currentPage(), $data->lastPage()),
-=======
         $data = $this->query($user, $f)
             ->paginate($f['per'])
             ->withQueryString();
@@ -272,12 +255,10 @@ class PermohonanController extends Controller
                 $data->lastPage()
             ),
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             'punyaCakupan' => $user->id_moda !== null,
         ]);
     }
 
-<<<<<<< HEAD
     public function export(Request $request)
     {
         if (! class_exists(\ZipArchive::class)) {
@@ -286,7 +267,6 @@ class PermohonanController extends Controller
 
         $rows = [];
         foreach ($this->query($request->user(), $this->filter($request))->get() as $i => $r) {
-=======
     /*
     |--------------------------------------------------------------------------
     | EXPORT DAFTAR PERMOHONAN
@@ -335,46 +315,37 @@ class PermohonanController extends Controller
                 })
                 ->implode('; ');
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             $rows[] = [
                 $i + 1,
                 $r->nomor_laporan,
                 $r->kabKotaAsal->nama_lengkap,
                 $r->kabKotaAsal->provinsi->nama_provinsi,
                 $r->kabKotaAsal->wilayah->nama_wilayah,
-<<<<<<< HEAD
                 trim($r->tanggal_lengkap . ' ' . $r->jam_pengajuan),
                 $r->label_status_moda,
                 // data yang diinput Pemda
-=======
 
                 trim(
                     $r->tanggal_lengkap . ' ' . $r->jam_pengajuan
                 ),
 
                 $r->label_status_moda,
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 $r->klasifikasi_label,
                 $r->keterangan_pemda,
                 $r->potensi_ringkas,
                 implode(', ', $r->sektor_terdeteksi),
                 implode(', ', $r->tujuan_daftar),
                 $r->jumlah_tujuan,
-<<<<<<< HEAD
-=======
                 $komoditas ?: '-',
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             ];
         }
 
         $path = XlsxExporter::buat(
-<<<<<<< HEAD
             ['No', 'Nomor Laporan', 'Pemda', 'Provinsi', 'Wilayah', 'Tanggal Pengajuan', 'Status',
              'Klasifikasi Wilayah', 'Keterangan Daerah', 'Potensi Unggulan Daerah', 'Sektor Potensi', 'Kebutuhan Konektivitas / Rute Tujuan', 'Jumlah Tujuan'],
             $rows,
             'Permohonan',
             [6, 18, 34, 24, 18, 30, 24, 22, 40, 60, 36, 50, 14]
-=======
             [
                 'No',
                 'Nomor Laporan',
@@ -397,19 +368,16 @@ class PermohonanController extends Controller
                 6, 18, 34, 24, 18, 30, 24,
                 22, 40, 60, 36, 50, 14, 100
             ]
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         );
 
         return response()->download(
             $path,
             'permohonan-' . now()->format('Ymd-His') . '.xlsx',
-<<<<<<< HEAD
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         )->deleteFileAfterSend(true);
     }
 
     /** Ekspor satu laporan (data yang diinput Pemda, dokumen, dan riwayat peninjauan) ke Excel. */
-=======
             [
                 'Content-Type' =>
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -423,12 +391,10 @@ class PermohonanController extends Controller
     |--------------------------------------------------------------------------
     */
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public function exportDetail(Request $request, RuteSubsidi $rute)
     {
         $this->pastikanMilik($request->user(), $rute);
 
-<<<<<<< HEAD
         if (! class_exists(\ZipArchive::class)) {
             return back()->with('error', 'Ekspor Excel membutuhkan ekstensi PHP "zip". Aktifkan extension=zip di php.ini lalu restart server.');
         }
@@ -447,7 +413,6 @@ class PermohonanController extends Controller
             $tebal[] = count($baris);
             $baris[] = [$judul, ''];
         };
-=======
         if (!class_exists(\ZipArchive::class)) {
             return back()->with(
                 'error',
@@ -492,12 +457,10 @@ class PermohonanController extends Controller
         | Menambahkan informasi berbentuk label dan nilai.
         */
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         $isi = function (string $label, $nilai) use (&$baris) {
             $baris[] = [$label, $nilai];
         };
 
-<<<<<<< HEAD
         $bagian('LAPORAN');
         $isi('Nomor laporan', $rute->nomor_laporan);
         $isi('Status', $rute->label_status_moda);
@@ -538,7 +501,6 @@ class PermohonanController extends Controller
         }
 
         $path = XlsxExporter::buat(['Data', 'Isi'], $baris, 'Review Laporan', [38, 100], $tebal);
-=======
         /*
         | Menambahkan header tabel.
         */
@@ -815,12 +777,10 @@ class PermohonanController extends Controller
             [40, 85, 36, 22, 30],
             $tebal
         );
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
         return response()->download(
             $path,
             $rute->nomor_laporan . '.xlsx',
-<<<<<<< HEAD
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         )->deleteFileAfterSend(true);
     }
@@ -843,7 +803,6 @@ class PermohonanController extends Controller
             ]),
             'riwayat'   => $riwayat,
             'terakhir'  => $riwayat->last(),
-=======
             [
                 'Content-Type' =>
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -897,12 +856,10 @@ class PermohonanController extends Controller
 
             'riwayat' => $riwayat,
             'terakhir' => $riwayat->last(),
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             'checklist' => self::CHECKLIST,
         ]);
     }
 
-<<<<<<< HEAD
     public function keputusan(Request $request, RuteSubsidi $rute)
     {
         $user = $request->user();
@@ -926,7 +883,6 @@ class PermohonanController extends Controller
         }
         if ($data['keputusan'] === 'setuju' && count(array_unique($data['periksa'] ?? [])) < count(self::CHECKLIST)) {
             return back()->withInput()->withErrors(['periksa' => 'Konfirmasi seluruh pemeriksaan pada checklist sebelum menyetujui laporan.']);
-=======
     /*
     |--------------------------------------------------------------------------
     | KEPUTUSAN MODA
@@ -997,12 +953,10 @@ class PermohonanController extends Controller
                     'periksa' =>
                         'Konfirmasi seluruh pemeriksaan pada checklist sebelum menyetujui laporan.'
                 ]);
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
 
         $putusan = self::KEPUTUSAN[$data['keputusan']];
 
-<<<<<<< HEAD
         DB::transaction(function () use ($rute, $user, $putusan, $catatan) {
             $baru = RuteSubsidi::where('id_rute_subsidi', $rute->id_rute_subsidi)->lockForUpdate()->firstOrFail();
 
@@ -1018,7 +972,6 @@ class PermohonanController extends Controller
                 'tahap_verifikasi'   => StatusPengajuan::TAHAP_MODA,
                 'status_verifikasi'  => $putusan['hasil'],
                 'catatan_verifikasi' => $catatan !== '' ? $catatan : null,
-=======
         DB::transaction(function () use (
             $rute,
             $user,
@@ -1060,12 +1013,10 @@ class PermohonanController extends Controller
                     ? $catatan
                     : null,
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 'tanggal_verifikasi' => now(),
             ]);
         });
 
-<<<<<<< HEAD
         return redirect()->route('permohonan.index')
             ->with('success', 'Laporan ' . $rute->nomor_laporan . ' ' . $putusan['pesan'] . '.');
     }
@@ -1090,7 +1041,6 @@ class PermohonanController extends Controller
         abort_unless($user->id_moda !== null && (int) $rute->id_moda === (int) $user->id_moda, 404);
     }
 
-=======
         return redirect()
             ->route('permohonan.index')
             ->with(
@@ -1389,13 +1339,11 @@ class PermohonanController extends Controller
     |--------------------------------------------------------------------------
     */
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     private function filter(Request $r): array
     {
         $prov = (string) $r->query('provinsi', '');
         $status = (string) $r->query('status', '');
         $periode = (string) $r->query('periode', '');
-<<<<<<< HEAD
         $per = (int) $r->query('per', self::PER_HALAMAN[0]);
 
         return [
@@ -1459,7 +1407,6 @@ class PermohonanController extends Controller
         return $byte >= 1048576
             ? number_format($byte / 1048576, 1, ',', '.') . ' MB'
             : number_format(max($byte, 1) / 1024, 0, ',', '.') . ' KB';
-=======
 
         $per = (int) $r->query(
             'per',
@@ -1645,6 +1592,5 @@ class PermohonanController extends Controller
                 ',',
                 '.'
             ) . ' KB';
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 }

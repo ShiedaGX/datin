@@ -49,7 +49,6 @@
         </a>
 
         <nav class="nav">
-<<<<<<< HEAD
             @php($pengguna = auth()->user())
             @if ($pengguna->isModa() || $pengguna->isIntram())
                 <p class="nav-title">MENU UTAMA</p>
@@ -97,7 +96,6 @@
                     <span>Hasil Unggahan</span>
                 </a>
             @endif
-=======
 
             @php($pengguna = auth()->user())
 
@@ -504,7 +502,6 @@
 
             @endif
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </nav>
         @hasSection('sidecard')
             @yield('sidecard')
@@ -607,7 +604,6 @@
         <div class="sidebar-user">
 
             <span class="avatar" aria-hidden="true"></span>
-<<<<<<< HEAD
             <a class="who" href="{{ route('akun.password') }}" title="Akun saya">
                 <strong>{{ auth()->user()->full_name }}</strong>
                 <small>{{ auth()->user()->role->nama_role ?? '-' }}</small>
@@ -615,7 +611,6 @@
             <a class="logout" href="{{ route('akun.password') }}" title="Ubah kata sandi" aria-label="Ubah kata sandi">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/><circle cx="12" cy="15.5" r="1"/></svg>
             </a>
-=======
 
             {{-- Identitas role dibuat langsung dari relasi akun, tanpa variabel tambahan. --}}
             <a class="who" href="{{ route('akun.password') }}" title="Akun saya">
@@ -650,7 +645,6 @@
 
             </a>
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
 
@@ -692,7 +686,6 @@
                 </svg>
 
             </button>
-<<<<<<< HEAD
             <h1>@yield('heading')@hasSection('subheading')<span class="h1-sep" aria-hidden="true"></span><small>@yield('subheading')</small>@endif</h1>
             <form class="search" action="{{ trim($__env->yieldContent('search_action')) ?: route('data-wilayah.index') }}" method="GET" role="search">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -707,7 +700,6 @@
                 <div class="notif-panel" id="notifPanel" hidden>
                     <header>Notifikasi</header>
                     @forelse ($notif as $n)
-=======
 
 
             <h1>
@@ -774,19 +766,16 @@
 
                     @forelse ($notif as $n)
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                         <a class="notif-item" href="{{ $n['url'] }}">
                             <strong>{{ $n['judul'] }}</strong>
                             <span>{{ $n['isi'] }}</span>
                             <small>{{ $n['waktu'] }}</small>
                         </a>
-<<<<<<< HEAD
                     @empty
                         <p class="notif-empty">Belum ada notifikasi.</p>
                     @endforelse
                 </div>
             </div>
-=======
 
                     @empty
 
@@ -799,7 +788,6 @@
             </div>
 
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             <span class="lang">ID</span>
 
         </header>

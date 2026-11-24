@@ -7,10 +7,8 @@
 @section('search_placeholder', 'Cari nomor pengajuan atau pengirim')
 
 @section('content')
-<<<<<<< HEAD
 <nav class="rv-crumb" aria-label="Breadcrumb">
     <a href="{{ route('dashboard') }}">Dashboard</a> <span>/</span> <a href="{{ route('approval.index') }}">Approval</a> <span>/</span> <strong>Surat CHR Moda</strong>
-=======
 
 <nav class="rv-crumb" aria-label="Breadcrumb">
     <a href="{{ route('dashboard') }}">Dashboard</a>
@@ -18,13 +16,11 @@
     <a href="{{ route('approval.index') }}">Approval</a>
     <span>/</span>
     <strong>Surat CHR Moda</strong>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 </nav>
 
 <div class="pm-head">
     <div>
         <h2 class="pm-title">Approval Surat CHR Moda</h2>
-<<<<<<< HEAD
         <p class="pm-sub">Periksa Surat Catatan Hasil Review dari user moda dan tetapkan keputusan sebagai User INTRAM.</p>
     </div>
 </div>
@@ -63,7 +59,6 @@
         <div>
             <h3>Daftar Pengajuan Surat CHR</h3>
             <p class="muted">Surat Catatan Hasil Review adalah dokumen utama; lampiran bersifat opsional.</p>
-=======
         <p class="pm-sub">
             Periksa Surat Catatan Hasil Review dari user moda
             dan tetapkan keputusan sebagai User INTRAM.
@@ -164,12 +159,10 @@
                 Surat Catatan Hasil Review adalah dokumen utama;
                 lampiran bersifat opsional.
             </p>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </div>
         <span class="muted">{{ $data->total() }} pengajuan</span>
     </div>
 
-<<<<<<< HEAD
     <form class="ap-filter" method="GET" action="{{ route('approval.index') }}">
         <div class="field ap-f-q">
             <label class="sr-only" for="ap-q">Cari</label>
@@ -210,7 +203,6 @@
     <p class="ap-note muted">
         Moda tersedia: {{ $modaOpsi->pluck('nama_moda')->implode(', ') }} &middot; Urutan: terbaru lebih dulu
         @foreach ($chips as $c)<span class="pm-chip">{{ $c['label'] }}<a href="{{ $c['url'] }}" aria-label="Hapus filter {{ $c['label'] }}">&times;</a></span>@endforeach
-=======
     <form class="ap-filter"
           method="GET"
           action="{{ route('approval.index') }}">
@@ -304,15 +296,11 @@
                 </a>
             </span>
         @endforeach
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     </p>
 
     <div class="pm-table-wrap">
         <table class="table pm-table ap-table">
-<<<<<<< HEAD
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             <thead>
                 <tr>
                     <th>Nomor pengajuan</th>
@@ -323,7 +311,6 @@
                     <th>Aksi</th>
                 </tr>
             </thead>
-<<<<<<< HEAD
             <tbody>
                 @forelse ($data as $p)
                     @php($pilih = $dipilih && (int) $dipilih->id_pengajuan_surat === (int) $p->id_pengajuan_surat)
@@ -352,7 +339,6 @@
                 @empty
                     <tr><td colspan="6" class="empty">Belum ada pengajuan Surat CHR.@if ($chips) <a class="link-teal" href="{{ route('approval.index') }}">Reset filter</a>@endif</td></tr>
                 @endforelse
-=======
 
             <tbody>
 
@@ -448,29 +434,24 @@
 
                 @endforelse
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             </tbody>
         </table>
     </div>
 
     <div class="table-foot ap-foot">
-<<<<<<< HEAD
         <p class="muted">
             @if ($data->total() > 0)
                 Menampilkan {{ $data->firstItem() }}&ndash;{{ $data->lastItem() }} dari {{ $data->total() }} pengajuan
-=======
 
         <p class="muted">
             @if ($data->total() > 0)
                 Menampilkan
                 {{ $data->firstItem() }}&ndash;{{ $data->lastItem() }}
                 dari {{ $data->total() }} pengajuan
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             @else
                 Tidak ada pengajuan
             @endif
         </p>
-<<<<<<< HEAD
         @if ($data->lastPage() > 1)
             <nav class="pager-num" aria-label="Halaman">
                 @if ($data->onFirstPage())
@@ -721,7 +702,6 @@
 </section>
 @endif
 @endif
-=======
 
         @if ($data->lastPage() > 1)
 
@@ -1544,5 +1524,4 @@
 
 @endif
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 @endsection

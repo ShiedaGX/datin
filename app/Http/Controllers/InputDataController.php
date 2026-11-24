@@ -14,10 +14,7 @@ use App\Models\RuteSubsidi;
 use App\Models\RuteSubsidiTujuanKomoditas;
 use App\Models\Wilayah;
 use App\Support\FormOptions;
-<<<<<<< HEAD
-=======
 use App\Support\Sektor;
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +22,6 @@ use Illuminate\Validation\ValidationException;
 
 class InputDataController extends Controller
 {
-<<<<<<< HEAD
     public function create(Request $request)
     {
         $user = auth()->user();
@@ -73,7 +69,6 @@ class InputDataController extends Controller
                 'id'       => $k->id_kab_kota,
                 'nama'     => $k->nama_kab_kota,
                 'provinsi' => $k->provinsi->nama_provinsi,
-=======
     /**
      * Menampilkan halaman input pengajuan Pemda.
      */
@@ -206,13 +201,11 @@ class InputDataController extends Controller
 
                 'provinsi' =>
                     $k->provinsi->nama_provinsi,
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             ])->values(),
         ]);
     }
 
     /**
-<<<<<<< HEAD
      * Pengajuan ulang atas permintaan revisi INTRAM (?kab=ID): form diisi dengan data pengajuan terakhir
      * daerah tersebut agar Pemda cukup memeriksa dan mengubah seperlunya. Dokumen tetap harus diunggah.
      *
@@ -228,7 +221,6 @@ class InputDataController extends Controller
         }
 
         $kab = $idKab ? $semuaKabKota->firstWhere('id_kab_kota', $idKab) : null;
-=======
      * Mengambil data pengajuan sebelumnya untuk
      * memenuhi permintaan revisi INTRAM.
      *
@@ -274,15 +266,12 @@ class InputDataController extends Controller
             $idKab
         );
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         if (! $kab) {
             return [[], null];
         }
 
-<<<<<<< HEAD
         $modaDiminta = $kab->modaRevisiTerbuka($user);
         $sumber = $modaDiminta ? RuteSubsidi::where('id_kab_kota_asal', $idKab)->orderByDesc('id_rute_subsidi')->first() : null;
-=======
         // Ambil moda tambahan yang diminta INTRAM.
         $modaDiminta = collect(
             $kab->modaRevisiTerbuka($user)
@@ -361,12 +350,10 @@ class InputDataController extends Controller
         // Gunakan laporan asal permintaan revisi.
         $sumber = $permintaan->ruteAsal;
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         if (! $sumber) {
             return [[], null];
         }
 
-<<<<<<< HEAD
         $kunciKeterangan = collect(FormOptions::KETERANGAN)->mapWithKeys(fn ($v, $k) => [mb_strtolower($v['label']) => $k]);
 
         return [[
@@ -381,7 +368,6 @@ class InputDataController extends Controller
         ], $sumber];
     }
 
-=======
         // Pemetaan keterangan Pemda.
         $kunciKeterangan = collect(
             FormOptions::KETERANGAN
@@ -501,14 +487,12 @@ class InputDataController extends Controller
      * Permintaan revisi INTRAM bukan syarat wajib
      * untuk membuat pengajuan baru.
      */
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public function store(StoreWilayahRequest $request)
     {
         $data = $request->validated();
 
         $user = $request->user();
 
-<<<<<<< HEAD
         // Pengaman: kab/kota harus milik akun (readonly di browser bisa diakali lewat DevTools)
         if ($user->id_kab_kota) {
             if ((int) $data['id_kab_kota'] !== (int) $user->id_kab_kota) {
@@ -610,7 +594,6 @@ class InputDataController extends Controller
 
         return redirect()->route('data-wilayah.index')
             ->with('success', 'Pengajuan untuk "' . $kab->nama_kab_kota . '" berhasil ditambahkan.');
-=======
         // Pengamanan akun Pemda.
         if ($user->id_kab_kota) {
             if (
@@ -1185,6 +1168,5 @@ class InputDataController extends Controller
                 report($e);
             }
         }
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 }

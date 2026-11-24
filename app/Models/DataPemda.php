@@ -132,11 +132,9 @@ class DataPemda extends Model
             fn ($r) => StatusPengajuan::grup($r->status_pengajuan) === 'disetujui'
         );
 
-<<<<<<< HEAD
         return $this->id_user !== null
             && (int) $this->id_user === (int) $user->id_user
             && ! $adaYangDisetujui;
-=======
         return $this->id_user !== null
             && (int) $this->id_user === (int) $user->id_user
             && ! $adaYangDisetujui;
@@ -149,7 +147,6 @@ class DataPemda extends Model
             && (int) $this->id_user === (int) $user->id_user
             && (int) $rute->id_pemda === (int) $this->id_pemda
             && StatusPengajuan::grup($rute->status_pengajuan) !== 'disetujui';
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 
     /**

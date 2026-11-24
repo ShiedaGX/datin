@@ -32,7 +32,6 @@ class DataWilayahController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-<<<<<<< HEAD
         $filter = $this->filter($request);
         $data = $this->query($filter, $user)->paginate(self::PER_HALAMAN)->withQueryString();
         $this->sesuaikanUntukRole($data->getCollection(), $user);
@@ -45,7 +44,6 @@ class DataWilayahController extends Controller
             'halaman'     => $this->nomorHalaman($data->currentPage(), $data->lastPage()),
             'adaFilter'   => $filter['wilayah'] !== null || $filter['klasifikasi'] !== null || $filter['q'] !== '',
             'lingkup'     => $this->lingkup($user),
-=======
 
         $filter = $this->filter($request);
 
@@ -73,7 +71,6 @@ class DataWilayahController extends Controller
                 || $filter['q'] !== '',
 
             'lingkup' => $this->lingkup($user),
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ]);
     }
 
@@ -86,7 +83,6 @@ class DataWilayahController extends Controller
     public function show(Request $request, DataPemda $pemda)
     {
         $user = auth()->user();
-<<<<<<< HEAD
         abort_unless(DataPemda::terlihatOleh($user)->whereKey($pemda->id_pemda)->exists(), 404);
 
         $pemda->load('kabKota.provinsi', 'kabKota.wilayah', 'user', 'ruteSubsidi.moda', 'ruteSubsidi.dokumen', 'ruteSubsidi.verifikasi.verifikator', 'ruteSubsidi.pengajuanSurat', 'ruteSubsidi.rekomendasi', 'permintaanRevisi.moda', 'permintaanRevisi.peminta');
@@ -96,7 +92,6 @@ class DataWilayahController extends Controller
             $pemda->setRelation('ruteSubsidi', $pemda->ruteSubsidi->where('id_moda', $user->id_moda)->values());
             $pemda->setRelation('permintaanRevisi', collect());
         }
-=======
 
         abort_unless(
             DataPemda::terlihatOleh($user)
@@ -135,7 +130,6 @@ class DataWilayahController extends Controller
             'id_rute_subsidi',
             (int) $request->query('pengajuan')
         ) ?? $pemda->pengajuan_terbaru;
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
         return view('data-wilayah.show', [
             'pemda'     => $pemda,
@@ -160,11 +154,9 @@ class DataWilayahController extends Controller
         }
 
         $rows = [];
-<<<<<<< HEAD
         $koleksi = $this->query($this->filter($request), $request->user())->reorder('id_pemda')->get();
         $this->sesuaikanUntukRole($koleksi, $request->user());
         foreach ($koleksi as $i => $p) {
-=======
 
         $user = $request->user();
 
@@ -180,7 +172,6 @@ class DataWilayahController extends Controller
             $p = $b->pemda;
             $isi = $b->rute ?? $p;
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             $rows[] = [
                 $i + 1,
                 $b->rute?->nomor_laporan ?? '-',
@@ -232,16 +223,13 @@ class DataWilayahController extends Controller
         )->deleteFileAfterSend(true);
     }
 
-<<<<<<< HEAD
     /** Menghapus PENGAJUAN (rute, dokumen, verifikasi) dan melepas kepemilikan. Data wilayah (kab/kota & data pemda) tetap tersimpan. */
-=======
     /*
     |--------------------------------------------------------------------------
     | DESTROY
     |--------------------------------------------------------------------------
     */
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public function destroy(Request $request, DataPemda $pemda)
     {
         $user = $request->user();
@@ -271,14 +259,12 @@ class DataWilayahController extends Controller
         $folder = [];
 
         try {
-<<<<<<< HEAD
             DB::transaction(function () use ($pemda, &$folder) {
                 foreach ($pemda->ruteSubsidi as $rute) {
                     $folder[] = "dokumen_pengajuan/{$rute->id_rute_subsidi}";
                     $rute->delete();   // dokumen & verifikasi ikut terhapus (cascade)
                 }
                 $pemda->update(['id_user' => null]);
-=======
             DB::transaction(function () use (
                 $pemda,
                 $target,
@@ -301,26 +287,21 @@ class DataWilayahController extends Controller
                         'id_user' => null,
                     ]);
                 }
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             });
         } catch (\Throwable $e) {
             report($e);
 
-<<<<<<< HEAD
             return back()->with('error', 'Pengajuan gagal dihapus. Silakan coba lagi atau hubungi administrator.');
-=======
             return back()->with(
                 'error',
                 'Pengajuan gagal dihapus. Silakan coba lagi atau hubungi administrator.'
             );
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
 
         foreach ($folder as $f) {
             Storage::disk('local')->deleteDirectory($f);
         }
 
-<<<<<<< HEAD
         return redirect()->route('data-wilayah.index')->with('success', 'Pengajuan "' . $nama . '" berhasil dihapus. Data wilayah tetap tersimpan.');
     }
 
@@ -332,7 +313,6 @@ class DataWilayahController extends Controller
         return $request->boolean('lihat')
             ? Storage::disk('local')->response($dokumen->path_file, $dokumen->nama_file)
             : Storage::disk('local')->download($dokumen->path_file, $dokumen->nama_file);
-=======
         return redirect()
             ->route('data-wilayah.index')
             ->with(
@@ -414,7 +394,6 @@ class DataWilayahController extends Controller
             ->sort()
             ->values()
             ->all();
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 
     /*
@@ -581,15 +560,12 @@ class DataWilayahController extends Controller
         ];
     }
 
-<<<<<<< HEAD
-=======
     /*
     |--------------------------------------------------------------------------
     | QUERY DATA
     |--------------------------------------------------------------------------
     */
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     private function query(array $f, User $user)
     {
         $klas = 'COALESCE(
@@ -599,7 +575,6 @@ class DataWilayahController extends Controller
 
         return DataPemda::query()
             ->terlihatOleh($user)
-<<<<<<< HEAD
             ->with([
                 'kabKota.provinsi', 'kabKota.wilayah', 'permintaanRevisi.moda',
                 // Moda hanya memuat pengajuan untuk modanya sendiri, sehingga status yang tampil adalah status pengajuannya
@@ -623,7 +598,6 @@ class DataWilayahController extends Controller
                 }
             })
             ->terbaru();
-=======
 
             ->leftJoin(
                 'rute_subsidi as rs',
@@ -743,7 +717,6 @@ class DataWilayahController extends Controller
             ->orderByDesc('rs.created_at')
             ->orderByDesc('rs.id_rute_subsidi')
             ->orderByDesc('data_pemda.id_pemda');
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 
     /*

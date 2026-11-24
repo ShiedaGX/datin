@@ -1,5 +1,4 @@
 <?php
-<<<<<<< HEAD
 namespace App\Support;
 
 /**
@@ -28,7 +27,6 @@ class Sektor
     }
 
     /** @return array<int,string> */
-=======
 
 namespace App\Support;
 
@@ -115,36 +113,29 @@ class Sektor
     }
 
     /** @return string[] */
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public static function daftar(): array
     {
         return array_keys(self::peta());
     }
 
-<<<<<<< HEAD
     /** Sektor yang terdeteksi dari teks potensi (tanpa membedakan huruf besar/kecil). */
     public static function deteksi(string $teks): array
     {
         $t = mb_strtolower($teks);
         if (trim($t) === '') {
-=======
     /** @return string[] */
     public static function deteksi(string $teks): array
     {
         $teks = mb_strtolower($teks);
         if (trim($teks) === '') {
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             return [];
         }
 
         $hasil = [];
         foreach (self::peta() as $nama => $kunci) {
             foreach ($kunci as $k) {
-<<<<<<< HEAD
                 if (str_contains($t, $k)) {
-=======
                 if ($k !== '' && str_contains($teks, $k)) {
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                     $hasil[] = $nama;
                     break;
                 }
@@ -154,7 +145,6 @@ class Sektor
         return $hasil;
     }
 
-<<<<<<< HEAD
     /** "Industri, Tambang & Energi" -> ["industri", "tambang", "energi"] */
     private static function kataDariNama(string $nama): array
     {
@@ -163,11 +153,9 @@ class Sektor
         return array_values(array_filter(array_map('trim', $bagian), fn ($x) => $x !== ''));
     }
 }
-=======
     public static function lupakan(): void
     {
         Cache::forget(self::CACHE_KEY);
         Cache::forget(self::CACHE_KEY_KOMODITAS);
     }
 }
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54

@@ -24,14 +24,11 @@
         </div>
     @endif
 
-<<<<<<< HEAD
     <section class="step">
         <h3><span class="step-no">1</span> Data akun</h3>
-=======
     {{-- ===== 1. Data pengguna ===== --}}
     <section class="step">
         <h3><span class="step-no">1</span> Data pengguna</h3>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         <div class="grid-2">
             <div class="field">
                 <label for="full_name">Nama lengkap</label>
@@ -39,19 +36,15 @@
                 @error('full_name')<p class="error">{{ $message }}</p>@enderror
             </div>
             <div class="field">
-<<<<<<< HEAD
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" value="{{ old('username', $user->username) }}" maxlength="50" required placeholder="huruf kecil, angka, . _ -" class="@error('username') is-invalid @enderror">
                 @error('username')<p class="error">{{ $message }}</p>@enderror
             </div>
             <div class="field">
-=======
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 <label for="email">Alamat email</label>
                 <input type="text" id="email" name="email" value="{{ old('email', $user->email) }}" maxlength="150" required placeholder="nama@instansi.go.id" inputmode="email" class="@error('email') is-invalid @enderror">
                 @error('email')<p class="error">{{ $message }}</p>@enderror
             </div>
-<<<<<<< HEAD
             <div class="field">
                 <label for="instansi">Instansi / organisasi <span class="wajib" id="wajibInstansi" hidden>*</span></label>
                 <input type="text" id="instansi" name="instansi" value="{{ old('instansi', $user->instansi) }}" maxlength="150" data-wajib="instansi" placeholder="Contoh: Pemda Sumatera Selatan" class="@error('instansi') is-invalid @enderror">
@@ -70,12 +63,10 @@
         </div>
     </section>
 
-=======
         </div>
     </section>
 
     {{-- ===== 2. Role & cakupan ===== --}}
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     <section class="step">
         <h3><span class="step-no">2</span> Role &amp; cakupan</h3>
         <div class="grid-2">
@@ -90,8 +81,6 @@
                 @error('id_role')<p class="error">{{ $message }}</p>@enderror
             </div>
 
-<<<<<<< HEAD
-=======
             <div class="field field-suggest">
                 <label for="instansi">Instansi / organisasi <span class="wajib" id="wajibInstansi" hidden>*</span></label>
                 <input type="text" id="instansi" name="instansi_teks" value="{{ old('instansi_teks', $user->instansi) }}" maxlength="150"
@@ -103,7 +92,6 @@
                 @error('id_kab_kota')<p class="error">{{ $message }}</p>@enderror
             </div>
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             <div class="field" data-butuh="wilayah" hidden>
                 <label for="id_wilayah">Cakupan wilayah</label>
                 <select id="id_wilayah" name="id_wilayah" class="@error('id_wilayah') is-invalid @enderror">
@@ -132,8 +120,6 @@
             <ul class="checks" id="roleInfoList"></ul>
             <p class="hint" id="roleInfoCatatan"></p>
         </div>
-<<<<<<< HEAD
-=======
     </section>
 
     {{-- ===== 3. Akun login ===== --}}
@@ -171,7 +157,6 @@
                 <p class="pw-match" id="pwMatch" role="status" aria-live="polite" hidden></p>
             </div>
         </div>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
         <label class="check aktif-check">
             <input type="checkbox" name="aktif" value="1" @checked(old('aktif', $user->diverifikasi_at !== null))>
@@ -187,9 +172,7 @@
 
     <script type="application/json" id="data-role">@json($infoRole)</script>
 </form>
-<<<<<<< HEAD
 @endsection
-=======
 
 <style>
     .field-suggest { position: relative; }
@@ -416,4 +399,3 @@ document.querySelectorAll('.pw-toggle').forEach((btn) => {
 })();
 </script>
 @endsection
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54

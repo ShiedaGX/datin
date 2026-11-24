@@ -5,7 +5,6 @@
 @section('heading', 'Detail Data Wilayah')
 
 @section('content')
-<<<<<<< HEAD
 @php($isi = $rute ?? $pemda)
 @foreach ($pemda->permintaan_terbuka as $pr)
     <div class="alert alert-revisi" role="status">
@@ -16,7 +15,6 @@
         </div>
         @if ((int) $pemda->id_user === (int) auth()->user()->id_user && auth()->user()->bisa('pemda.unggah'))
             <a class="btn btn-primary" href="{{ route('input-data.create', ['kab' => $pemda->id_kab_kota]) }}">Ajukan untuk moda {{ $pr->moda->nama_moda }}</a>
-=======
 
 @php
     $isi = $rute ?? $pemda;
@@ -80,19 +78,15 @@
             >
                 Ajukan untuk moda {{ $pr->moda->nama_moda }}
             </a>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         @endif
     </div>
 @endforeach
 
-<<<<<<< HEAD
-=======
 
 {{-- ========================================================= --}}
 {{-- 1. DETAIL DATA WILAYAH --}}
 {{-- ========================================================= --}}
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 <section class="box">
 
     <div class="box-head row-between">
@@ -114,10 +108,8 @@
         </div>
 
         <div class="acts">
-<<<<<<< HEAD
             <span class="badge badge-{{ \Illuminate\Support\Str::slug($isi->klasifikasi_label) }}">{{ $isi->klasifikasi_label }}</span>
             <span class="badge {{ $pemda->status_kelas }}">{{ $pemda->status_label }}</span>
-=======
             <span class="badge badge-{{ \Illuminate\Support\Str::slug($isi->klasifikasi_label) }}">
                 {{ $isi->klasifikasi_label }}
             </span>
@@ -125,7 +117,6 @@
             <span class="badge {{ \App\Support\StatusPengajuan::kelas($statusUtama) }}">
                 {{ $statusUtama }}
             </span>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </div>
     </div>
 
@@ -134,13 +125,10 @@
         {{-- Keterangan daerah --}}
         <div>
             <dt>Keterangan Daerah</dt>
-<<<<<<< HEAD
             <dd>{{ $isi->keterangan_pemda ?: '-' }}</dd>
-=======
             <dd>
                 {{ $isi->keterangan_pemda ?: '-' }}
             </dd>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </div>
 
         {{-- Moda transportasi --}}
@@ -170,12 +158,10 @@
 
         {{-- Sektor potensi daerah --}}
         <div class="span-2">
-<<<<<<< HEAD
             <dt>Sektor Potensi ({{ $isi->jumlah_sektor }})</dt>
             <dd>
                 @forelse ($isi->sektor_terdeteksi as $sektor)
                     <span class="tag">{{ $sektor }}</span>
-=======
             <dt>
                 Sektor Potensi
                 ({{ $isi->jumlah_sektor }})
@@ -186,7 +172,6 @@
                     <span class="tag">
                         {{ $sektor }}
                     </span>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 @empty
                     -
                 @endforelse
@@ -195,10 +180,8 @@
 
         {{-- Kebutuhan konektivitas --}}
         <div class="span-2">
-<<<<<<< HEAD
             <dt>Kebutuhan Konektivitas Regional @if ($isi->jumlah_tujuan !== null)({{ $isi->jumlah_tujuan }} tujuan)@endif</dt>
             <dd class="prewrap">{{ $isi->kebutuhan_konektivitas ?: '-' }}</dd>
-=======
             <dt>
                 Kebutuhan Konektivitas Regional
 
@@ -210,7 +193,6 @@
             <dd class="prewrap">
                 {{ $isi->kebutuhan_konektivitas ?: '-' }}
             </dd>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </div>
 
         {{-- Tanggal pengajuan --}}
@@ -234,7 +216,6 @@
     </dl>
 </section>
 
-<<<<<<< HEAD
 <section class="box">
     <div class="box-head">
         <h2>Pengajuan per Moda</h2>
@@ -297,7 +278,6 @@
                     @endforeach
                 </tbody>
             </table>
-=======
 
 {{-- ========================================================= --}}
 {{-- 2. RUTE TUJUAN DAN DETAIL KOMODITAS --}}
@@ -335,7 +315,6 @@
                 &middot;
                 moda {{ $rute->moda->nama_moda ?? '-' }}
             </p>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </div>
 
         <div class="table-box">
@@ -736,7 +715,6 @@
 
 </section>
 
-<<<<<<< HEAD
 @if ($rute && $rute->verifikasi->isNotEmpty())
 <section class="box">
     <div class="box-head"><h2>Riwayat Peninjauan</h2></div>
@@ -754,7 +732,6 @@
 @endif
 
 <a class="btn btn-outline" href="{{ route('data-wilayah.index') }}">&larr; Kembali ke daftar</a>
-=======
 
 {{-- ========================================================= --}}
 {{-- 4. DOKUMEN PENGAJUAN --}}
@@ -937,5 +914,4 @@
     &larr; Kembali ke daftar
 </a>
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 @endsection

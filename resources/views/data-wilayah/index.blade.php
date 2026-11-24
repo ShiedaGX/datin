@@ -71,11 +71,8 @@
         dari {{ number_format($data->total(), 0, ',', '.') }} entri
     </span>
 
-<<<<<<< HEAD
     @if ($lingkup)<span class="scope-note">{{ $lingkup }}</span>@endif
     <span class="count">Menampilkan {{ $data->count() }} dari {{ number_format($data->total(), 0, ',', '.') }} entri</span>
-=======
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     @if ($adaFilter)
         <a class="reset" href="{{ route('data-wilayah.index') }}">Reset</a>
     @endif
@@ -148,7 +145,6 @@
                     @endphp
 
                     <tr>
-<<<<<<< HEAD
                         <td data-label="No">{{ $data->firstItem() + $loop->index }}</td>
                         <td data-label="Provinsi"><strong>{{ $row->kabKota->provinsi->nama_provinsi }}</strong></td>
                         <td data-label="Wilayah" class="soft">{{ $row->kabKota->wilayah->nama_wilayah }}</td>
@@ -166,7 +162,6 @@
                                         @method('DELETE')
                                         <button type="submit" class="act act-del" title="Hapus pengajuan" aria-label="Hapus pengajuan {{ $row->kabKota->nama_kab_kota }}">
                                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>
-=======
                         <td data-label="No">
                             {{ $data->firstItem() + $loop->index }}
                         </td>
@@ -271,7 +266,6 @@
                                             >
                                                 <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/>
                                             </svg>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                                         </button>
                                     </form>
                                 @endif

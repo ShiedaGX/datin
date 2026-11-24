@@ -1,8 +1,5 @@
 <?php
-<<<<<<< HEAD
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 namespace App\Http\Controllers;
 
 use App\Models\DokumenSurat;
@@ -19,7 +16,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-<<<<<<< HEAD
 /**
  * Surat CHR: Moda mengunggah Surat Catatan Hasil Review untuk SATU laporan Pemda yang sudah
  * disetujui, lalu mengirimkannya ke INTRAM. Surat dikelola per moda: semua akun Moda dengan moda
@@ -32,7 +28,6 @@ class SuratController extends Controller
 
     /** Status surat yang mengunci laporan: CHR sudah dikirim dan tidak boleh dibuat lagi. */
     private const STATUS_TERKUNCI = [SuratOptions::TERKIRIM, SuratOptions::DALAM_REVIEW, SuratOptions::DISETUJUI];
-=======
 class SuratController extends Controller
 {
     private const PER_HALAMAN = 10;
@@ -50,13 +45,11 @@ class SuratController extends Controller
     | HALAMAN DAFTAR SURAT CHR
     |--------------------------------------------------------------------------
     */
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
     public function index(Request $request)
     {
         $user = $request->user();
 
-<<<<<<< HEAD
         // ---- Permohonan yang sudah disetujui ----
         $lstatus = (string) $request->query('lstatus', '');
         $lf = [
@@ -95,7 +88,6 @@ class SuratController extends Controller
         $filter = [
             'q'      => trim((string) $request->query('q', '')),
             'status' => array_key_exists($status, SuratOptions::STATUS_OPSI) ? $status : null,
-=======
         /*
         |--------------------------------------------------------------------------
         | DAFTAR LAPORAN YANG SUDAH DISETUJUI
@@ -232,12 +224,10 @@ class SuratController extends Controller
             )
                 ? $status
                 : null,
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ];
 
         $riwayat = DokumenSurat::query()
             ->with('pengajuan.rute.kabKotaAsal')
-<<<<<<< HEAD
             ->whereHas('pengajuan', function ($p) use ($user, $filter) {
                 $p->where('id_moda', $user->id_moda ?? 0);
                 if ($filter['status']) {
@@ -395,7 +385,6 @@ class SuratController extends Controller
                         }
                     }
                     $draf->status = SuratOptions::TERKIRIM;
-=======
 
             ->whereHas(
                 'pengajuan',
@@ -1053,12 +1042,10 @@ class SuratController extends Controller
                     $draf->status =
                         SuratOptions::TERKIRIM;
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                     $draf->dikirim_at = now();
                 }
 
                 $draf->save();
-<<<<<<< HEAD
                 $nomor = $draf->nomor;
             });
         } catch (ValidationException $e) {
@@ -1129,7 +1116,6 @@ class SuratController extends Controller
     private function milikModa($user, PengajuanSurat $pengajuan): bool
     {
         return $user->id_moda !== null && (int) $pengajuan->id_moda === (int) $user->id_moda;
-=======
 
                 $nomorSurat = $draf->nomor;
             });
@@ -1472,6 +1458,5 @@ class SuratController extends Controller
                 report($e);
             }
         }
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 }

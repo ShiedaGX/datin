@@ -229,9 +229,7 @@
 
     </button>
 
-<<<<<<< HEAD
     <p class="register">Belum memiliki akun? Akun dibuat oleh administrator. <a class="link" href="#">Hubungi administrator</a></p>
-=======
     {{-- BANTUAN ADMINISTRATOR --}}
     <div class="register-box">
 
@@ -299,7 +297,6 @@
         </span>
 
     </div>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
 </form>
 

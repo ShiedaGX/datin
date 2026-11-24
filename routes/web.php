@@ -1,13 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\HakAksesController;
-<<<<<<< HEAD
 use App\Http\Controllers\Admin\UserController;
-=======
 use App\Http\Controllers\Admin\SektorController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\MasterSatuanDataController;
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 use App\Http\Controllers\AkunController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
@@ -15,25 +12,19 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWilayahController;
 use App\Http\Controllers\InputDataController;
 use App\Http\Controllers\PermohonanController;
-<<<<<<< HEAD
 use App\Http\Controllers\RekomendasiController;
 use App\Http\Controllers\SuratController;
-=======
 use App\Http\Controllers\PetaController;
 use App\Http\Controllers\PetaGeospasialController;
 use App\Http\Controllers\FasilitasTransportasiController;
 use App\Http\Controllers\RekomendasiController;
 use App\Http\Controllers\SuratController;
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 use App\Http\Middleware\AkunAktif;
 use App\Http\Middleware\HanyaRole;
 use App\Http\Middleware\HanyaSuperAdmin;
 use App\Http\Middleware\PunyaHakAkses;
-<<<<<<< HEAD
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 use Illuminate\Support\Facades\Route;
 
 
@@ -45,11 +36,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
 
-<<<<<<< HEAD
 });
 
 Route::middleware(['auth', AkunAktif::class])->group(function () {
-=======
     Route::get('/login', [AuthController::class, 'showLogin'])
         ->name('login');
 
@@ -74,22 +63,17 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
     |--------------------------------------------------------------------------
     */
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     Route::get('/', fn () => redirect()->route('dashboard'));
 
-<<<<<<< HEAD
     // Input data pengajuan: butuh hak akses "pemda.unggah" (bawaan: role Pemda; Super Admin selalu boleh)
     Route::middleware(PunyaHakAkses::class . ':pemda.unggah')->group(function () {
         Route::get('/input-data', [InputDataController::class, 'create'])->name('input-data.create');
         Route::post('/input-data', [InputDataController::class, 'store'])->name('input-data.store');
     });
-=======
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
 
-<<<<<<< HEAD
     // Permohonan: khusus role Moda (dan hak akses "laporan.tinjau"). Laporan dibatasi per moda di controller.
     Route::middleware([HanyaRole::class . ':Moda', PunyaHakAkses::class . ':laporan.tinjau'])
         ->prefix('permohonan')->name('permohonan.')->group(function () {
@@ -149,7 +133,6 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
     Route::put('/akun/password', [AkunController::class, 'ubahPassword'])->middleware('throttle:6,1')->name('akun.password.update');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-=======
     /*
     |--------------------------------------------------------------------------
     | PETA KONEKTIVITAS REGIONAL
@@ -572,5 +555,4 @@ Route::middleware(['auth', AkunAktif::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])
         ->name('logout');
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 });

@@ -39,7 +39,6 @@ class StoreWilayahRequest extends FormRequest
             ->all();
 
         $rules = [
-<<<<<<< HEAD
             'id_provinsi'            => ['required', 'integer', 'exists:provinsi,id_provinsi'],
             'id_wilayah'             => ['required', 'integer', 'exists:wilayah,id_wilayah'],
             'id_kab_kota'            => ['required', 'integer', 'exists:kab_kota,id_kab_kota'],
@@ -55,7 +54,6 @@ class StoreWilayahRequest extends FormRequest
             }],
             'id_moda'                => ['required', 'integer', 'exists:moda,id_moda'],
             'kebutuhan_konektivitas' => ['nullable', 'string', 'max:2000'],
-=======
             'id_provinsi' => [
                 'required',
                 'integer',
@@ -154,15 +152,12 @@ class StoreWilayahRequest extends FormRequest
                 'string',
                 Rule::in($satuanAktif),
             ],
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ];
 
         // Validasi dokumen pengajuan.
         foreach (array_keys(FormOptions::DOKUMEN) as $field) {
-<<<<<<< HEAD
             $rules[$field] = ['required', 'file', 'mimes:pdf,doc,docx', 'max:5120']; // 5 MB
             $rules['nomor.' . $field] = ['required', 'string', 'max:100'];          // nomor surat diisi manual
-=======
             $rules[$field] = [
                 'required',
                 'file',
@@ -175,7 +170,6 @@ class StoreWilayahRequest extends FormRequest
                 'string',
                 'max:100',
             ];
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
 
         return $rules;
@@ -206,7 +200,6 @@ class StoreWilayahRequest extends FormRequest
                 }
             }
 
-<<<<<<< HEAD
             // Kab/Kota harus berada di provinsi yang dipilih dan masih tersedia
             if (! $v->errors()->hasAny(['id_provinsi', 'id_kab_kota'])) {
                 $kab = KabKota::with('dataPemda.ruteSubsidi', 'dataPemda.permintaanRevisi')->find($this->input('id_kab_kota'));
@@ -214,7 +207,6 @@ class StoreWilayahRequest extends FormRequest
                     $v->errors()->add('id_kab_kota', 'Kabupaten/Kota tidak berada pada provinsi yang dipilih.');
                 } elseif ($kab && ($alasan = $kab->alasanTidakTersedia($this->user()))) {
                     $v->errors()->add('id_kab_kota', 'Kabupaten/Kota ini ' . $alasan . '.');
-=======
             // Validasi Kabupaten/Kota asal.
             if (! $v->errors()->hasAny([
                 'id_provinsi',
@@ -248,7 +240,6 @@ class StoreWilayahRequest extends FormRequest
                         . $alasan
                         . '.'
                     );
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 }
             }
 
@@ -274,7 +265,6 @@ class StoreWilayahRequest extends FormRequest
 
     public function attributes(): array
     {
-<<<<<<< HEAD
         $nomor = [];
         foreach (FormOptions::DOKUMEN as $field => $label) {
             $nomor['nomor.' . $field] = 'Nomor ' . mb_strtolower($label);
@@ -291,7 +281,6 @@ class StoreWilayahRequest extends FormRequest
             'surat_permohonan'       => 'Surat permohonan',
             'surat_pernyataan'       => 'Surat pernyataan',
             'surat_rencana_teknis'   => 'Surat rencana teknis',
-=======
         return [
             'id_provinsi' =>
                 'Provinsi',
@@ -328,14 +317,12 @@ class StoreWilayahRequest extends FormRequest
 
             'tujuan.*.komoditas.*.satuan_data' =>
                 'Satuan data komoditas',
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ];
     }
 
     public function messages(): array
     {
         return [
-<<<<<<< HEAD
             'required'            => ':attribute wajib diisi.',
             'id_kab_kota.required' => 'Kabupaten/Kota wajib dipilih.',
             'exists'              => ':attribute tidak valid.',
@@ -345,7 +332,6 @@ class StoreWilayahRequest extends FormRequest
             'mimes'               => ':attribute harus berformat PDF, DOC, atau DOCX.',
             'uploaded'            => ':attribute gagal diunggah. Periksa batas ukuran upload pada server (upload_max_filesize).',
             'potensi.*.not_regex' => 'Isi satu potensi saja pada setiap kolom (tanpa koma, titik koma, atau baris baru).',
-=======
             'required' =>
                 ':attribute wajib diisi.',
 
@@ -393,7 +379,6 @@ class StoreWilayahRequest extends FormRequest
 
             'uploaded' =>
                 ':attribute gagal diunggah. Periksa ukuran berkas dan coba kembali.',
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ];
     }
 }

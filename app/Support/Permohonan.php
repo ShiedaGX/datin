@@ -1,15 +1,11 @@
 <?php
-<<<<<<< HEAD
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 namespace App\Support;
 
 use App\Models\RuteSubsidi;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 
-<<<<<<< HEAD
 /** Query dasar halaman Permohonan: laporan hanya untuk moda milik akun yang sedang login. */
 class Permohonan
 {
@@ -23,7 +19,6 @@ class Permohonan
     public static function ringkasanSidebar(User $user): array
     {
         $menunggu = self::untukModa($user)->whereIn('status_pengajuan', StatusPengajuan::GRUP['menunggu']);
-=======
 class Permohonan
 {
     /**
@@ -52,12 +47,10 @@ class Permohonan
                 StatusPengajuan::GRUP['menunggu']
             );
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         $target = (int) config('datin.target_tinjau_hari', 3);
 
         return [
             'menunggu' => (clone $menunggu)->count(),
-<<<<<<< HEAD
             'lewat'    => (clone $menunggu)->where('created_at', '<', now()->subDays($target))->count(),
             'target'   => $target,
         ];
@@ -81,7 +74,6 @@ class Permohonan
             ]),
             'rekomendasi' => $rute->rekomendasi_terbaru,
             'riwayat'  => $riwayat,
-=======
 
             'lewat' => (clone $menunggu)
                 ->where('created_at', '<', now()->subDays($target))
@@ -144,7 +136,6 @@ class Permohonan
 
             'riwayat' => $riwayat,
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             'terakhir' => $riwayat->last(),
         ];
     }

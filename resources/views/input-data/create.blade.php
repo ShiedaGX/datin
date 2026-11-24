@@ -147,7 +147,6 @@
             <div class="field">
                 @if ($terkunci)
                     <label for="tampil_wilayah">Wilayah Regional</label>
-<<<<<<< HEAD
                     <input type="text" id="tampil_wilayah" class="is-locked" value="{{ $wilayahSaya->nama_wilayah ?? '' }}" readonly tabindex="-1">
                 @else
                     <label for="id_wilayah">Wilayah Regional</label>
@@ -159,7 +158,6 @@
                     </select>
                 @endif
                 @error('id_wilayah')<p class="error">{{ $message }}</p>@enderror
-=======
                     <input
                         type="text"
                         id="tampil_wilayah"
@@ -229,13 +227,11 @@
                 @error('id_provinsi')
                     <p class="error">{{ $message }}</p>
                 @enderror
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             </div>
 
             {{-- Kabupaten/kota asal --}}
             <div class="field">
                 @if ($terkunci)
-<<<<<<< HEAD
                     <label for="tampil_provinsi">Provinsi</label>
                     <input type="text" id="tampil_provinsi" class="is-locked" value="{{ $provinsiSaya->nama_provinsi ?? '' }}" readonly tabindex="-1">
                 @else
@@ -268,7 +264,6 @@
                     </select>
                 @endif
                 @error('id_kab_kota')<p class="error">{{ $message }}</p>@enderror
-=======
                     <label for="tampil_kab_kota">Kabupaten / Kota</label>
                     <input
                         type="text"
@@ -321,7 +316,6 @@
                 @error('id_kab_kota')
                     <p class="error">{{ $message }}</p>
                 @enderror
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             </div>
 
             {{-- Klasifikasi --}}
@@ -337,16 +331,13 @@
                     <option value="">Pilih Klasifikasi...</option>
 
                     @foreach ($klasifikasi as $k)
-<<<<<<< HEAD
                         <option value="{{ $k }}" @selected(old('klasifikasi_pemda', $isian['klasifikasi_pemda'] ?? '') === $k)>{{ $k }}</option>
-=======
                         <option
                             value="{{ $k }}"
                             @selected(old('klasifikasi_pemda', $isian['klasifikasi_pemda'] ?? '') === $k)
                         >
                             {{ $k }}
                         </option>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                     @endforeach
                 </select>
 
@@ -375,16 +366,13 @@
             <div class="chips">
                 @foreach ($keterangan as $key => $item)
                     <label class="chip">
-<<<<<<< HEAD
                         <input type="checkbox" name="keterangan[]" value="{{ $key }}" @checked(in_array($key, old('keterangan', $isian['keterangan'] ?? [])))>
-=======
                         <input
                             type="checkbox"
                             name="keterangan[]"
                             value="{{ $key }}"
                             @checked(in_array($key, old('keterangan', $isian['keterangan'] ?? [])))
                         >
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                         <span>{{ $item['label'] }}</span>
                     </label>
                 @endforeach
@@ -401,7 +389,6 @@
 
             <div class="stack">
                 @for ($i = 0; $i < 5; $i++)
-<<<<<<< HEAD
                     <input type="text" name="potensi[]" maxlength="200" autocomplete="off"
                            aria-label="Potensi unggulan {{ $i + 1 }}"
                            placeholder="{{ $i < 4 ? 'Masukkan Potensi Unggulan Daerah' : 'Lainnya' }}"
@@ -413,7 +400,6 @@
             @error('potensi')<p class="error">{{ $message }}</p>@enderror
             @error('potensi.*')<p class="error">{{ $message }}</p>@enderror
         <script type="application/json" id="data-sektor">@json($sektor)</script>
-=======
                     <input
                         type="text"
                         name="potensi[]"
@@ -448,7 +434,6 @@
             @enderror
 
             <script type="application/json" id="data-sektor">@json($sektor)</script>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </fieldset>
 
         {{-- Pemilihan moda --}}
@@ -458,9 +443,7 @@
             <div class="chips">
                 @foreach ($moda as $m)
                     <label class="chip">
-<<<<<<< HEAD
                         <input type="radio" name="id_moda" value="{{ $m->id_moda }}" required @checked((string) old('id_moda', $isian['id_moda'] ?? '') === (string) $m->id_moda)>
-=======
                         <input
                             type="radio"
                             name="id_moda"
@@ -468,22 +451,18 @@
                             required
                             @checked((string) old('id_moda', $isian['id_moda'] ?? '') === (string) $m->id_moda)
                         >
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                         <span>{{ $m->nama_moda }}</span>
                     </label>
                 @endforeach
             </div>
-<<<<<<< HEAD
             <p class="hint is-warn" id="modaHint" hidden></p>
             @error('id_moda')<p class="error">{{ $message }}</p>@enderror
-=======
 
             <p class="hint is-warn" id="modaHint" hidden></p>
 
             @error('id_moda')
                 <p class="error">{{ $message }}</p>
             @enderror
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </fieldset>
 
         {{-- ===================================================== --}}
@@ -491,7 +470,6 @@
         {{-- ===================================================== --}}
 
         <div class="field field-wide">
-<<<<<<< HEAD
             <label for="kebutuhan_konektivitas">Kebutuhan Konektivitas Regional (Hubungan Logistik) / Rute Tujuan</label>
             <div class="ac">
                 <textarea id="kebutuhan_konektivitas" name="kebutuhan_konektivitas" rows="4" maxlength="2000"
@@ -503,7 +481,6 @@
             <p class="hint">Ketik nama kabupaten/kota, lalu klik saran yang muncul. Bisa memilih lebih dari satu; pisahkan dengan koma.</p>
             @error('kebutuhan_konektivitas')<p class="error">{{ $message }}</p>@enderror
             <script type="application/json" id="data-kabkota">@json($saran)</script>
-=======
 
             <label for="tujuanCari">
                 Kebutuhan Konektivitas Regional (Hubungan Logistik) / Rute Tujuan
@@ -589,7 +566,6 @@
             <script type="application/json" id="data-komoditas">@json($komoditasSektor)</script>
             <script type="application/json" id="data-satuan">@json($pilihanSatuan)</script>
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         </div>
     </section>
 
@@ -613,7 +589,6 @@
 
             @foreach ($dokumen as $field => $label)
                 <div class="field">
-<<<<<<< HEAD
                     <label for="{{ $field }}_name">{{ $label }}</label>
                     <div class="nomor-surat">
                         <label for="nomor_{{ $field }}" class="sub">Nomor surat <span class="wajib">*</span></label>
@@ -625,7 +600,6 @@
                                placeholder="upload {{ strtolower($label) }}">
                         <input type="file" id="{{ $field }}" name="{{ $field }}" accept=".pdf,.doc,.docx" data-upload hidden>
                         <button type="button" class="btn-upload" data-target="{{ $field }}">Upload</button>
-=======
 
                     <label for="{{ $field }}_name">
                         {{ $label }}
@@ -651,7 +625,6 @@
                         @error('nomor.' . $field)
                             <p class="error">{{ $message }}</p>
                         @enderror
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                     </div>
 
                     <div class="upload-box @error($field) is-invalid @enderror">
@@ -712,25 +685,20 @@
 
 </form>
 
-<<<<<<< HEAD
 <style>
     /* Wilayah / provinsi / kab-kota: terisi otomatis dari akun, hanya baca */
-=======
 {{-- ============================================================= --}}
 {{-- CSS --}}
 {{-- ============================================================= --}}
 
 <style>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     input.is-locked {
         background-color: #f1f5f9;
         color: #475569;
         cursor: default;
     }
-<<<<<<< HEAD
 </style>
 @endsection
-=======
 
     /* Kartu tujuan */
     .tujuan-rows {
@@ -1314,4 +1282,3 @@
 </script>
 
 @endsection
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54

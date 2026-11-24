@@ -1,8 +1,5 @@
 <?php
-<<<<<<< HEAD
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 namespace App\Http\Controllers;
 
 use App\Models\Moda;
@@ -18,30 +15,24 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
-<<<<<<< HEAD
 /**
  * Hasil Unggahan (INTRAM): INTRAM melihat unggahan Pemda dan Surat CHR moda untuk setiap laporan, dan
  * setelah Surat CHR DISETUJUI mengunggah Surat Rekomendasi Teknis. Surat Rekomendasi Teknis kemudian
  * tampil pada Pemda pemilik laporan dan pada Moda yang bersangkutan.
  */
-=======
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 class RekomendasiController extends Controller
 {
     private const PER_HALAMAN = 10;
 
-<<<<<<< HEAD
     /** kunci filter => label */
     private const STATUS_OPSI = [
         'menunggu-chr' => 'Menunggu CHR disetujui',
         'menunggu-rt'  => 'Menunggu Rekomendasi Teknis',
         'terunggah'    => 'Rekomendasi Teknis terunggah',
-=======
     private const STATUS_OPSI = [
         'menunggu-chr' => 'Menunggu CHR disetujui',
         'menunggu-rt' => 'Menunggu Rekomendasi Teknis',
         'terunggah' => 'Rekomendasi Teknis terunggah',
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     ];
 
     public function index(Request $request)
@@ -49,7 +40,6 @@ class RekomendasiController extends Controller
         $f = $this->filter($request);
 
         $data = RuteSubsidi::query()
-<<<<<<< HEAD
             ->whereIn('status_pengajuan', StatusPengajuan::GRUP['disetujui'])
             ->with('kabKotaAsal.provinsi', 'kabKotaAsal.wilayah', 'moda', 'pengajuanSurat', 'rekomendasi')
             ->when($f['q'] !== '', function ($q) use ($f) {
@@ -83,7 +73,6 @@ class RekomendasiController extends Controller
         ]);
     }
 
-=======
             ->whereIn(
                 'status_pengajuan',
                 StatusPengajuan::GRUP['disetujui']
@@ -183,12 +172,10 @@ class RekomendasiController extends Controller
     /**
      * Detail laporan dan rekomendasi teknis.
      */
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public function show(Request $request, RuteSubsidi $rute)
     {
         $this->pastikanLaporan($rute);
 
-<<<<<<< HEAD
         $rute->load('pengajuanSurat.dokumen', 'pengajuanSurat.user', 'rekomendasi.user');
         $chr = $rute->pengajuanSurat->sortByDesc('id_pengajuan_surat')->first(fn ($p) => $p->status === SuratOptions::DISETUJUI);
 
@@ -314,7 +301,6 @@ class RekomendasiController extends Controller
     private function pastikanLaporan(RuteSubsidi $rute): void
     {
         abort_unless($rute->grup_status === 'disetujui', 404);
-=======
         $rute->load(
             'pengajuanSurat.dokumen',
             'pengajuanSurat.user',
@@ -657,20 +643,17 @@ class RekomendasiController extends Controller
             $rute->grup_status === 'disetujui',
             404
         );
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 
     private function filter(Request $r): array
     {
         $moda = (string) $r->query('moda', '');
-<<<<<<< HEAD
         $status = (string) $r->query('status', '');
 
         return [
             'q'      => trim((string) $r->query('q', '')),
             'moda'   => ctype_digit($moda) ? (int) $moda : null,
             'status' => array_key_exists($status, self::STATUS_OPSI) ? $status : null,
-=======
 
         $status = (string) $r->query('status', '');
 
@@ -683,7 +666,6 @@ class RekomendasiController extends Controller
                 $status,
                 self::STATUS_OPSI
             ) ? $status : null,
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ];
     }
 }

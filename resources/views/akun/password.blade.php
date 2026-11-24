@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 @extends('layouts.app')
 
 @section('title', 'Ubah Kata Sandi')
@@ -9,7 +6,6 @@
 @section('subheading', 'Ubah kata sandi')
 
 @section('content')
-<<<<<<< HEAD
 <form class="box form akun-form" method="POST" action="{{ route('akun.password.update') }}" autocomplete="off">
     @csrf
     @method('PUT')
@@ -54,7 +50,6 @@
         <button type="submit" class="btn btn-primary">Simpan Kata Sandi</button>
     </div>
 </form>
-=======
 
 <style>
     /* =========================================
@@ -828,5 +823,4 @@
 
 </div>
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 @endsection

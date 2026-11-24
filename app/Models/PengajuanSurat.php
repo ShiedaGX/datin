@@ -36,8 +36,6 @@ class PengajuanSurat extends Model
     {
         return $this->status !== SuratOptions::DRAF;
     }
-<<<<<<< HEAD
-=======
 
     /**
      * Siapa yang boleh melihat/mengunduh berkas Surat CHR ini:
@@ -60,5 +58,4 @@ class PengajuanSurat extends Model
 
         return $pemda !== null && $pemda->id_user !== null && (int) $pemda->id_user === (int) $user->id_user;
     }
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 }

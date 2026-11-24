@@ -1,4 +1,3 @@
-<<<<<<< HEAD
             {{-- 2. Data yang diinput Pemda --}}
             <section>
                 <h3 class="rv-h"><span class="step-no">{{ $no }}</span> Data Pengajuan Pemda</h3>
@@ -35,7 +34,6 @@
                     </div>
                 </div>
             </section>
-=======
 @php
     $daftarTujuan = $rute->tujuan;
 
@@ -526,4 +524,3 @@
         }
     }
 </style>
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54

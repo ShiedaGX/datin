@@ -14,11 +14,8 @@ class User extends Authenticatable
     protected $table = 'users';
     protected $primaryKey = 'id_user';
 
-<<<<<<< HEAD
     protected $fillable = ['id_role', 'id_moda', 'id_wilayah', 'username', 'email', 'password_hash', 'full_name', 'instansi', 'diverifikasi_at'];
-=======
     protected $fillable = ['id_role', 'id_moda', 'id_wilayah', 'username', 'email', 'password_hash', 'full_name', 'instansi', 'diverifikasi_at', 'id_kab_kota'];
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     protected $hidden = ['password_hash'];
     protected $casts = ['password_hash' => 'hashed', 'diverifikasi_at' => 'datetime'];
 

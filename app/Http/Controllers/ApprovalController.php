@@ -1,13 +1,10 @@
 <?php
-<<<<<<< HEAD
 namespace App\Http\Controllers;
 
-=======
 
 namespace App\Http\Controllers;
 
 use App\Models\DataPemda;
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 use App\Models\Moda;
 use App\Models\PengajuanSurat;
 use App\Models\PeninjauanSurat;
@@ -21,7 +18,6 @@ use App\Support\SuratOptions;
 use App\Support\Tanggal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-<<<<<<< HEAD
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -30,18 +26,15 @@ use Illuminate\Validation\ValidationException;
  * data Pemda yang menjadi rujukannya, lalu menyetujui, meminta perbaikan, atau menolak.
  * INTRAM juga dapat meminta Pemda mengajukan lagi untuk moda tambahan tanpa mengubah pengajuan moda lain.
  */
-=======
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 class ApprovalController extends Controller
 {
     private const PER_HALAMAN = 10;
 
     public const CHECKLIST = [
-<<<<<<< HEAD
         'dokumen'   => ['Dokumen CHR tersedia dan terbaca', 'Berkas utama dapat dibuka, utuh, dan sesuai jenis Surat Catatan Hasil Review.'],
         'identitas' => ['Identitas dan pengesahan sesuai', 'Nomor surat, pengirim, penerima, tanggal, dan tanda tangan telah diperiksa.'],
         'hasil'     => ['Hasil review sesuai moda dan usulan', 'Catatan layanan {moda} dan wilayah {wilayah} sesuai pengajuan yang dirujuk.'],
@@ -52,7 +45,6 @@ class ApprovalController extends Controller
         'setuju'    => ['status' => SuratOptions::DISETUJUI,       'aksi' => SuratOptions::AKSI_SETUJU,   'pesan' => 'disetujui'],
         'perbaikan' => ['status' => SuratOptions::PERLU_PERBAIKAN, 'aksi' => SuratOptions::AKSI_PERBAIKI, 'pesan' => 'dikembalikan untuk diperbaiki'],
         'tolak'     => ['status' => SuratOptions::DITOLAK,         'aksi' => SuratOptions::AKSI_TOLAK,    'pesan' => 'ditolak'],
-=======
         'dokumen' => [
             'Dokumen CHR tersedia dan terbaca',
             'Berkas utama dapat dibuka, utuh, dan sesuai jenis Surat Catatan Hasil Review.',
@@ -87,14 +79,12 @@ class ApprovalController extends Controller
             'aksi' => SuratOptions::AKSI_TOLAK,
             'pesan' => 'ditolak',
         ],
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     ];
 
     public function index(Request $request)
     {
         $f = $this->filter($request);
 
-<<<<<<< HEAD
         // Ringkasan mengikuti filter periode
         $hit = PengajuanSurat::query()->where('status', '!=', SuratOptions::DRAF);
         $this->terapkanPeriode($hit, $f['periode']);
@@ -165,7 +155,6 @@ class ApprovalController extends Controller
                     'id_pengajuan_surat' => $p->id_pengajuan_surat,
                     'id_user'            => $request->user()->id_user,
                     'aksi'               => SuratOptions::AKSI_MULAI,
-=======
         $hit = PengajuanSurat::query()
             ->where('status', '!=', SuratOptions::DRAF);
 
@@ -313,12 +302,10 @@ class ApprovalController extends Controller
                     'id_pengajuan_surat' => $p->id_pengajuan_surat,
                     'id_user' => $request->user()->id_user,
                     'aksi' => SuratOptions::AKSI_MULAI,
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 ]);
             }
         });
 
-<<<<<<< HEAD
         return redirect(route('approval.index', ['pilih' => $pengajuan->id_pengajuan_surat]) . '#detail');
     }
 
@@ -335,7 +322,6 @@ class ApprovalController extends Controller
         ], [
             'keputusan.required' => 'Pilih keputusan terlebih dahulu.',
             'catatan.max'        => 'Catatan maksimal :max karakter.',
-=======
         return redirect(
             route('approval.index', [
                 'pilih' => $pengajuan->id_pengajuan_surat,
@@ -375,18 +361,15 @@ class ApprovalController extends Controller
         ], [
             'keputusan.required' => 'Pilih keputusan terlebih dahulu.',
             'catatan.max' => 'Catatan maksimal :max karakter.',
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         ]);
 
         $catatan = trim((string) ($data['catatan'] ?? ''));
 
-<<<<<<< HEAD
         if (in_array($data['keputusan'], ['perbaikan', 'tolak'], true) && $catatan === '') {
             return back()->withInput()->withErrors(['catatan' => 'Catatan wajib diisi agar pengirim mengetahui alasan keputusan ini.']);
         }
         if ($data['keputusan'] === 'setuju' && count(array_unique($data['periksa'] ?? [])) < count(self::CHECKLIST)) {
             return back()->withInput()->withErrors(['periksa' => 'Konfirmasi seluruh pemeriksaan pada checklist sebelum menyetujui surat.']);
-=======
         if (
             in_array(
                 $data['keputusan'],
@@ -408,12 +391,10 @@ class ApprovalController extends Controller
             return back()->withInput()->withErrors([
                 'periksa' => 'Konfirmasi seluruh pemeriksaan pada checklist sebelum menyetujui surat.',
             ]);
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
 
         $putusan = self::KEPUTUSAN[$data['keputusan']];
 
-<<<<<<< HEAD
         DB::transaction(function () use ($pengajuan, $user, $putusan, $catatan) {
             $p = PengajuanSurat::where('id_pengajuan_surat', $pengajuan->id_pengajuan_surat)->lockForUpdate()->firstOrFail();
 
@@ -544,7 +525,6 @@ class ApprovalController extends Controller
         $isi['riwayatSurat'] = $riwayat->sortByDesc(fn ($e) => optional($e['waktu'])->getTimestamp() ?? 0)->values();
 
         $isi['bisaPutuskan'] = in_array($p->status, [SuratOptions::TERKIRIM, SuratOptions::DALAM_REVIEW], true);
-=======
         DB::transaction(function () use (
             $pengajuan,
             $user,
@@ -978,19 +958,16 @@ class ApprovalController extends Controller
             true
         );
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         $isi['permintaan'] = collect();
         $isi['modaTambahan'] = collect();
 
         if ($rute) {
-<<<<<<< HEAD
             $isi += Permohonan::detail($rute);
             $isi['permintaan'] = PermintaanRevisi::with('moda', 'ruteBaru')->where('id_pemda', $rute->id_pemda)->orderByDesc('id_permintaan_revisi')->get();
             $sudah = RuteSubsidi::where('id_pemda', $rute->id_pemda)->pluck('id_moda')->map(fn ($i) => (int) $i)->all();
             $diminta = $isi['permintaan']->where('status', PermintaanRevisi::MENUNGGU)->pluck('id_moda')->map(fn ($i) => (int) $i)->all();
             $isi['modaTambahan'] = Moda::whereNotIn('id_moda', $sudah)->orderBy('id_moda')->get()
                 ->map(fn ($m) => ['id' => $m->id_moda, 'nama' => $m->nama_moda, 'diminta' => in_array((int) $m->id_moda, $diminta, true)]);
-=======
             $rute->loadMissing(
                 'tujuan',
                 'detailKomoditasTujuan'
@@ -1038,7 +1015,6 @@ class ApprovalController extends Controller
                         true
                     ),
                 ]);
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
 
         return $isi;
@@ -1051,7 +1027,6 @@ class ApprovalController extends Controller
         $periode = (string) $r->query('periode', '');
 
         return [
-<<<<<<< HEAD
             'q'       => trim((string) $r->query('q', '')),
             'moda'    => ctype_digit($moda) ? (int) $moda : null,
             'status'  => ($status !== 'draf' && array_key_exists($status, SuratOptions::STATUS_OPSI)) ? $status : null,
@@ -1063,7 +1038,6 @@ class ApprovalController extends Controller
     {
         if ($periode) {
             $query->whereYear('dikirim_at', (int) substr($periode, 0, 4))->whereMonth('dikirim_at', (int) substr($periode, 5, 2));
-=======
             'q' => trim((string) $r->query('q', '')),
             'moda' => ctype_digit($moda)
                 ? (int) $moda
@@ -1094,13 +1068,11 @@ class ApprovalController extends Controller
                 'dikirim_at',
                 (int) substr($periode, 5, 2)
             );
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
     }
 
     private function query(array $f)
     {
-<<<<<<< HEAD
         $q = PengajuanSurat::query()->with('user', 'moda', 'rute.kabKotaAsal')->where('status', '!=', SuratOptions::DRAF);
 
         if ($f['q'] !== '') {
@@ -1122,7 +1094,6 @@ class ApprovalController extends Controller
         $this->terapkanPeriode($q, $f['periode']);
 
         return $q->orderByDesc('dikirim_at')->orderByDesc('id_pengajuan_surat');
-=======
         $q = PengajuanSurat::query()
             ->with(
                 'user',
@@ -1182,6 +1153,5 @@ class ApprovalController extends Controller
         return $q
             ->orderByDesc('dikirim_at')
             ->orderByDesc('id_pengajuan_surat');
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 }

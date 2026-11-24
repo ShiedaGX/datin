@@ -88,10 +88,7 @@
 
   /* ---------- Wilayah -> Provinsi -> Kabupaten/Kota (dropdown bertingkat) ---------- */
   var prov = $('#id_provinsi'), wil = $('#id_wilayah'), kab = $('#id_kab_kota');
-<<<<<<< HEAD
-=======
   if (kab && kab.tagName !== 'SELECT') kab = null;   // form user: #id_kab_kota berupa input hidden (hasil saran Instansi), bukan dropdown
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
   /* ---------- Revisi dari INTRAM: moda yang diminta disarankan, moda lain tetap boleh diajukan ---------- */
   var modaRadios = $$('input[name="id_moda"]'), modaHint = $('#modaHint'), modaAuto = false;
@@ -387,8 +384,6 @@
     });
   }
 
-<<<<<<< HEAD
-=======
   /* ---------- Form user: saran Instansi (kab/kota) dari server ---------- */
   var inInst = $('#instansi'), listInst = $('#instansiList'), idKab = $('#id_kab_kota');
   if (inInst && listInst && idKab && inInst.dataset.url) {
@@ -453,7 +448,6 @@
     inInst.addEventListener('blur', function () { setTimeout(tutupInst, 150); });
   }
 
->>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
   /* ---------- Form user: cakupan & hak akses menyesuaikan role ---------- */
   var peran = $('#id_role'), dataRole = $('#data-role');
   if (peran && dataRole) {
