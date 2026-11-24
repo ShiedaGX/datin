@@ -12,7 +12,12 @@ use Illuminate\Validation\Rule;
 class StoreWilayahRequest extends FormRequest
 {
     /**
-     * Pilihan satuan data komoditas.
+     * Daftar satuan lama.
+     *
+     * Dipertahankan untuk kompatibilitas apabila
+     * masih digunakan oleh bagian sistem lainnya.
+     *
+     * Validasi aktual menggunakan MasterSatuanData.
      */
     public const SATUAN_DATA = [
         'Ton',
@@ -28,6 +33,11 @@ class StoreWilayahRequest extends FormRequest
 
     public function rules(): array
     {
+        // Ambil pilihan satuan aktif dari database.
+        $satuanAktif = MasterSatuanData::aktif()
+            ->pluck('nama_satuan')
+            ->all();
+
         $rules = [
             'id_provinsi' => [
                 'required',
@@ -52,11 +62,16 @@ class StoreWilayahRequest extends FormRequest
                 Rule::in(FormOptions::KLASIFIKASI),
             ],
 
-            'keterangan' => ['nullable', 'array'],
+            'keterangan' => [
+                'nullable',
+                'array',
+            ],
 
             'keterangan.*' => [
                 'string',
-                Rule::in(array_keys(FormOptions::KETERANGAN)),
+                Rule::in(
+                    array_keys(FormOptions::KETERANGAN)
+                ),
             ],
 
             'potensi' => [
@@ -71,13 +86,14 @@ class StoreWilayahRequest extends FormRequest
                 'max:200',
             ],
 
+            // Moda boleh sama dengan pengajuan sebelumnya.
             'id_moda' => [
                 'required',
                 'integer',
                 'exists:moda,id_moda',
             ],
 
-            // Tujuan
+            // Daftar tujuan.
             'tujuan' => [
                 'required',
                 'array',
@@ -93,21 +109,21 @@ class StoreWilayahRequest extends FormRequest
                 'different:id_kab_kota',
             ],
 
-            // Setiap tujuan wajib memiliki minimal satu komoditas.
+            // Setiap tujuan minimal satu komoditas.
             'tujuan.*.komoditas' => [
                 'required',
                 'array',
                 'min:1',
             ],
 
-            // Nama setiap komoditas.
+            // Nama komoditas.
             'tujuan.*.komoditas.*.nama' => [
                 'required',
                 'string',
                 'max:150',
             ],
 
-            // Jumlah setiap komoditas.
+            // Jumlah komoditas.
             'tujuan.*.komoditas.*.jumlah' => [
                 'required',
                 'numeric',
@@ -115,15 +131,11 @@ class StoreWilayahRequest extends FormRequest
                 'max:9999999999',
             ],
 
-            // Satuan setiap komoditas.
+            // Satuan berdasarkan master satuan aktif.
             'tujuan.*.komoditas.*.satuan_data' => [
                 'required',
                 'string',
-                Rule::in(
-                    MasterSatuanData::aktif()
-                        ->pluck('nama_satuan')
-                        ->all()
-                ),
+                Rule::in($satuanAktif),
             ],
         ];
 
@@ -151,7 +163,7 @@ class StoreWilayahRequest extends FormRequest
         $validator->after(function ($v) {
 
             // Validasi kesesuaian wilayah dan provinsi.
-            if (!$v->errors()->hasAny([
+            if (! $v->errors()->hasAny([
                 'id_provinsi',
                 'id_wilayah',
             ])) {
@@ -160,9 +172,9 @@ class StoreWilayahRequest extends FormRequest
                 );
 
                 if (
-                    $provinsi &&
-                    (int) $provinsi->id_wilayah !==
-                    (int) $this->input('id_wilayah')
+                    $provinsi
+                    && (int) $provinsi->id_wilayah
+                        !== (int) $this->input('id_wilayah')
                 ) {
                     $v->errors()->add(
                         'id_wilayah',
@@ -171,8 +183,8 @@ class StoreWilayahRequest extends FormRequest
                 }
             }
 
-            // Validasi kabupaten/kota asal.
-            if (!$v->errors()->hasAny([
+            // Validasi Kabupaten/Kota asal.
+            if (! $v->errors()->hasAny([
                 'id_provinsi',
                 'id_kab_kota',
             ])) {
@@ -184,42 +196,45 @@ class StoreWilayahRequest extends FormRequest
                 );
 
                 if (
-                    $kab &&
-                    (int) $kab->id_provinsi !==
-                    (int) $this->input('id_provinsi')
+                    $kab
+                    && (int) $kab->id_provinsi
+                        !== (int) $this->input('id_provinsi')
                 ) {
                     $v->errors()->add(
                         'id_kab_kota',
                         'Kabupaten/Kota tidak berada di provinsi yang dipilih.'
                     );
                 } elseif (
-                    $kab &&
-                    ($alasan = $kab->alasanTidakTersedia(
+                    $kab
+                    && ($alasan = $kab->alasanTidakTersedia(
                         $this->user()
                     ))
                 ) {
                     $v->errors()->add(
                         'id_kab_kota',
-                        'Kabupaten/Kota ini ' . $alasan . '.'
+                        'Kabupaten/Kota ini '
+                        . $alasan
+                        . '.'
                     );
                 }
             }
 
-            // Minimal satu potensi unggulan harus diisi.
-            $terisi = collect(
-                $this->input('potensi', [])
-            )->filter(
-                fn ($x) => trim((string) $x) !== ''
-            );
-
-            if (
-                $terisi->isEmpty() &&
-                !$v->errors()->has('potensi')
-            ) {
-                $v->errors()->add(
-                    'potensi',
-                    'Isi minimal satu potensi unggulan daerah.'
+            // Minimal satu potensi unggulan.
+            if (! $v->errors()->has('potensi')) {
+                $terisi = collect(
+                    $this->input('potensi', [])
+                )->filter(
+                    fn ($x) =>
+                        is_string($x)
+                        && trim($x) !== ''
                 );
+
+                if ($terisi->isEmpty()) {
+                    $v->errors()->add(
+                        'potensi',
+                        'Isi minimal satu potensi unggulan daerah.'
+                    );
+                }
             }
         });
     }
@@ -227,16 +242,32 @@ class StoreWilayahRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'id_provinsi' => 'Provinsi',
-            'id_wilayah' => 'Wilayah regional',
-            'id_kab_kota' => 'Kabupaten/Kota',
-            'klasifikasi_pemda' => 'Klasifikasi wilayah',
-            'id_moda' => 'Moda transportasi',
+            'id_provinsi' =>
+                'Provinsi',
 
-            'tujuan' => 'Rute tujuan',
-            'tujuan.*.id' => 'Kabupaten/Kota tujuan',
+            'id_wilayah' =>
+                'Wilayah regional',
 
-            'tujuan.*.komoditas' => 'Daftar komoditas',
+            'id_kab_kota' =>
+                'Kabupaten/Kota',
+
+            'klasifikasi_pemda' =>
+                'Klasifikasi wilayah',
+
+            'id_moda' =>
+                'Moda transportasi',
+
+            'potensi' =>
+                'Potensi unggulan daerah',
+
+            'tujuan' =>
+                'Rute tujuan',
+
+            'tujuan.*.id' =>
+                'Kabupaten/Kota tujuan',
+
+            'tujuan.*.komoditas' =>
+                'Daftar komoditas',
 
             'tujuan.*.komoditas.*.nama' =>
                 'Nama komoditas',
@@ -252,8 +283,11 @@ class StoreWilayahRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'exists' => ':attribute tidak valid.',
+            'required' =>
+                ':attribute wajib diisi.',
+
+            'exists' =>
+                ':attribute tidak valid.',
 
             'tujuan.required' =>
                 'Pilih minimal satu rute tujuan.',
@@ -286,13 +320,16 @@ class StoreWilayahRequest extends FormRequest
                 'Satuan data wajib dipilih.',
 
             'tujuan.*.komoditas.*.satuan_data.in' =>
-                'Satuan data harus Ton, Ekor, Perjalanan Wisatawan, atau Batang.',
+                'Pilih satuan data yang tersedia dan aktif pada Master Satuan Data.',
 
             'mimes' =>
                 ':attribute harus berformat PDF, DOC, atau DOCX.',
 
             'max.file' =>
                 ':attribute maksimal 5 MB.',
+
+            'uploaded' =>
+                ':attribute gagal diunggah. Periksa ukuran berkas dan coba kembali.',
         ];
     }
 }
