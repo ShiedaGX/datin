@@ -14,7 +14,6 @@ class PeranUser
         self::SUPER_ADMIN => [],
         self::PEMDA       => ['wilayah', 'instansi'],
         self::MODA        => ['moda'],
-        self::INTRAM      => ['wilayah', 'moda'],
         self::INTRAM      => [],   // Intram tidak dibatasi cakupan wilayah maupun moda
     ];
 
@@ -22,7 +21,6 @@ class PeranUser
     public const CAKUPAN = [
         self::PEMDA  => 'wilayah & instansi Pemda',
         self::MODA   => 'Darat / Laut / Udara / Kereta Api',
-        self::INTRAM => 'wilayah peninjauan & moda',
         self::INTRAM => 'seluruh wilayah & moda',
     ];
 

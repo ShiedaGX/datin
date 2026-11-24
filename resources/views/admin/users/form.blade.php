@@ -24,8 +24,6 @@
         </div>
     @endif
 
-    <section class="step">
-        <h3><span class="step-no">1</span> Data akun</h3>
     {{-- ===== 1. Data pengguna ===== --}}
     <section class="step">
         <h3><span class="step-no">1</span> Data pengguna</h3>
@@ -36,33 +34,10 @@
                 @error('full_name')<p class="error">{{ $message }}</p>@enderror
             </div>
             <div class="field">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" value="{{ old('username', $user->username) }}" maxlength="50" required placeholder="huruf kecil, angka, . _ -" class="@error('username') is-invalid @enderror">
-                @error('username')<p class="error">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
                 <label for="email">Alamat email</label>
                 <input type="text" id="email" name="email" value="{{ old('email', $user->email) }}" maxlength="150" required placeholder="nama@instansi.go.id" inputmode="email" class="@error('email') is-invalid @enderror">
                 @error('email')<p class="error">{{ $message }}</p>@enderror
             </div>
-            <div class="field">
-                <label for="instansi">Instansi / organisasi <span class="wajib" id="wajibInstansi" hidden>*</span></label>
-                <input type="text" id="instansi" name="instansi" value="{{ old('instansi', $user->instansi) }}" maxlength="150" data-wajib="instansi" placeholder="Contoh: Pemda Sumatera Selatan" class="@error('instansi') is-invalid @enderror">
-                @error('instansi')<p class="error">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label for="password">Kata sandi{{ $mode === 'edit' ? ' baru' : '' }}</label>
-                <input type="password" id="password" name="password" minlength="8" autocomplete="new-password" @if ($mode === 'create') required @endif
-                       placeholder="{{ $mode === 'edit' ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter' }}" class="@error('password') is-invalid @enderror">
-                @error('password')<p class="error">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label for="password_confirmation">Konfirmasi kata sandi</label>
-                <input type="password" id="password_confirmation" name="password_confirmation" minlength="8" autocomplete="new-password" @if ($mode === 'create') required @endif placeholder="Ulangi kata sandi">
-            </div>
-        </div>
-    </section>
-
         </div>
     </section>
 
@@ -172,7 +147,6 @@
 
     <script type="application/json" id="data-role">@json($infoRole)</script>
 </form>
-@endsection
 
 <style>
     .field-suggest { position: relative; }

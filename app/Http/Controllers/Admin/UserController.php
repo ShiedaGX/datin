@@ -60,10 +60,6 @@ class UserController extends Controller
         $user->load('role.hakAkses', 'moda', 'wilayah');
 
         return view('admin.users.show', [
-            'user'         => $user,
-            'jumlahData'   => $user->dataPemda()->count(),
-            'jumlahDokumen' => $user->dokumen()->count(),
-            'cakupan'      => PeranUser::CAKUPAN,
             'user'          => $user,
             'jumlahData'    => $user->dataPemda()->count(),
             'jumlahDokumen' => $user->dokumen()->count(),
@@ -161,8 +157,6 @@ class UserController extends Controller
         )->deleteFileAfterSend(true);
     }
 
-    // ------------------------------------------------------------------
-
     /** Saran isian "Instansi / organisasi" dari tabel kab_kota (JSON, dipakai autocomplete di form user). */
     public function saranInstansi(Request $request)
     {
@@ -232,7 +226,6 @@ class UserController extends Controller
             ->orderBy('id_user');
     }
 
-    /** Atribut akun sesuai role: cakupan yang tidak dipakai role itu dikosongkan. */
     /**
      * Atribut akun sesuai role. Untuk Pemda, kab/kota adalah sumber kebenaran:
      * teks instansi dan cakupan wilayah diisi otomatis dari tabel kab_kota.
@@ -252,8 +245,6 @@ class UserController extends Controller
             'username'        => $d['username'],
             'email'           => $d['email'],
             'id_role'         => $role->id_role,
-            'instansi'        => $d['instansi'] ?? null,
-            'id_wilayah'      => in_array('wilayah', $syarat, true) ? ($d['id_wilayah'] ?? null) : null,
             'id_kab_kota'     => $kab?->id_kab_kota,
             'instansi'        => $kab ? $this->labelInstansi($kab->jenis, $kab->nama_kab_kota) : null,
             'id_wilayah'      => $kab
@@ -290,5 +281,4 @@ class UserController extends Controller
             ]]),
         ];
     }
-}
 }

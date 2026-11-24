@@ -135,9 +135,6 @@ class DataPemda extends Model
         return $this->id_user !== null
             && (int) $this->id_user === (int) $user->id_user
             && ! $adaYangDisetujui;
-        return $this->id_user !== null
-            && (int) $this->id_user === (int) $user->id_user
-            && ! $adaYangDisetujui;
     }
 
     /** Pemilik boleh membatalkan satu pengajuan selama pengajuan itu belum disetujui Moda. */
