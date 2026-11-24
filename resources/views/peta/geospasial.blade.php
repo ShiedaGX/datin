@@ -1,0 +1,789 @@
+
+
+
+@extends('layouts.app')
+@section('title', 'Peta Geospasial')
+@section('heading', 'Peta Geospasial')
+@section('subheading', 'Sebaran fasilitas transportasi dan analisis konektivitas regional')
+@section('content')
+<style>
+.gs-shell {
+        --navy:#10243e;
+        --muted:#91a5bd;
+        --line:#e2e9f1;
+        font-family:Inter,'Barlow Semi Condensed',system-ui,sans-serif;
+        color:#20334b
+}
+.gs-intro {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        padding:15px 19px;
+        margin-bottom:15px;
+        border:1px solid #d9e6f0;
+        border-radius:14px;
+        background:linear-gradient(115deg,#f5faff,#edf5fb)
+}
+.gs-intro strong {
+        display:block;
+        font-size:14px;
+        color:#183a5c;
+        margin-bottom:4px
+}
+.gs-intro p {
+        font-size:12px;
+        line-height:1.6;
+        color:#60748c;
+        margin:0
+}
+.gs-pill {
+        flex-shrink:0;
+        background:#e1f4ed;
+        color:#137353;
+        border:1px solid #c3e9d9;
+        border-radius:100px;
+        padding:7px 12px;
+        font-size:11px;
+        font-weight:700
+}
+.gs-layout {
+        display:grid;
+        grid-template-columns:322px minmax(0,1fr);
+        height:min(810px,calc(100vh - 166px));
+        min-height:640px;
+        overflow:hidden;
+        border-radius:17px;
+        border:1px solid #d5e0eb;
+        box-shadow:0 12px 38px rgba(16,36,62,.09)
+}
+.gs-sidebar {
+        background:linear-gradient(175deg,#132b49 0%,#10243e 55%,#0d2037 100%);
+        color:#fff;
+        padding:21px 18px;
+        overflow:auto;
+        scrollbar-color:#516983 transparent;
+        scrollbar-width:thin
+}
+.gs-eyebrow {
+        font-size:10px;
+        letter-spacing:.15em;
+        font-weight:800;
+        color:#8ed5ec;
+        text-transform:uppercase;
+        margin-bottom:8px
+}
+.gs-sidebar h2 {
+        font-size:23px;
+        letter-spacing:-.03em;
+        line-height:1.15;
+        margin:0 0 8px
+}
+.gs-sidebar p {
+        font-size:12px;
+        color:#b7c9dc;
+        line-height:1.6;
+        margin:0 0 12px
+}
+.gs-links {
+        display:flex;
+        flex-wrap:wrap;
+        gap:7px;
+        margin:14px 0 18px
+}
+.gs-links a {
+        font-size:11px;
+        text-decoration:none;
+        color:#d9efff;
+        background:#ffffff12;
+        border:1px solid #ffffff23;
+        border-radius:8px;
+        padding:8px 10px
+}
+.gs-links a:hover {
+        background:#ffffff23
+}
+.gs-section {
+        font-size:10px;
+        letter-spacing:.13em;
+        text-transform:uppercase;
+        font-weight:800;
+        color:#91aeca;
+        margin:21px 0 10px;
+        display:flex;
+        align-items:center;
+        gap:9px
+}
+.gs-section:after {
+        content:'';
+        height:1px;
+        flex:1;
+        background:#ffffff1f
+}
+.gs-statgrid {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px
+}
+.gs-stat {
+        padding:12px;
+        border:1px solid #ffffff20;
+        border-radius:11px;
+        background:#ffffff0c
+}
+.gs-stat span {
+        font-size:11px;
+        display:block;
+        color:#aec3d8;
+        line-height:1.4
+}
+.gs-stat strong {
+        font-size:21px;
+        display:block;
+        margin-top:5px;
+        letter-spacing:-.04em;
+        font-variant-numeric:tabular-nums
+}
+.gs-stat-wide {
+        grid-column:1/-1;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        background:linear-gradient(105deg,#194b65,#155777);
+        border-color:#2b7595
+}
+.gs-stat-wide strong {
+        margin:0;
+        color:#fff
+}
+.gs-footnote {
+        font-size:10px!important;
+        color:#9fb5cc!important;
+        margin-top:9px!important
+}
+.gs-layer {
+        display:flex;
+        align-items:flex-start;
+        gap:10px;
+        padding:11px 12px;
+        background:#ffffff0a;
+        border:1px solid #ffffff1b;
+        border-radius:10px;
+        margin:7px 0;
+        cursor:pointer
+}
+.gs-layer:hover {
+        background:#ffffff14
+}
+.gs-layer input {
+        accent-color:#44c6e7;
+        margin-top:3px
+}
+.gs-layer strong {
+        display:block;
+        font-size:12px
+}
+.gs-layer small {
+        display:block;
+        font-size:10px;
+        color:#9fb5cc;
+        line-height:1.5;
+        margin-top:4px
+}
+.gs-field {
+        margin:13px 0
+}
+.gs-field label {
+        display:block;
+        font-size:11px;
+        font-weight:750;
+        color:#dce8f6;
+        margin-bottom:7px
+}
+.gs-field select {
+        width:100%;
+        background:#1c3858;
+        color:#f4f9ff;
+        border:1px solid #49617c;
+        border-radius:9px;
+        padding:11px 12px;
+        font:inherit;
+        font-size:12px;
+        outline:none
+}
+.gs-field select:focus {
+        border-color:#7ccfeb;
+        box-shadow:0 0 0 3px #62c7e524
+}
+.gs-field select:disabled {
+        opacity:.45;
+        cursor:not-allowed
+}
+.gs-field small {
+        font-size:10px;
+        color:#9fb5cc;
+        line-height:1.5;
+        display:block;
+        margin-top:6px
+}
+.gs-summary {
+        margin:12px 0;
+        padding:12px 13px;
+        background:#ffffff0d;
+        border:1px solid #ffffff1d;
+        border-radius:10px;
+        color:#e2f2ff;
+        font-size:12px;
+        line-height:1.65
+}
+.gs-detail {
+        background:#f9fbfe;
+        color:#1e344e;
+        border:1px solid #dce6f0;
+        border-radius:12px;
+        padding:15px;
+        font-size:12px;
+        line-height:1.6;
+        max-height:320px;
+        overflow:auto;
+        overflow-wrap:anywhere
+}
+.gs-detail h3 {
+        font-size:16px;
+        margin:0 0 10px;
+        line-height:1.3;
+        letter-spacing:-.02em
+}
+.gs-detail p {
+        margin:6px 0
+}
+.gs-detail dl {
+        margin:0
+}
+.gs-detail dt {
+        font-size:10px;
+        text-transform:uppercase;
+        letter-spacing:.055em;
+        color:#70859b;
+        font-weight:800;
+        margin-top:11px
+}
+.gs-detail dd {
+        margin:3px 0;
+        color:#223c55
+}
+.gs-warning {
+        color:#c62828!important;
+        font-weight:800
+}
+.gs-mapbox {
+        position:relative;
+        overflow:hidden;
+        background:radial-gradient(ellipse at 70% 30%,#e3f4f9 0%,#cce5f0 70%,#bcd9e8 100%)
+}
+#gs-map {
+        width:100%;
+        height:100%;
+        display:block
+}
+.gs-land {
+        fill:#f3ead2;
+        stroke:#c6ba9b;
+        stroke-width:.65;
+        vector-effect:non-scaling-stroke
+}
+.gs-connection {
+        fill:none;
+        stroke:#277da7;
+        stroke-opacity:.3;
+        stroke-width:1.3;
+        vector-effect:non-scaling-stroke;
+        cursor:pointer
+}
+.gs-connection.gs-facility-link {
+        stroke:#e2933e;
+        stroke-dasharray:5 3;
+        stroke-opacity:.46
+}
+.gs-connection.gs-highlight,.gs-connection:hover {
+        stroke:#c76b13;
+        stroke-opacity:1;
+        stroke-width:2.8
+}
+.gs-recommend {
+        stroke:#df8724;
+        stroke-width:2.6;
+        stroke-dasharray:6 4;
+        vector-effect:non-scaling-stroke
+}
+.gs-recommend.gs-service {
+        stroke:#17466c;
+        stroke-width:3;
+        stroke-dasharray:none
+}
+.gs-route-point {
+        stroke:#fff;
+        stroke-width:1.7;
+        vector-effect:non-scaling-stroke
+}
+.gs-rail {
+        fill:none;
+        stroke:#586d7f;
+        stroke-width:1;
+        stroke-opacity:.5;
+        stroke-dasharray:3 3;
+        vector-effect:non-scaling-stroke
+}
+.gs-point {
+        stroke:#fff;
+        stroke-width:1;
+        cursor:pointer;
+        vector-effect:non-scaling-stroke
+}
+.gs-point:hover {
+        stroke:#fff;
+        stroke-width:2.5
+}
+.gs-cluster {
+        fill:#173b63;
+        fill-opacity:.92;
+        stroke:#fff;
+        stroke-width:2;
+        cursor:pointer;
+        vector-effect:non-scaling-stroke
+}
+.gs-cluster:hover {
+        fill:#0f2a47
+}
+.gs-cluster-n {
+        fill:#fff;
+        font:700 11px Inter,system-ui,sans-serif;
+        text-anchor:middle;
+        dominant-baseline:central;
+        pointer-events:none
+}
+.gs-mapbadge {
+        position:absolute;
+        top:17px;
+        left:17px;
+        z-index:2;
+        background:#ffffffeb;
+        border:1px solid #ffffff;
+        color:#284660;
+        border-radius:11px;
+        padding:10px 13px;
+        box-shadow:0 5px 22px #2949681b;
+        pointer-events:none
+}
+.gs-mapbadge strong {
+        font-size:12px;
+        display:block
+}
+.gs-mapbadge small {
+        font-size:10px;
+        color:#748ba0
+}
+.gs-legend {
+        position:absolute;
+        bottom:17px;
+        left:17px;
+        z-index:2;
+        background:#fffffff0;
+        backdrop-filter:blur(14px);
+        border:1px solid #ffffff;
+        box-shadow:0 7px 25px #23465d24;
+        color:#263d52;
+        padding:12px 14px;
+        border-radius:12px;
+        font-size:11px;
+        line-height:1.8;
+        pointer-events:none;
+        max-width:275px
+}
+.gs-legend-title {
+        font-weight:800;
+        margin-bottom:6px;
+        font-size:11px
+}
+.gs-legend span.gs-dot {
+        display:inline-block;
+        width:9px;
+        height:9px;
+        border-radius:50%;
+        margin-right:7px
+}
+.gs-legend small {
+        display:block;
+        border-top:1px solid #dbe4eb;
+        padding-top:7px;
+        margin-top:7px;
+        color:#72869b;
+        font-size:10px;
+        line-height:1.45
+}
+.gs-zoom {
+        position:absolute;
+        bottom:17px;
+        right:17px;
+        z-index:3;
+        display:grid;
+        gap:6px;
+        padding:5px;
+        background:#ffffffeb;
+        border:1px solid #fff;
+        border-radius:12px;
+        box-shadow:0 7px 25px #23465d24
+}
+.gs-zoom button {
+        width:36px;
+        height:36px;
+        background:#fff;
+        border:0;
+        border-radius:8px;
+        font-size:19px;
+        color:#24435f;
+        cursor:pointer
+}
+.gs-zoom button:hover {
+        background:#eaf4fb
+}
+.gs-alert {
+        position:absolute;
+        top:18px;
+        left:18px;
+        right:18px;
+        z-index:5;
+        background:#fff9e8;
+        border:1px solid #f0dbad;
+        border-radius:10px;
+        padding:12px;
+        color:#775519;
+        font-size:12px
+}
+.gs-city-dot {
+        fill:#38546a;
+        stroke:#fff;
+        stroke-width:1;
+        pointer-events:none;
+        vector-effect:non-scaling-stroke
+}
+.gs-city-label {
+        fill:#33495e;
+        font-size:10px;
+        font-weight:650;
+        paint-order:stroke;
+        stroke:#f1ead9;
+        stroke-width:3px;
+        stroke-linejoin:round;
+        pointer-events:none
+}
+.gs-water-label {
+        fill:#4286a6;
+        font-size:12px;
+        font-style:italic;
+        letter-spacing:.06em;
+        opacity:.82;
+        paint-order:stroke;
+        stroke:#d6eaf3;
+        stroke-width:3px;
+        pointer-events:none
+}
+.gs-mapcontrols {
+        position:absolute;
+        top:17px;
+        right:17px;
+        z-index:3;
+        display:flex;
+        gap:6px
+}
+.gs-mapcontrols select {
+        background:#fffffff0;
+        border:1px solid #d5e3ed;
+        color:#284760;
+        border-radius:9px;
+        padding:9px 11px;
+        font-size:11px;
+        box-shadow:0 4px 18px #29496818;
+        max-width:160px
+}
+@media(max-width:1000px) {
+    .gs-layout {
+            grid-template-columns:290px minmax(0,1fr)
+    }
+}
+@media(max-width:820px) {
+    .gs-layout {
+            grid-template-columns:1fr;
+            height:auto
+    }
+    .gs-sidebar {
+            max-height:630px
+    }
+    .gs-mapbox {
+            height:65vh;
+            min-height:460px
+    }
+}
+@media(max-width:520px) {
+    .gs-intro {
+            align-items:flex-start
+    }
+    .gs-pill {
+            display:none
+    }
+    .gs-legend {
+            max-width:195px;
+            font-size:10px
+    }
+    .gs-mapcontrols {
+            top:65px;
+            left:17px;
+            right:auto;
+            flex-direction:column
+    }
+    .gs-mapbadge {
+            right:17px
+    }
+    .gs-mapcontrols select {
+            max-width:200px
+    }
+}
+</style>
+<div class="gs-shell">
+<div class="gs-intro">
+<div>
+<strong>Analisis spasial &amp; konektivitas transportasi</strong>
+<p>Data Kemenhub menjadi referensi utama, GeoJSON Tim Statistika sebagai tambahan, dan OSM sebagai kandidat indikatif yang belum diverifikasi. Garis rekomendasi adalah jarak geografis, bukan layanan aktual.</p>
+</div>
+<span class="gs-pill">● Peta interaktif</span>
+</div>
+<div class="gs-layout">
+<aside class="gs-sidebar">
+<div class="gs-eyebrow">DATIN / Geospatial Intelligence</div>
+<h2>Eksplorasi Fasilitas</h2>
+<p>Jelajahi sebaran simpul transportasi, pilih sumber data, dan analisis kebutuhan konektivitas regional.</p>
+<div class="gs-links">
+<a href="{{ route('peta.index') }}">↗ Peta Konektivitas Pemda</a>@if(auth()->user()->isSuperAdmin())<a href="{{ route('fasilitas.index') }}">↗ Kelola Fasilitas</a>@endif</div>
+<div class="gs-section">Ringkasan data</div>
+<div class="gs-statgrid">
+<div class="gs-stat">
+<span>Fasilitas Kemenhub</span>
+<strong>{{ number_format($statistikFasilitas['kemenhub'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat">
+<span>GeoJSON tambahan</span>
+<strong>{{ number_format($statistikFasilitas['geojson_tambahan'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat">
+<span>GeoJSON kandidat duplikat</span>
+<strong>{{ number_format($statistikFasilitas['geojson_kandidat_duplikat'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat">
+<span>Total di database</span>
+<strong>{{ number_format($statistikFasilitas['total_database'],0,',','.') }}</strong>
+</div>
+<div class="gs-stat gs-stat-wide">
+<span>Total fasilitas di peta</span>
+<strong>{{ number_format($statistikFasilitas['ditampilkan'],0,',','.') }}</strong>
+</div>
+</div>
+<p class="gs-footnote">Penyaringan duplikat hanya memengaruhi visualisasi. Angka mengikuti hak akses pengguna.</p>
+<div class="gs-section">Lapisan peta</div>
+<div id="gs-layers">
+<label class="gs-layer">
+<input type="checkbox" data-layer="fasilitas" checked>
+<span>
+<strong>Titik fasilitas transportasi</strong>
+<small>Kemenhub, GeoJSON tambahan, dan OpenStreetMap</small>
+</span>
+</label>
+<label class="gs-layer">
+<input type="checkbox" data-layer="akses-fasilitas">
+<span>
+<strong>Garis akses GeoJSON</strong>
+<small>Referensi konektivitas dari tim statistika</small>
+</span>
+</label>
+</div>
+<div class="gs-section">Filter eksplorasi</div>
+<div class="gs-field">
+<label for="gs-moda">Moda transportasi</label>
+<select id="gs-moda">
+<option value="">Semua moda</option>
+<option value="1">Darat / Terminal</option>
+<option value="2">Laut / Pelabuhan</option>
+<option value="3">Udara / Bandara</option>
+<option value="4">Kereta Api / Stasiun</option>
+</select>
+</div>
+<div class="gs-field">
+<label for="gs-sumber">Sumber data fasilitas</label>
+<select id="gs-sumber">
+<option value="SEMUA">Semua sumber data</option>
+<option value="KEMENHUB">Kemenhub</option>
+<option value="GEOJSON">GeoJSON Tim Statistika</option>
+<option value="OSM">OpenStreetMap</option>
+</select>
+</div>
+<div class="gs-field">
+<label for="gs-jenis-osm">Kategori fasilitas OSM</label>
+<select id="gs-jenis-osm">
+<option value="SEMUA">Semua jenis OSM</option>
+<option value="KANDIDAT_TERMINAL">Kandidat Terminal</option>
+<option value="PERLU_REVIEW">Perlu Pemeriksaan</option>
+<option value="HALTE">Halte</option>
+<option value="POOL">Pool</option>
+<option value="SHUTTLE">Shuttle</option>
+<option value="TERKAIT_PELABUHAN">Terkait Pelabuhan</option>
+</select>
+<small>Data OSM bersifat indikatif dan tidak otomatis menjadi fasilitas resmi.</small>
+</div>
+<div class="gs-section">Analisis konektivitas</div>
+<div class="gs-field">
+<label for="gs-pengajuan">Pengajuan Pemda (Verifikasi Final)</label>
+<select id="gs-pengajuan">
+<option value="">Pilih kebutuhan konektivitas...</option>
+</select>
+</div>
+<label class="gs-layer">
+<input type="checkbox" id="gs-show-rail">
+<span>
+<strong>Jaringan rel Kemenhub</strong>
+<small>Skema segmen, bukan geometri jalur rel sebenarnya</small>
+</span>
+</label>
+<div class="gs-summary" id="gs-summary" aria-live="polite">Memuat data geospasial...</div>
+<section class="gs-detail" id="gs-detail" aria-live="polite">
+<h3>Informasi lokasi</h3>
+<p>Klik titik fasilitas atau garis untuk melihat detailnya. Pilih pengajuan untuk melihat rekomendasi spasial awal.</p>
+</section>
+</aside>
+<div class="gs-mapbox">
+<svg id="gs-map" role="img" aria-label="Peta fasilitas transportasi Indonesia">
+</svg>
+<div class="gs-mapbadge">
+<strong>Peta Fasilitas Indonesia</strong>
+<small>Referensi geospasial · DATIN</small>
+</div>
+<div class="gs-mapcontrols">
+<select id="gs-label-kota" aria-label="Tampilan label kota">
+<option value="OTOMATIS">Kota · Otomatis</option>
+<option value="UTAMA">Kota utama</option>
+<option value="SEMUA">Semua kota</option>
+<option value="HIDE">Sembunyikan kota</option>
+</select>
+<select id="gs-label-air" aria-label="Tampilan label perairan">
+<option value="OTOMATIS">Perairan · Otomatis</option>
+<option value="UTAMA">Perairan utama</option>
+<option value="SEMUA">Semua perairan</option>
+<option value="HIDE">Sembunyikan perairan</option>
+</select>
+</div>
+<div class="gs-alert" id="gs-alert">Memuat peta...</div>
+<div class="gs-legend">
+<div class="gs-legend-title">Legenda fasilitas</div>
+<div>
+<span class="gs-dot" style="background:#e67e22">
+</span>Darat non-OSM</div>
+<div>
+<span class="gs-dot" style="background:#1688dc">
+</span>Pelabuhan</div>
+<div>
+<span class="gs-dot" style="background:#8b5cf6">
+</span>Bandara</div>
+<div>
+<span class="gs-dot" style="background:#159b68">
+</span>Stasiun kereta api</div>
+<div>
+<span class="gs-dot" style="background:#f59e0b">
+</span>Kandidat terminal OSM</div>
+<div>
+<span class="gs-dot" style="background:#94a3b8">
+</span>Objek OSM lainnya</div>
+<div>
+<span class="gs-dot" style="background:#dc2626">
+</span>Perlu pemeriksaan</div>
+<div style="color:#d18a3a">┄ Akses fasilitas pilihan</div>
+<div style="color:#17466c">━ Relasi antarfasilitas indikatif</div>
+<small>Garis bukan jalur transportasi aktual. Label geografis bersifat referensi.</small>
+</div>
+<div class="gs-zoom">
+<button type="button" id="gs-in" aria-label="Perbesar">+</button>
+<button type="button" id="gs-out" aria-label="Perkecil">−</button>
+<button type="button" id="gs-home" aria-label="Atur ulang">⟲</button>
+</div>
+</div>
+</div>
+</div><script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="{{ asset('js/peta-cluster.js') }}"></script>
+<script>
+    (() => {
+
+    'use strict';
+
+    const managed=@json($fasilitasDatabase),pengajuan=@json($pengajuanPeta),requestedKab=@json(request()->query('kab')),requestedModa=@json(request()->query('moda'));
+
+    const sources={'akses-fasilitas':@json(route('peta.geospasial.data',['layer'=>'akses-fasilitas']))},all={},labels={'akses-fasilitas':'Akses fasilitas terdekat'},colors={1:'#e67e22',2:'#1688dc',3:'#8b5cf6',4:'#159b68'},modeNames={1:'Darat',2:'Laut',3:'Udara',4:'Kereta Api'},kind={1:'Terminal / Fasilitas Darat',2:'Pelabuhan',3:'Bandar Udara',4:'Stasiun Kereta Api'};
+
+    const el=id=>document.getElementById(id),esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cities=[['Jakarta',106.8456,-6.2088,1],['Banda Aceh',95.3238,5.5483,0],['Medan',98.6722,3.5952,1],['Padang',100.3543,-.9471,0],['Pekanbaru',101.4478,.5071,0],['Palembang',104.7566,-2.9761,0],['Bandar Lampung',105.2667,-5.4292,0],['Bandung',107.6191,-6.9175,1],['Semarang',110.4203,-6.9667,0],['Yogyakarta',110.3695,-7.7956,0],['Surabaya',112.7521,-7.2575,1],['Denpasar',115.2126,-8.6705,0],['Pontianak',109.3414,-.0263,0],['Banjarmasin',114.5908,-3.3186,0],['Balikpapan',116.8312,-1.2379,0],['Makassar',119.4327,-5.1477,1],['Manado',124.8421,1.4748,0],['Palu',119.8707,-.8917,0],['Kendari',122.5149,-3.9985,0],['Ambon',128.1814,-3.6954,0],['Jayapura',140.7181,-2.5337,0],['Kupang',123.607,-10.1772,0]].map(([name,lon,lat,major])=>({name,lon,lat,major:!!major}));
+const waters=[['Samudra Hindia',103,-12.5,1],['Samudra Pasifik',138,4.4,1],['Laut Jawa',112,-5.2,1],['Laut Banda',127,-5.3,1],['Laut Sulawesi',123,3.2,1],['Laut Arafura',135,-8.3,1],['Laut Flores',120,-7.5,0],['Laut Seram',130,-2.5,0],['Laut Halmahera',129.2,1.2,0],['Laut Natuna',108.5,4.2,0],['Laut Timor',125.5,-11.3,0],['Selat Malaka',99,4.4,0],['Selat Sunda',105.7,-5.9,0],['Selat Karimata',108,-2.4,0],['Selat Makassar',118.4,-2.1,0],['Selat Lombok',115.7,-8.5,0],['Selat Bali',114.45,-8.2,0],['Selat Alas',116.8,-8.6,0],['Selat Ombai',125,-8.7,0]].map(([name,lon,lat,major])=>({name,lon,lat,major:!!major}));
+const mercatorToLonLat=([x,y])=>[x*180/20037508.342789244,(2*Math.atan(Math.exp(y*Math.PI/20037508.342789244))-Math.PI/2)*180/Math.PI];
+function convertGeometry(g){if(!g)return g;const convert=(v,depth)=>depth===0?mercatorToLonLat(v):v.map(item=>convert(item,depth-1));const depth={Point:0,MultiPoint:1,LineString:1,MultiLineString:2,Polygon:2,MultiPolygon:3}[g.type];return depth===undefined?g:{...g,coordinates:convert(g.coordinates,depth)};}
+const svg=d3.select('#gs-map'),root=svg.append('g'),land=root.append('g'),relLayer=root.append('g'),connections=root.append('g'),recommendationLayer=root.append('g'),dots=root.append('g'),routeDots=root.append('g'),waterLayer=root.append('g'),cityLayer=root.append('g'),projection=d3.geoMercator(),path=d3.geoPath(projection);
+let currentZoom=1,currentT=d3.zoomIdentity,currentItems=[],raf=0;const zoom=d3.zoom().scaleExtent([1,16]).on('zoom',event=>{currentZoom=event.transform.k;currentT=event.transform;root.attr('transform',event.transform);if(!raf)raf=requestAnimationFrame(()=>{raf=0;drawDots();drawLabels();routeDots.selectAll('circle').attr('r',7/currentZoom);});});svg.call(zoom);
+let base=null,segmentsRel=null,selectedPoint=null;
+const rad=Math.PI/180,haversine=(a,b)=>{const dl=(Number(b.lat)-Number(a.lat))*rad,doLon=(Number(b.lon)-Number(a.lon))*rad,h=Math.sin(dl/2)**2+Math.cos(Number(a.lat)*rad)*Math.cos(Number(b.lat)*rad)*Math.sin(doLon/2)**2;return 6371.0088*2*Math.asin(Math.min(1,Math.sqrt(h)));};
+const formatKm=n=>new Intl.NumberFormat('id-ID',{maximumFractionDigits:1}).format(n)+' km',coord=p=>projection([Number(p.lon),Number(p.lat)]);
+const rawPoints=managed.map(f=>({...f,id:'db-'+f.id,lat:Number(f.lat),lon:Number(f.lon),id_moda:Number(f.id_moda),is_osm:f.is_osm===true||(f.is_osm==null&&f.sumber==='OpenStreetMap via Overpass Turbo'),jenis_fasilitas_osm:f.jenis_fasilitas_osm||null,status_pencocokan:f.status_pencocokan||null,perlu_verifikasi:f.perlu_verifikasi===true,layak_rekomendasi:f.layak_rekomendasi!==false})).map(f=>({...f,perlu_verifikasi:f.is_osm||f.perlu_verifikasi,layak_rekomendasi:!f.is_osm&&f.layak_rekomendasi})).filter(f=>Number.isFinite(f.lat)&&Number.isFinite(f.lon)&&Math.abs(f.lat)<=90&&Math.abs(f.lon)<=180);
+pengajuan.forEach((r,i)=>{const opt=document.createElement('option');opt.value=String(i);opt.textContent=`${r.laporan} | ${r.asal.nama} → ${r.tujuan.nama} (${modeNames[r.moda]})`;el('gs-pengajuan').appendChild(opt);});
+if(requestedKab){const index=pengajuan.findIndex(r=>String(r.id_asal)===String(requestedKab)&&(!requestedModa||String(r.moda)===String(requestedModa)));if(index>=0)el('gs-pengajuan').value=String(index);}
+function drawLabels(){const k=currentZoom,citySetting=el('gs-label-kota').value,waterSetting=el('gs-label-air').value,w=svg.node().clientWidth||900,h=svg.node().clientHeight||600;const show=(d,setting)=>setting==='SEMUA'||(setting==='UTAMA'&&d.major)||(setting==='OTOMATIS'&&(d.major||k>=2.3));
+// Ukuran huruf dan titik dibuat tetap di layar (dibagi k). Label yang bertumpuk disembunyikan; label utama diprioritaskan.
+const placed=[],hit=(b)=>placed.some(p=>b[0]<p[2]&&b[2]>p[0]&&b[1]<p[3]&&b[3]>p[1]),inside=(sx,sy)=>sx>-80&&sy>-30&&sx<w+80&&sy<h+30;
+const fitText=(d,size,centered)=>{const [x,y]=coord(d),sx=currentT.x+k*x,sy=currentT.y+k*y;if(!inside(sx,sy))return false;const tw=d.name.length*size*.6+(centered?0:8),box=centered?[sx-tw/2,sy-size,sx+tw/2,sy+4]:[sx+4,sy-size-6,sx+4+tw,sy+3];if(hit(box))return false;placed.push(box);return true;};
+const byRank=(a,b)=>(b.major-a.major);
+const citySize=d=>d.major?12:10,waterSize=d=>d.major?13:11;
+const visibleCities=citySetting==='HIDE'?[]:cities.filter(d=>show(d,citySetting)).sort(byRank).filter(d=>fitText(d,citySize(d),false));
+const visibleWaters=waterSetting==='HIDE'?[]:waters.filter(d=>show(d,waterSetting)).sort(byRank).filter(d=>fitText(d,waterSize(d),true));
+cityLayer.selectAll('circle').data(visibleCities,d=>d.name).join('circle').attr('class','gs-city-dot').attr('cx',d=>coord(d)[0]).attr('cy',d=>coord(d)[1]).attr('r',d=>(d.major?3:2.2)/k);
+cityLayer.selectAll('text').data(visibleCities,d=>d.name).join('text').attr('class','gs-city-label').attr('x',d=>coord(d)[0]+6/k).attr('y',d=>coord(d)[1]-5/k).style('font-size',d=>citySize(d)/k+'px').style('stroke-width',3/k+'px').style('font-weight',d=>d.major?'800':'600').text(d=>d.name);
+waterLayer.selectAll('text').data(visibleWaters,d=>d.name).join('text').attr('class','gs-water-label').attr('text-anchor','middle').attr('x',d=>coord(d)[0]).attr('y',d=>coord(d)[1]).style('font-size',d=>waterSize(d)/k+'px').style('stroke-width',3/k+'px').text(d=>d.name);}
+// ---- Titik fasilitas: dikelompokkan (cluster) pada zoom rendah, ukuran tetap di layar ----
+function titikFasilitas(f){return {fill:f.is_osm?(f.jenis_fasilitas_osm==='KANDIDAT_TERMINAL'?'#f59e0b':'#94a3b8'):(colors[f.id_moda]||'#64748b'),r:f.is_osm?3.5:(f.perlu_verifikasi?6:4),stroke:f.is_osm?'#475569':(f.perlu_verifikasi?'#dc2626':'#fff'),sw:f.is_osm?1.2:(f.perlu_verifikasi?2.5:1)};}
+function zoomKeKelompok(c){const w=svg.node().clientWidth||900,h=svg.node().clientHeight||600,[x0,y0,x1,y1]=PetaCluster.bounds(c.items,coord),k2=Math.min(16,Math.max(currentZoom*1.9,.8*Math.min(w/Math.max(x1-x0,1e-3),h/Math.max(y1-y0,1e-3))));
+if(k2<=currentZoom*1.05){el('gs-detail').innerHTML=`<h3>${c.items.length} fasilitas pada titik berdekatan</h3><ul style="margin:6px 0 0;padding-left:18px">${c.items.slice(0,40).map(f=>`<li>${esc(f.nama)}</li>`).join('')}</ul>${c.items.length>40?`<p>dan ${c.items.length-40} lainnya</p>`:''}`;return;}
+svg.transition().duration(450).call(zoom.transform,d3.zoomIdentity.translate(w/2-k2*(x0+x1)/2,h/2-k2*(y0+y1)/2).scale(k2));}
+function drawDots(){const k=currentZoom,w=svg.node().clientWidth||900,h=svg.node().clientHeight||600,g=PetaCluster.group(currentItems,coord,{k,tx:currentT.x,ty:currentT.y,w,h,cell:38,pinned:selectedPoint?selectedPoint.id:null});
+const markers=[...g.clusters.map(c=>({key:'c:'+c.key,type:'c',x:c.x,y:c.y,c})),...g.singles.map(f=>{const [x,y]=coord(f);return {key:'p:'+f.id,type:'p',x,y,f};})];
+const nodes=dots.selectAll('g.gs-mk').data(markers,d=>d.key).join(enter=>{const n=enter.append('g').attr('class','gs-mk');n.append('circle');n.append('text').attr('class','gs-cluster-n');n.append('title');return n;});
+nodes.attr('transform',d=>`translate(${d.x},${d.y}) scale(${1/k})`);
+nodes.select('circle').attr('class',d=>d.type==='c'?'gs-cluster':'gs-point').attr('r',d=>d.type==='c'?11+Math.min(6,Math.log2(d.c.items.length)*1.5):titikFasilitas(d.f).r).attr('fill',d=>d.type==='c'?null:titikFasilitas(d.f).fill).attr('stroke',d=>d.type==='c'?null:titikFasilitas(d.f).stroke).attr('stroke-width',d=>d.type==='c'?null:titikFasilitas(d.f).sw);
+nodes.select('text').text(d=>d.type==='c'?(d.c.items.length>999?'999+':d.c.items.length):'');
+nodes.select('title').text(d=>d.type==='c'?`${d.c.items.length} fasilitas. Klik untuk memperbesar`:d.f.nama);
+nodes.on('click',(event,d)=>{event.stopPropagation();if(d.type==='c'){zoomKeKelompok(d.c);return;}selectedPoint=d.f;showFacilityDetail(d.f);update();});}
+function gambarRekomendasi(){const pilihan=el('gs-pengajuan').value,r=pilihan===''?null:pengajuan[Number(pilihan)],fasilitas=r?rawPoints.filter(p=>p.id_moda===Number(r.moda)&&p.layak_rekomendasi):[];let pair=null;if(r&&fasilitas.length>=2){const origins=[...fasilitas].sort((a,b)=>haversine(r.asal,a)-haversine(r.asal,b)).slice(0,5),destinations=[...fasilitas].sort((a,b)=>haversine(r.tujuan,a)-haversine(r.tujuan,b)).slice(0,5),candidates=origins.flatMap(a=>destinations.filter(b=>b.id!==a.id).map(b=>({a,b,da:haversine(r.asal,a),db:haversine(b,r.tujuan)})));candidates.sort((a,b)=>(a.da+a.db)-(b.da+b.db));pair=candidates[0]||null;}
+const lines=pair?[{from:r.asal,to:pair.a,main:false},{from:pair.a,to:pair.b,main:true},{from:pair.b,to:r.tujuan,main:false}]:[];recommendationLayer.selectAll('line').data(lines).join('line').attr('class',d=>d.main?'gs-recommend gs-service':'gs-recommend').attr('x1',d=>coord(d.from)[0]).attr('y1',d=>coord(d.from)[1]).attr('x2',d=>coord(d.to)[0]).attr('y2',d=>coord(d.to)[1]);const ends=r?[{...r.asal,type:'Daerah asal'},{...r.tujuan,type:'Daerah tujuan'}]:[];if(pair)ends.push({...pair.a,type:'Fasilitas asal'},{...pair.b,type:'Fasilitas tujuan'});routeDots.selectAll('circle').data(ends,d=>d.type).join('circle').attr('class','gs-route-point').attr('r',7/currentZoom).attr('cx',d=>coord(d)[0]).attr('cy',d=>coord(d)[1]).attr('fill',d=>d.type.startsWith('Daerah')?'#c8372d':'#142b47');routeDots.selectAll('title').data(ends,d=>d.type).join('title').text(d=>d.type+': '+d.nama);
+if(!r)return;if(pair){el('gs-detail').innerHTML=`<h3>Rekomendasi Spasial Awal</h3><p><strong>${esc(r.laporan)}</strong> · ${esc(modeNames[r.moda])}</p><p>${esc(r.asal.nama)} → ${esc(r.tujuan.nama)}</p><dl><dt>Fasilitas asal</dt><dd>${esc(pair.a.nama)} (${formatKm(pair.da)} dari daerah asal)</dd><dt>Sumber fasilitas asal</dt><dd>${esc(pair.a.sumber)}</dd><dt>Fasilitas tujuan</dt><dd>${esc(pair.b.nama)} (${formatKm(pair.db)} dari daerah tujuan)</dd><dt>Sumber fasilitas tujuan</dt><dd>${esc(pair.b.sumber)}</dd><dt>Jarak antarfasilitas</dt><dd>${formatKm(haversine(pair.a,pair.b))} garis lurus</dd></dl><p style="font-size:11px;color:#71849a">Analisis berdasarkan jarak geografis. Belum mempertimbangkan trayek, jalan, jadwal, kapasitas, atau layanan aktual.</p>`;}else{el('gs-detail').innerHTML=`<h3>${esc(r.laporan)}</h3><p>${esc(r.asal.nama)} → ${esc(r.tujuan.nama)}</p><p>Belum tersedia dua fasilitas dengan moda ${esc(modeNames[r.moda])} yang memenuhi syarat rekomendasi.</p>`;}}
+const layerEnabled=key=>{const input=document.querySelector(`[data-layer="${key}"]`);return input?input.checked:false;},selectedModa=()=>el('gs-moda').value,selectedSumber=()=>el('gs-sumber').value,selectedJenisOsm=()=>el('gs-jenis-osm').value;
+function lolosFilterSumber(f){switch(selectedSumber()){case 'SEMUA':return true;case 'OSM':return f.is_osm;case 'KEMENHUB':return !f.is_osm&&String(f.sumber||'').startsWith('Kemenhub');case 'GEOJSON':return !f.is_osm&&f.sumber==='GeoJSON Tim Statistika (Sementara)';default:return false;}}
+function lolosFilterOsm(f){const jenis=selectedJenisOsm();return jenis==='SEMUA'||(f.is_osm&&f.jenis_fasilitas_osm===jenis);}
+function sinkronkanFilterOsm(){const nonOsm=['KEMENHUB','GEOJSON'].includes(selectedSumber());el('gs-jenis-osm').disabled=nonOsm;if(nonOsm)el('gs-jenis-osm').value='SEMUA';}
+const near=(a,b)=>Math.abs(a[0]-b[0])<.002&&Math.abs(a[1]-b[1])<.002,linked=(feature,p)=>{const g=feature.geometry;if(!g)return false;const parts=g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];return parts.some(segment=>segment.length&&(near(segment[0],[p.lon,p.lat])||near(segment[segment.length-1],[p.lon,p.lat])));};
+function showDetail(f,key){const rows=Object.entries(f.properties||{}).filter(([k,v])=>v!==null&&v!==''&&!['fid','NO','no'].includes(k));el('gs-detail').innerHTML=`<h3>${esc(labels[key])}</h3><dl>${rows.map(([k,v])=>`<dt>${esc(k.replace(/_/g,' '))}</dt><dd>${esc(typeof v==='object'?JSON.stringify(v):v)}</dd>`).join('')}</dl>`;}
+function showFacilityDetail(f){let warning='';if(f.is_osm){warning=`<dt>Status verifikasi</dt><dd class="gs-warning">${esc(f.status_verifikasi||'BELUM_DIVERIFIKASI')}</dd><dt>Jenis fasilitas OSM</dt><dd>${esc((f.jenis_fasilitas_osm||'BELUM_DIKLASIFIKASIKAN').replaceAll('_',' '))}</dd><dt>Status pencocokan wilayah</dt><dd>${esc(f.status_pencocokan||'Belum diketahui')}</dd><dd style="font-size:11px;color:#71849a;margin-top:9px">Data OSM belum membuktikan status terminal resmi maupun operasionalnya. Tidak digunakan untuk rekomendasi otomatis.</dd>`;}else if(f.perlu_verifikasi){warning='<dt>Status pemeriksaan</dt><dd class="gs-warning">Koordinat perlu diperiksa. Tidak digunakan untuk rekomendasi otomatis.</dd>';}
+const tipeTerminal=f.tipe_terminal?`<dt>Tipe terminal</dt><dd>${esc(f.tipe_terminal)}</dd>`:'';el('gs-detail').innerHTML=`<h3>${esc(f.nama)}</h3><dl><dt>Moda</dt><dd>${esc(kind[f.id_moda]||'Tidak diketahui')}</dd><dt>Kabupaten/Kota terkait</dt><dd>${esc(f.kab_kota||'Belum ditetapkan')}</dd><dt>Provinsi</dt><dd>${esc(f.provinsi||'Belum ditetapkan')}</dd><dt>Latitude</dt><dd>${esc(f.lat)}</dd><dt>Longitude</dt><dd>${esc(f.lon)}</dd><dt>Sumber data</dt><dd>${esc(f.sumber)}</dd>${tipeTerminal}${warning}<dt>Garis akses GeoJSON terkait</dt><dd>${(all['akses-fasilitas']?.features||[]).filter(g=>linked(g,f)).length} garis (perlu validasi)</dd></dl>`;}
+function update(){const totals=[];['akses-fasilitas'].forEach(key=>{const items=(all[key]?.features||[]).filter(()=>layerEnabled(key));totals.push(`${items.length} ${labels[key].toLowerCase()}`);connections.selectAll(`path[data-key="${key}"]`).data(items).join('path').attr('data-key',key).attr('class',f=>`gs-connection gs-facility-link${selectedPoint&&linked(f,selectedPoint)?' gs-highlight':''}`).attr('d',path).on('click',(event,f)=>{event.stopPropagation();showDetail(f,key);});});
+const items=rawPoints.filter(f=>layerEnabled('fasilitas')&&(!selectedModa()||String(f.id_moda)===selectedModa())&&lolosFilterSumber(f)&&lolosFilterOsm(f));totals.push(`${items.length} titik fasilitas`,`${items.filter(f=>f.is_osm).length} OSM`,`${items.filter(f=>f.is_osm&&f.jenis_fasilitas_osm==='KANDIDAT_TERMINAL').length} kandidat terminal OSM`);
+currentItems=items;drawDots();
+relLayer.selectAll('path').data(el('gs-show-rail').checked?(segmentsRel?.features||[]):[]).join('path').attr('class','gs-rail').attr('d',path);gambarRekomendasi();if(selectedPoint)showFacilityDetail(selectedPoint);el('gs-summary').textContent=totals.join(' · ');}
+function render(){if(!base)return;const width=svg.node().clientWidth||900,height=svg.node().clientHeight||600;svg.attr('viewBox',`0 0 ${width} ${height}`);projection.fitExtent([[24,24],[width-24,height-24]],base);land.selectAll('path').data(base.features).join('path').attr('class','gs-land').attr('d',path);update();drawLabels();}
+Object.keys(sources).forEach(key=>document.querySelector(`[data-layer="${key}"]`).addEventListener('change',update));document.querySelector('[data-layer="fasilitas"]').addEventListener('change',update);el('gs-moda').addEventListener('change',update);el('gs-sumber').addEventListener('change',()=>{sinkronkanFilterOsm();update();});el('gs-jenis-osm').addEventListener('change',()=>{if(selectedJenisOsm()!=='SEMUA'&&selectedSumber()==='SEMUA')el('gs-sumber').value='OSM';update();});el('gs-pengajuan').addEventListener('change',()=>{selectedPoint=null;const selected=el('gs-pengajuan').value;if(selected!=='')el('gs-moda').value=String(pengajuan[Number(selected)].moda);update();});el('gs-show-rail').addEventListener('change',update);el('gs-label-kota').addEventListener('change',drawLabels);el('gs-label-air').addEventListener('change',drawLabels);el('gs-in').addEventListener('click',()=>svg.transition().call(zoom.scaleBy,1.5));el('gs-out').addEventListener('click',()=>svg.transition().call(zoom.scaleBy,1/1.5));el('gs-home').addEventListener('click',()=>svg.transition().call(zoom.transform,d3.zoomIdentity));sinkronkanFilterOsm();
+Promise.all([fetch(@json(asset('data/indonesia-provinsi.json'))).then(r=>{if(!r.ok)throw Error('Batas provinsi tidak tersedia');return r.json();}),fetch(@json(route('peta.geospasial.data',['layer'=>'jaringan-rel']))).then(r=>r.ok?r.json():null).then(data=>{segmentsRel=data;}).catch(()=>{segmentsRel=null;}),...Object.entries(sources).map(async([key,url])=>{try{const res=await fetch(url);if(!res.ok){all[key]={type:'FeatureCollection',features:[]};return;}const data=await res.json();all[key]={...data,features:(data.features||[]).map(f=>({...f,geometry:convertGeometry(f.geometry)}))};}catch(error){all[key]={type:'FeatureCollection',features:[]};}})]).then(([geo])=>{base=geo;if(['1','2','3','4'].includes(String(requestedModa)))el('gs-moda').value=String(requestedModa);if(requestedKab&&el('gs-pengajuan').value===''){const matches=rawPoints.filter(p=>String(p.id_kab_kota)===String(requestedKab)&&(!requestedModa||String(p.id_moda)===String(requestedModa)));el('gs-detail').innerHTML=matches.length?`<h3>Fasilitas Terkait Pengajuan</h3><p>${matches.map(p=>esc(p.nama)).join(', ')}</p><p>Wilayah dan moda sesuai referensi fasilitas, belum tentu memiliki layanan untuk rute tersebut.</p>`:'<h3>Fasilitas Terkait Pengajuan</h3><p>Belum ada fasilitas yang terhubung langsung dengan wilayah dan moda pengajuan ini.</p>';}el('gs-alert').hidden=true;render();if(typeof ResizeObserver!=='undefined')new ResizeObserver(render).observe(svg.node());}).catch(error=>{el('gs-summary').textContent='Data belum dapat dimuat';el('gs-alert').textContent=error.message;});
+})();
+</script>
+@endsection
+
+
+
+

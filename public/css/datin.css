@@ -288,11 +288,20 @@ a.pg:hover{border-color:var(--teal-line);color:var(--teal)}
 /* ===== Input Data: dropdown bertingkat & saran otomatis ===== */
 select:disabled{background-color:#f8fafc;color:#94a3b8;cursor:not-allowed}
 .ac{position:relative}
+<<<<<<< HEAD
 .ac-list{position:absolute;z-index:30;left:0;right:0;top:100%;margin:4px 0 0;padding:6px;list-style:none;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,.14);max-height:280px;overflow:auto}
 .ac-list[hidden]{display:none}
 .ac-list li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:14.5px}
 .ac-list li small{color:var(--muted);font-size:12.5px;white-space:nowrap}
 .ac-list li:hover,.ac-list li[aria-selected="true"]{background:#e6f6f3}
+=======
+.field-suggest{position:relative}
+.ac-list,.suggest{position:absolute;z-index:30;left:0;right:0;top:100%;margin:4px 0 0;padding:6px;list-style:none;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,.14);max-height:280px;overflow:auto}
+.ac-list[hidden],.suggest[hidden]{display:none}
+.ac-list li,.suggest li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:14.5px}
+.ac-list li small,.suggest li small{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.ac-list li:hover,.ac-list li[aria-selected="true"],.suggest li:hover,.suggest li[aria-selected="true"]{background:#e6f6f3}
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 .hint.is-warn{color:#b45309}
 
 /* ===== Manajemen user (Super Admin) ===== */
@@ -802,3 +811,54 @@ a.who:hover strong{text-decoration:underline}
 .dlg .btn-danger:focus-visible{outline-color:rgba(220,38,38,.35)}
 @media (max-width:480px){ .dlg{padding:22px 20px 18px} .dlg-aksi{flex-direction:column-reverse} .dlg-aksi .btn{width:100%} }
 @media (prefers-reduced-motion:reduce){ .dlg-backdrop,.dlg{transition:none} }
+<<<<<<< HEAD
+=======
+
+.nomor-lap{display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted,#64748b)}
+.doc-links{display:flex;flex-direction:column;gap:6px}
+.doc-links .acts{align-items:center}
+.doc-links small{color:var(--muted,#64748b)}
+.table tr.row-aktif td{background:#f0fdfa}
+
+/* ---- Master sektor & komoditas (Super Admin) ---- */
+.ms-grid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:20px;align-items:start}
+.ms-side,.ms-main{margin:0;padding:20px 22px}
+.ms-side{position:sticky;top:16px}
+.ms-side h2{margin:0 0 12px;font-size:16px}
+.ms-list{list-style:none;margin:0;padding:0;max-height:55vh;overflow:auto}
+.ms-list a{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;color:#334155;text-decoration:none;font-size:14.5px}
+.ms-list a:hover{background:#f1f5f9}
+.ms-list a.aktif{background:var(--teal-tint,#ccfbf1);color:var(--teal,#0f766e);font-weight:600}
+.ms-list b{flex:none;min-width:30px;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#475569;font-size:12px;text-align:center}
+.ms-list a.aktif b{background:#fff;color:var(--teal,#0f766e)}
+.ms-tambah{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.ms-tambah summary,.ms-ubah summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--teal,#0f766e)}
+.ms-tambah form{margin-top:12px}
+.ms-tambah .field{margin-bottom:12px}
+.ms-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.ms-head h2{margin:0 0 2px;font-size:18px}
+.ms-head p{margin:0}
+.ms-cari{display:flex;gap:8px;align-items:center}
+.ms-cari input[type=search]{width:220px;height:40px}
+.ms-tools{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.ms-tambah-k{display:flex;gap:8px;flex:1 1 320px}
+.ms-tambah-k input{flex:1;min-width:0;height:40px}
+.ms-ubah{flex:0 0 auto;text-align:right}
+.ms-ubah-isi{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;text-align:left}
+.ms-ubah-isi form{display:flex;gap:8px;align-items:center}
+.ms-ubah-isi input{height:38px}
+.ms-ubah-isi input.kecil{width:80px}
+.ms-hint{margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#f1f5f9;color:#475569;font-size:14px}
+.ms-table td{padding-top:8px;padding-bottom:8px}
+.baris-form{display:flex;gap:8px;align-items:center}
+.baris-form input{flex:1 1 auto;min-width:0;max-width:340px;height:38px}
+.ms-table .btn{padding-top:7px;padding-bottom:7px}
+.btn-hapus{color:#b91c1c;border-color:#fca5a5}
+.btn-hapus:hover{background:#fef2f2}
+.ms-pager{margin-top:14px;justify-content:flex-end}
+@media (max-width:900px){
+  .ms-grid{grid-template-columns:1fr}
+  .ms-side{position:static}
+  .ms-list{max-height:220px}
+}
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54

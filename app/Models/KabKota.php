@@ -37,7 +37,10 @@ class KabKota extends Model
             if ($pemda->id_user === null || (int) $pemda->id_user !== (int) $user->id_user) {
                 return 'dikelola akun lain';
             }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
         foreach ($this->dataPemda as $pemda) {
             if ($pemda->id_user !== null && (int) $pemda->id_user !== (int) $user->id_user) {

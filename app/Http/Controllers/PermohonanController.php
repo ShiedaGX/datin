@@ -1,4 +1,8 @@
 <?php
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 namespace App\Http\Controllers;
 
 use App\Models\DokumenPengajuan;
@@ -8,6 +12,10 @@ use App\Models\RuteSubsidi;
 use App\Models\VerifikasiPengajuan;
 use App\Support\Paginasi;
 use App\Support\Permohonan;
+<<<<<<< HEAD
+=======
+use App\Support\Sektor;
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 use App\Support\StatusPengajuan;
 use App\Support\Tanggal;
 use App\Support\XlsxExporter;
@@ -18,15 +26,19 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
+<<<<<<< HEAD
 /**
  * Halaman Permohonan untuk user Moda. Setiap akun Moda hanya melihat laporan yang dipilih
  * Pemda dengan moda yang sama seperti cakupan moda akun (users.id_moda = rute_subsidi.id_moda).
  */
+=======
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 class PermohonanController extends Controller
 {
     private const PER_HALAMAN = [10, 25, 50];
 
     public const CHECKLIST = [
+<<<<<<< HEAD
         'dokumen' => ['Kelengkapan dokumen', 'Seluruh surat wajib tersedia, terbaca, ditandatangani, dan memiliki lampiran pendukung.'],
         'data'    => ['Konsistensi data', 'Identitas instansi, nomor laporan, wilayah, serta data pada seluruh dokumen saling sesuai.'],
         'teknis'  => ['Kelayakan teknis', 'Rencana layanan, trayek, sarana, jadwal, dan proyeksi kebutuhan dinilai dapat dilaksanakan.'],
@@ -39,12 +51,57 @@ class PermohonanController extends Controller
         'tolak'  => ['status' => StatusPengajuan::DITOLAK, 'hasil' => 'Ditolak',      'pesan' => 'ditolak'],
     ];
 
+=======
+        'dokumen' => [
+            'Kelengkapan dokumen',
+            'Seluruh surat wajib tersedia, terbaca, ditandatangani, dan memiliki lampiran pendukung.'
+        ],
+        'data' => [
+            'Konsistensi data',
+            'Identitas instansi, nomor laporan, wilayah, serta data pada seluruh dokumen saling sesuai.'
+        ],
+        'teknis' => [
+            'Kelayakan teknis',
+            'Rencana layanan, trayek, sarana, jadwal, dan proyeksi kebutuhan dinilai dapat dilaksanakan.'
+        ],
+        'syarat' => [
+            'Kesesuaian persyaratan',
+            'Pengajuan memenuhi kriteria penerima subsidi transportasi dan ketentuan program yang berlaku.'
+        ],
+    ];
+
+    private const KEPUTUSAN = [
+        'setuju' => [
+            'status' => StatusPengajuan::V1,
+            'hasil' => 'Disetujui',
+            'pesan' => 'disetujui'
+        ],
+        'revisi' => [
+            'status' => StatusPengajuan::REVISI,
+            'hasil' => 'Perlu Revisi',
+            'pesan' => 'dikembalikan untuk direvisi'
+        ],
+        'tolak' => [
+            'status' => StatusPengajuan::DITOLAK,
+            'hasil' => 'Ditolak',
+            'pesan' => 'ditolak'
+        ],
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | DAFTAR PERMOHONAN MODA
+    |--------------------------------------------------------------------------
+    */
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public function index(Request $request)
     {
         $user = $request->user();
         $f = $this->filter($request);
 
         $dasar = Permohonan::untukModa($user);
+<<<<<<< HEAD
         $periode = (clone $dasar)->pluck('created_at')->filter()
             ->map(fn ($d) => $d->format('Y-m'))->unique()->sortDesc()->values();
 
@@ -55,11 +112,45 @@ class PermohonanController extends Controller
         $kartu->select('status_pengajuan', DB::raw('COUNT(*) AS n'))->groupBy('status_pengajuan')->get()
             ->each(function ($r) use (&$hitung) {
                 $grup = StatusPengajuan::grup($r->status_pengajuan);
+=======
+
+        $periode = (clone $dasar)
+            ->pluck('created_at')
+            ->filter()
+            ->map(fn ($d) => $d->format('Y-m'))
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $hitung = [
+            'menunggu' => 0,
+            'disetujui' => 0,
+            'revisi' => 0,
+            'ditolak' => 0
+        ];
+
+        $kartu = Permohonan::untukModa($user);
+
+        $this->terapkanPeriode($kartu, $f['periode']);
+
+        $kartu->select(
+            'status_pengajuan',
+            DB::raw('COUNT(*) AS n')
+        )
+            ->groupBy('status_pengajuan')
+            ->get()
+            ->each(function ($r) use (&$hitung) {
+                $grup = StatusPengajuan::grup(
+                    $r->status_pengajuan
+                );
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 if (isset($hitung[$grup])) {
                     $hitung[$grup] += (int) $r->n;
                 }
             });
 
+<<<<<<< HEAD
         $data = $this->query($user, $f)->paginate($f['per'])->withQueryString();
 
         $provinsi = Provinsi::whereIn(
@@ -97,10 +188,96 @@ class PermohonanController extends Controller
             'perOpsi'      => self::PER_HALAMAN,
             'chips'        => $chips,
             'halaman'      => Paginasi::nomor($data->currentPage(), $data->lastPage()),
+=======
+        $data = $this->query($user, $f)
+            ->paginate($f['per'])
+            ->withQueryString();
+
+        $provinsi = Provinsi::whereIn(
+            'id_provinsi',
+            KabKota::select('id_provinsi')
+                ->whereIn(
+                    'id_kab_kota',
+                    RuteSubsidi::select('id_kab_kota_asal')
+                        ->where('id_moda', $user->id_moda ?? 0)
+                )
+        )
+            ->orderBy('nama_provinsi')
+            ->get(['id_provinsi', 'nama_provinsi']);
+
+        $tanpa = fn (array $kunci) => route(
+            'permohonan.index',
+            array_filter(
+                Arr::except(
+                    $request->query(),
+                    array_merge($kunci, ['page'])
+                ),
+                fn ($v) => $v !== null && $v !== ''
+            )
+        );
+
+        $chips = [];
+
+        if ($f['periode']) {
+            $chips[] = [
+                'label' => Tanggal::bulanTahun($f['periode']),
+                'url' => $tanpa(['periode'])
+            ];
+        }
+
+        if ($f['provinsi']) {
+            $chips[] = [
+                'label' => $provinsi
+                    ->firstWhere('id_provinsi', $f['provinsi'])
+                    ->nama_provinsi ?? 'Provinsi',
+                'url' => $tanpa(['provinsi'])
+            ];
+        }
+
+        if ($f['status']) {
+            $chips[] = [
+                'label' => StatusPengajuan::LABEL_GRUP[$f['status']],
+                'url' => $tanpa(['status'])
+            ];
+        }
+
+        if ($f['q'] !== '') {
+            $chips[] = [
+                'label' => '"' . $f['q'] . '"',
+                'url' => $tanpa(['q'])
+            ];
+        }
+
+        return view('permohonan.index', [
+            'data' => $data,
+            'filter' => $f,
+            'kpi' => ['total' => array_sum($hitung)] + $hitung,
+
+            'labelPeriode' => $f['periode']
+                ? 'Periode ' . Tanggal::bulanTahun($f['periode'])
+                : 'Semua periode',
+
+            'provinsi' => $provinsi,
+            'statusOpsi' => StatusPengajuan::LABEL_GRUP,
+
+            'periodeOpsi' => $periode->mapWithKeys(
+                fn ($ym) => [$ym => Tanggal::bulanTahun($ym)]
+            ),
+
+            'perOpsi' => self::PER_HALAMAN,
+            'chips' => $chips,
+
+            'halaman' => Paginasi::nomor(
+                $data->currentPage(),
+                $data->lastPage()
+            ),
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             'punyaCakupan' => $user->id_moda !== null,
         ]);
     }
 
+<<<<<<< HEAD
     public function export(Request $request)
     {
         if (! class_exists(\ZipArchive::class)) {
@@ -109,44 +286,149 @@ class PermohonanController extends Controller
 
         $rows = [];
         foreach ($this->query($request->user(), $this->filter($request))->get() as $i => $r) {
+=======
+    /*
+    |--------------------------------------------------------------------------
+    | EXPORT DAFTAR PERMOHONAN
+    |--------------------------------------------------------------------------
+    */
+
+    public function export(Request $request)
+    {
+        if (!class_exists(\ZipArchive::class)) {
+            return back()->with(
+                'error',
+                'Ekspor Excel membutuhkan ekstensi PHP "zip". Aktifkan extension=zip di php.ini lalu restart server.'
+            );
+        }
+
+        $rows = [];
+
+        $data = $this->query(
+            $request->user(),
+            $this->filter($request)
+        )
+            ->with([
+                'tujuan',
+                'detailKomoditasTujuan'
+            ])
+            ->get();
+
+        foreach ($data as $i => $r) {
+            $rincian = $this->rincianTujuan($r);
+
+            $komoditas = collect($rincian['baris'])
+                ->filter(fn ($b) => $b['komoditas'] !== null)
+                ->map(function ($b) {
+                    $teks = $b['tujuan']
+                        . ': '
+                        . $b['komoditas'];
+
+                    if ($b['jumlah'] !== null) {
+                        $teks .= ' - '
+                            . $this->formatJumlah($b['jumlah'])
+                            . ' '
+                            . ($b['satuan'] ?? '(satuan belum diketahui)');
+                    }
+
+                    return $teks;
+                })
+                ->implode('; ');
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             $rows[] = [
                 $i + 1,
                 $r->nomor_laporan,
                 $r->kabKotaAsal->nama_lengkap,
                 $r->kabKotaAsal->provinsi->nama_provinsi,
                 $r->kabKotaAsal->wilayah->nama_wilayah,
+<<<<<<< HEAD
                 trim($r->tanggal_lengkap . ' ' . $r->jam_pengajuan),
                 $r->label_status_moda,
                 // data yang diinput Pemda
+=======
+
+                trim(
+                    $r->tanggal_lengkap . ' ' . $r->jam_pengajuan
+                ),
+
+                $r->label_status_moda,
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 $r->klasifikasi_label,
                 $r->keterangan_pemda,
                 $r->potensi_ringkas,
                 implode(', ', $r->sektor_terdeteksi),
                 implode(', ', $r->tujuan_daftar),
                 $r->jumlah_tujuan,
+<<<<<<< HEAD
+=======
+                $komoditas ?: '-',
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             ];
         }
 
         $path = XlsxExporter::buat(
+<<<<<<< HEAD
             ['No', 'Nomor Laporan', 'Pemda', 'Provinsi', 'Wilayah', 'Tanggal Pengajuan', 'Status',
              'Klasifikasi Wilayah', 'Keterangan Daerah', 'Potensi Unggulan Daerah', 'Sektor Potensi', 'Kebutuhan Konektivitas / Rute Tujuan', 'Jumlah Tujuan'],
             $rows,
             'Permohonan',
             [6, 18, 34, 24, 18, 30, 24, 22, 40, 60, 36, 50, 14]
+=======
+            [
+                'No',
+                'Nomor Laporan',
+                'Pemda',
+                'Provinsi',
+                'Wilayah',
+                'Tanggal Pengajuan',
+                'Status',
+                'Klasifikasi Wilayah',
+                'Keterangan Daerah',
+                'Potensi Unggulan Daerah',
+                'Sektor Potensi',
+                'Kebutuhan Konektivitas / Rute Tujuan',
+                'Jumlah Tujuan',
+                'Rincian Komoditas Tujuan'
+            ],
+            $rows,
+            'Permohonan',
+            [
+                6, 18, 34, 24, 18, 30, 24,
+                22, 40, 60, 36, 50, 14, 100
+            ]
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         );
 
         return response()->download(
             $path,
             'permohonan-' . now()->format('Ymd-His') . '.xlsx',
+<<<<<<< HEAD
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         )->deleteFileAfterSend(true);
     }
 
     /** Ekspor satu laporan (data yang diinput Pemda, dokumen, dan riwayat peninjauan) ke Excel. */
+=======
+            [
+                'Content-Type' =>
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ]
+        )->deleteFileAfterSend(true);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | EXPORT DETAIL PERMOHONAN
+    |--------------------------------------------------------------------------
+    */
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     public function exportDetail(Request $request, RuteSubsidi $rute)
     {
         $this->pastikanMilik($request->user(), $rute);
 
+<<<<<<< HEAD
         if (! class_exists(\ZipArchive::class)) {
             return back()->with('error', 'Ekspor Excel membutuhkan ekstensi PHP "zip". Aktifkan extension=zip di php.ini lalu restart server.');
         }
@@ -165,10 +447,57 @@ class PermohonanController extends Controller
             $tebal[] = count($baris);
             $baris[] = [$judul, ''];
         };
+=======
+        if (!class_exists(\ZipArchive::class)) {
+            return back()->with(
+                'error',
+                'Ekspor Excel membutuhkan ekstensi PHP "zip". Aktifkan extension=zip di php.ini lalu restart server.'
+            );
+        }
+
+        $rute->load([
+            'pemda.user',
+            'kabKotaAsal.provinsi',
+            'kabKotaAsal.wilayah',
+            'moda',
+            'dokumen',
+            'verifikasi.verifikator',
+            'tujuan',
+            'detailKomoditasTujuan'
+        ]);
+
+        $p = $rute->pemda;
+        $k = $rute->kabKotaAsal;
+        $pengaju = $p?->user;
+
+        $rincian = $this->rincianTujuan($rute);
+
+        $baris = [];
+        $tebal = [];
+
+        /*
+        | Menambahkan judul bagian.
+        */
+
+        $bagian = function (string $judul) use (&$baris, &$tebal) {
+            if ($baris) {
+                $baris[] = [];
+            }
+
+            $tebal[] = count($baris);
+            $baris[] = [$judul];
+        };
+
+        /*
+        | Menambahkan informasi berbentuk label dan nilai.
+        */
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         $isi = function (string $label, $nilai) use (&$baris) {
             $baris[] = [$label, $nilai];
         };
 
+<<<<<<< HEAD
         $bagian('LAPORAN');
         $isi('Nomor laporan', $rute->nomor_laporan);
         $isi('Status', $rute->label_status_moda);
@@ -209,10 +538,289 @@ class PermohonanController extends Controller
         }
 
         $path = XlsxExporter::buat(['Data', 'Isi'], $baris, 'Review Laporan', [38, 100], $tebal);
+=======
+        /*
+        | Menambahkan header tabel.
+        */
+
+        $headerTabel = function (array $kolom) use (&$baris, &$tebal) {
+            $tebal[] = count($baris);
+            $baris[] = $kolom;
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | INFORMASI LAPORAN
+        |--------------------------------------------------------------------------
+        */
+
+        $bagian('LAPORAN');
+
+        $isi('Nomor laporan', $rute->nomor_laporan);
+        $isi('Status', $rute->label_status_moda);
+
+        $isi(
+            'Tanggal pengajuan',
+            trim(
+                $rute->tanggal_lengkap . ' ' . $rute->jam_pengajuan
+            )
+        );
+
+        $isi(
+            'Moda transportasi',
+            $rute->moda->nama_moda ?? '-'
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | INFORMASI PEMOHON
+        |--------------------------------------------------------------------------
+        */
+
+        $bagian('PEMOHON');
+
+        $isi(
+            'Instansi',
+            $pengaju?->instansi
+                ?: ('Pemerintah Daerah ' . $k->nama_lengkap)
+        );
+
+        $isi('Nama pengaju', $pengaju?->full_name ?? '-');
+        $isi('Email pengaju', $pengaju?->email ?? '-');
+
+        /*
+        |--------------------------------------------------------------------------
+        | INFORMASI WILAYAH
+        |--------------------------------------------------------------------------
+        */
+
+        $bagian('WILAYAH');
+
+        $isi(
+            'Provinsi',
+            $k->provinsi->nama_provinsi ?? '-'
+        );
+
+        $isi(
+            'Kabupaten / Kota',
+            $k->nama_lengkap
+        );
+
+        $isi(
+            'Wilayah regional',
+            $k->wilayah->nama_wilayah ?? '-'
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATA PENGAJUAN PEMDA
+        |--------------------------------------------------------------------------
+        */
+
+        $bagian('DATA YANG DIINPUT PEMDA');
+
+        $isi(
+            'Klasifikasi wilayah',
+            $rute->klasifikasi_label
+        );
+
+        $isi(
+            'Keterangan daerah',
+            $rute->keterangan_pemda ?: '-'
+        );
+
+        $isi(
+            'Potensi unggulan daerah',
+            $rute->potensi_pemda ?: '-'
+        );
+
+        $isi(
+            'Sektor potensi',
+            implode(', ', $rute->sektor_terdeteksi) ?: '-'
+        );
+
+        $isi(
+            'Jumlah tujuan',
+            $rute->tujuan->isNotEmpty()
+                ? $rute->tujuan->count()
+                : ($rute->jumlah_tujuan ?? '-')
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | RINCIAN KOMODITAS PER TUJUAN
+        |--------------------------------------------------------------------------
+        */
+
+        $bagian('RUTE TUJUAN DAN RINCIAN KOMODITAS');
+
+        $headerTabel([
+            'Kabupaten / Kota Tujuan',
+            'Komoditas',
+            'Sektor',
+            'Jumlah',
+            'Satuan'
+        ]);
+
+        if (!empty($rincian['baris'])) {
+            foreach ($rincian['baris'] as $b) {
+                $baris[] = [
+                    $b['tujuan'],
+                    $b['komoditas'] ?? '-',
+
+                    !empty($b['sektor'])
+                        ? implode(', ', $b['sektor'])
+                        : '-',
+
+                    $b['jumlah'],
+
+                    $b['komoditas'] !== null
+                        ? ($b['satuan'] ?? 'Satuan belum diketahui')
+                        : '-',
+                ];
+            }
+        } else {
+            $isi(
+                'Kebutuhan konektivitas / rute tujuan',
+                $rute->kebutuhan_konektivitas ?: '-'
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | RINGKASAN TOTAL KOMODITAS
+        |--------------------------------------------------------------------------
+        |
+        | Total dipisahkan berdasarkan nama komoditas dan satuan.
+        | Data dengan satuan yang belum diketahui tidak dijumlahkan.
+        |
+        */
+
+        $bagian('RINGKASAN TOTAL KOMODITAS');
+
+        $headerTabel([
+            'Komoditas',
+            'Satuan',
+            'Total Jumlah',
+            'Jumlah Tujuan',
+            'Jumlah Rincian'
+        ]);
+
+        if (!empty($rincian['ringkasan'])) {
+            foreach ($rincian['ringkasan'] as $item) {
+                $baris[] = [
+                    $item['komoditas'],
+                    $item['satuan'],
+                    $item['total'],
+                    $item['jumlah_tujuan'],
+                    $item['jumlah_rincian']
+                ];
+            }
+        } else {
+            $baris[] = [
+                'Belum ada komoditas dengan jumlah dan satuan yang lengkap.'
+            ];
+        }
+
+        $baris[] = [];
+
+        $baris[] = [
+            'Catatan',
+            'Total merupakan penjumlahan rincian komoditas per tujuan dalam laporan ini, bukan estimasi produksi unik daerah.'
+        ];
+
+        if ($rincian['jumlah_tidak_lengkap'] > 0) {
+            $baris[] = [
+                'Data tidak lengkap',
+                $rincian['jumlah_tidak_lengkap']
+                    . ' rincian komoditas tidak dimasukkan ke total karena jumlah atau satuannya belum diketahui.'
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | DOKUMEN SURAT
+        |--------------------------------------------------------------------------
+        */
+
+        $bagian('DOKUMEN SURAT');
+
+        foreach ($rute->dokumen as $d) {
+            $isi(
+                $d->jenis_dokumen,
+
+                ($d->nomor_surat
+                    ? 'No. ' . $d->nomor_surat . ' | '
+                    : '')
+
+                . $d->nama_file
+                . ' ('
+                . ($this->ukuran($d->path_file)
+                    ?? 'berkas tidak ditemukan')
+                . ')'
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | RIWAYAT PENINJAUAN
+        |--------------------------------------------------------------------------
+        */
+
+        $bagian('RIWAYAT PENINJAUAN');
+
+        $isi(
+            'Laporan diajukan',
+            trim(
+                ($pengaju?->full_name ?? '-')
+                . ', '
+                . $rute->tanggal_lengkap
+                . ' '
+                . $rute->jam_pengajuan
+            )
+        );
+
+        foreach (
+            $rute->verifikasi->sortBy('id_verifikasi_pengajuan')
+            as $v
+        ) {
+            $isi(
+                $v->tahap_verifikasi
+                    . ': '
+                    . $v->status_verifikasi,
+
+                'Oleh '
+                    . ($v->verifikator->full_name ?? '-')
+                    . ', '
+                    . Tanggal::panjang($v->tanggal_verifikasi)
+                    . ' '
+                    . Tanggal::jam($v->tanggal_verifikasi)
+
+                    . ($v->catatan_verifikasi
+                        ? ' | Catatan: ' . $v->catatan_verifikasi
+                        : '')
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | GENERATE FILE EXCEL
+        |--------------------------------------------------------------------------
+        */
+
+        $path = XlsxExporter::buat(
+            ['Data', 'Isi', '', '', ''],
+            $baris,
+            'Review Laporan',
+            [40, 85, 36, 22, 30],
+            $tebal
+        );
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
 
         return response()->download(
             $path,
             $rute->nomor_laporan . '.xlsx',
+<<<<<<< HEAD
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         )->deleteFileAfterSend(true);
     }
@@ -235,10 +843,66 @@ class PermohonanController extends Controller
             ]),
             'riwayat'   => $riwayat,
             'terakhir'  => $riwayat->last(),
+=======
+            [
+                'Content-Type' =>
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ]
+        )->deleteFileAfterSend(true);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HALAMAN REVIEW LAPORAN
+    |--------------------------------------------------------------------------
+    */
+
+    public function show(Request $request, RuteSubsidi $rute)
+    {
+        $this->pastikanMilik($request->user(), $rute);
+
+        $rute->load(
+            'pemda.user.role',
+            'kabKotaAsal.provinsi',
+            'kabKotaAsal.wilayah',
+            'moda',
+            'tujuan',
+            'detailKomoditasTujuan',
+            'dokumen',
+            'verifikasi.verifikator',
+            'rekomendasi'
+        );
+
+        $riwayat = $rute->verifikasi
+            ->sortBy('id_verifikasi_pengajuan')
+            ->values();
+
+        return view('permohonan.review', [
+            'rute' => $rute,
+            'pemda' => $rute->pemda,
+            'pengaju' => $rute->pemda->user,
+
+            'berkas' => $rute->dokumen->map(fn ($d) => [
+                'model' => $d,
+
+                'jenis' => strtoupper(
+                    pathinfo(
+                        $d->nama_file,
+                        PATHINFO_EXTENSION
+                    )
+                ),
+
+                'ukuran' => $this->ukuran($d->path_file),
+            ]),
+
+            'riwayat' => $riwayat,
+            'terakhir' => $riwayat->last(),
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
             'checklist' => self::CHECKLIST,
         ]);
     }
 
+<<<<<<< HEAD
     public function keputusan(Request $request, RuteSubsidi $rute)
     {
         $user = $request->user();
@@ -262,10 +926,83 @@ class PermohonanController extends Controller
         }
         if ($data['keputusan'] === 'setuju' && count(array_unique($data['periksa'] ?? [])) < count(self::CHECKLIST)) {
             return back()->withInput()->withErrors(['periksa' => 'Konfirmasi seluruh pemeriksaan pada checklist sebelum menyetujui laporan.']);
+=======
+    /*
+    |--------------------------------------------------------------------------
+    | KEPUTUSAN MODA
+    |--------------------------------------------------------------------------
+    */
+
+    public function keputusan(Request $request, RuteSubsidi $rute)
+    {
+        $user = $request->user();
+
+        $this->pastikanMilik($user, $rute);
+
+        $data = $request->validate([
+            'keputusan' => [
+                'required',
+                Rule::in(array_keys(self::KEPUTUSAN))
+            ],
+
+            'catatan' => [
+                'nullable',
+                'string',
+                'max:1000'
+            ],
+
+            'periksa' => [
+                'nullable',
+                'array'
+            ],
+
+            'periksa.*' => [
+                Rule::in(array_keys(self::CHECKLIST))
+            ],
+
+        ], [
+            'keputusan.required' => 'Pilih keputusan terlebih dahulu.',
+            'keputusan.in' => 'Keputusan tidak valid.',
+            'catatan.max' => 'Catatan maksimal :max karakter.',
+        ]);
+
+        $catatan = trim(
+            (string) ($data['catatan'] ?? '')
+        );
+
+        if (
+            in_array(
+                $data['keputusan'],
+                ['revisi', 'tolak'],
+                true
+            )
+            && $catatan === ''
+        ) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'catatan' =>
+                        'Catatan wajib diisi agar instansi pemohon mengetahui alasan keputusan ini.'
+                ]);
+        }
+
+        if (
+            $data['keputusan'] === 'setuju'
+            && count(array_unique($data['periksa'] ?? []))
+                < count(self::CHECKLIST)
+        ) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'periksa' =>
+                        'Konfirmasi seluruh pemeriksaan pada checklist sebelum menyetujui laporan.'
+                ]);
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
         }
 
         $putusan = self::KEPUTUSAN[$data['keputusan']];
 
+<<<<<<< HEAD
         DB::transaction(function () use ($rute, $user, $putusan, $catatan) {
             $baru = RuteSubsidi::where('id_rute_subsidi', $rute->id_rute_subsidi)->lockForUpdate()->firstOrFail();
 
@@ -281,10 +1018,54 @@ class PermohonanController extends Controller
                 'tahap_verifikasi'   => StatusPengajuan::TAHAP_MODA,
                 'status_verifikasi'  => $putusan['hasil'],
                 'catatan_verifikasi' => $catatan !== '' ? $catatan : null,
+=======
+        DB::transaction(function () use (
+            $rute,
+            $user,
+            $putusan,
+            $catatan
+        ) {
+            $baru = RuteSubsidi::where(
+                'id_rute_subsidi',
+                $rute->id_rute_subsidi
+            )
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Periksa ulang cakupan moda setelah baris dikunci.
+            $this->pastikanMilik($user, $baru);
+
+            if (
+                StatusPengajuan::grup(
+                    $baru->status_pengajuan
+                ) !== 'menunggu'
+            ) {
+                throw ValidationException::withMessages([
+                    'keputusan' =>
+                        'Laporan ini sudah ditinjau dan keputusannya tidak dapat diubah.'
+                ]);
+            }
+
+            $baru->update([
+                'status_pengajuan' => $putusan['status']
+            ]);
+
+            VerifikasiPengajuan::create([
+                'id_rute_subsidi' => $baru->id_rute_subsidi,
+                'id_user' => $user->id_user,
+                'tahap_verifikasi' => StatusPengajuan::TAHAP_MODA,
+                'status_verifikasi' => $putusan['hasil'],
+
+                'catatan_verifikasi' => $catatan !== ''
+                    ? $catatan
+                    : null,
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
                 'tanggal_verifikasi' => now(),
             ]);
         });
 
+<<<<<<< HEAD
         return redirect()->route('permohonan.index')
             ->with('success', 'Laporan ' . $rute->nomor_laporan . ' ' . $putusan['pesan'] . '.');
     }
@@ -309,11 +1090,312 @@ class PermohonanController extends Controller
         abort_unless($user->id_moda !== null && (int) $rute->id_moda === (int) $user->id_moda, 404);
     }
 
+=======
+        return redirect()
+            ->route('permohonan.index')
+            ->with(
+                'success',
+                'Laporan '
+                    . $rute->nomor_laporan
+                    . ' '
+                    . $putusan['pesan']
+                    . '.'
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PRATINJAU DAN UNDUH DOKUMEN
+    |--------------------------------------------------------------------------
+    */
+
+    public function dokumen(
+        Request $request,
+        RuteSubsidi $rute,
+        DokumenPengajuan $dokumen
+    ) {
+        $this->pastikanMilik($request->user(), $rute);
+
+        abort_unless(
+            (int) $dokumen->id_rute_subsidi
+                === (int) $rute->id_rute_subsidi,
+            404
+        );
+
+        abort_unless(
+            Storage::disk('local')->exists($dokumen->path_file),
+            404
+        );
+
+        return $request->boolean('unduh')
+            ? Storage::disk('local')->download(
+                $dokumen->path_file,
+                $dokumen->nama_file
+            )
+            : Storage::disk('local')->response(
+                $dokumen->path_file,
+                $dokumen->nama_file
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RINCIAN KOMODITAS PER TUJUAN
+    |--------------------------------------------------------------------------
+    |
+    | Prioritas:
+    | 1. Struktur baru rute_subsidi_tujuan_komoditas.
+    | 2. Pivot lama jika belum ada rincian baru untuk tujuan tersebut.
+    |
+    | Satuan data lama tidak diasumsikan sebagai Ton.
+    |
+    */
+
+    private function rincianTujuan(RuteSubsidi $rute): array
+    {
+        $rute->loadMissing([
+            'tujuan',
+            'detailKomoditasTujuan'
+        ]);
+
+        $komPerTujuan = $rute->detailKomoditasTujuan
+            ->groupBy('id_kab_kota_tujuan');
+
+        $baris = [];
+
+        foreach ($rute->tujuan as $tujuan) {
+            $idTujuan = $tujuan->id_kab_kota;
+
+            $namaTujuan = $tujuan->nama_lengkap
+                ?: $tujuan->nama_kab_kota;
+
+            $daftarKomoditas = $komPerTujuan->get(
+                $idTujuan,
+                collect()
+            );
+
+            /*
+            | Gunakan pivot lama hanya apabila belum ada
+            | detail komoditas baru untuk tujuan tersebut.
+            */
+
+            if ($daftarKomoditas->isEmpty()) {
+                $namaLama = trim(
+                    (string) ($tujuan->pivot->komoditas ?? '')
+                );
+
+                if ($namaLama !== '') {
+                    $daftarKomoditas = collect([
+                        (object) [
+                            'nama_komoditas' => $namaLama,
+                            'jumlah' => $tujuan->pivot->berat,
+                            'satuan_data' => null,
+                        ]
+                    ]);
+                }
+            }
+
+            /*
+            | Tetap tampilkan daerah tujuan meskipun belum
+            | memiliki rincian komoditas.
+            */
+
+            if ($daftarKomoditas->isEmpty()) {
+                $baris[] = [
+                    'id_tujuan' => $idTujuan,
+                    'tujuan' => $namaTujuan,
+                    'komoditas' => null,
+                    'sektor' => [],
+                    'jumlah' => null,
+                    'satuan' => null,
+                ];
+
+                continue;
+            }
+
+            foreach ($daftarKomoditas as $kom) {
+                $namaKomoditas = trim(
+                    (string) $kom->nama_komoditas
+                );
+
+                $satuan = trim(
+                    (string) ($kom->satuan_data ?? '')
+                );
+
+                $jumlah = $this->jumlahValid(
+                    $kom->jumlah
+                );
+
+                $sektor = $namaKomoditas !== ''
+                    ? Sektor::dariKomoditas($namaKomoditas)
+                    : [];
+
+                $baris[] = [
+                    'id_tujuan' => $idTujuan,
+                    'tujuan' => $namaTujuan,
+
+                    'komoditas' => $namaKomoditas !== ''
+                        ? $namaKomoditas
+                        : null,
+
+                    'sektor' => is_array($sektor)
+                        ? $sektor
+                        : ($sektor ? [$sektor] : []),
+
+                    'jumlah' => $jumlah,
+
+                    'satuan' => $satuan !== ''
+                        ? $satuan
+                        : null,
+                ];
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | HITUNG RINGKASAN KOMODITAS
+        |--------------------------------------------------------------------------
+        */
+
+        $kelompok = [];
+        $jumlahTidakLengkap = 0;
+
+        foreach ($baris as $b) {
+            if ($b['komoditas'] === null) {
+                continue;
+            }
+
+            if (
+                $b['jumlah'] === null
+                || $b['satuan'] === null
+            ) {
+                $jumlahTidakLengkap++;
+                continue;
+            }
+
+            $kunci = json_encode([
+                $this->normalisasi($b['komoditas']),
+                $this->normalisasi($b['satuan'])
+            ]);
+
+            if (!isset($kelompok[$kunci])) {
+                $kelompok[$kunci] = [
+                    'komoditas' => $b['komoditas'],
+                    'satuan' => $b['satuan'],
+                    'total' => 0,
+                    'tujuan' => [],
+                    'jumlah_rincian' => 0,
+                ];
+            }
+
+            $kelompok[$kunci]['total'] += $b['jumlah'];
+
+            $kelompok[$kunci]['tujuan'][
+                $b['id_tujuan']
+            ] = true;
+
+            $kelompok[$kunci]['jumlah_rincian']++;
+        }
+
+        $ringkasan = collect($kelompok)
+            ->map(function ($item) {
+                return [
+                    'komoditas' => $item['komoditas'],
+                    'satuan' => $item['satuan'],
+                    'total' => $item['total'],
+
+                    'jumlah_tujuan' => count(
+                        $item['tujuan']
+                    ),
+
+                    'jumlah_rincian' => $item['jumlah_rincian'],
+                ];
+            })
+            ->sortBy(
+                fn ($item) =>
+                    $this->normalisasi($item['komoditas'])
+                    . '|'
+                    . $this->normalisasi($item['satuan'])
+            )
+            ->values()
+            ->all();
+
+        return [
+            'baris' => $baris,
+            'ringkasan' => $ringkasan,
+            'jumlah_tidak_lengkap' => $jumlahTidakLengkap,
+        ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDASI DAN FORMAT JUMLAH
+    |--------------------------------------------------------------------------
+    */
+
+    private function jumlahValid($jumlah): ?float
+    {
+        if (
+            $jumlah === null
+            || trim((string) $jumlah) === ''
+            || !is_numeric($jumlah)
+        ) {
+            return null;
+        }
+
+        $nilai = (float) $jumlah;
+
+        return is_finite($nilai)
+            ? $nilai
+            : null;
+    }
+
+    private function formatJumlah($jumlah): string
+    {
+        return rtrim(
+            rtrim(
+                number_format((float) $jumlah, 2, ',', '.'),
+                '0'
+            ),
+            ','
+        );
+    }
+
+    private function normalisasi(string $nilai): string
+    {
+        return mb_strtolower(
+            preg_replace('/\s+/u', ' ', trim($nilai))
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PEMBATASAN AKSES MODA
+    |--------------------------------------------------------------------------
+    */
+
+    private function pastikanMilik($user, RuteSubsidi $rute): void
+    {
+        abort_unless(
+            $user->id_moda !== null
+            && (int) $rute->id_moda === (int) $user->id_moda,
+            404
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER PERMOHONAN
+    |--------------------------------------------------------------------------
+    */
+
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     private function filter(Request $r): array
     {
         $prov = (string) $r->query('provinsi', '');
         $status = (string) $r->query('status', '');
         $periode = (string) $r->query('periode', '');
+<<<<<<< HEAD
         $per = (int) $r->query('per', self::PER_HALAMAN[0]);
 
         return [
@@ -377,5 +1459,192 @@ class PermohonanController extends Controller
         return $byte >= 1048576
             ? number_format($byte / 1048576, 1, ',', '.') . ' MB'
             : number_format(max($byte, 1) / 1024, 0, ',', '.') . ' KB';
+=======
+
+        $per = (int) $r->query(
+            'per',
+            self::PER_HALAMAN[0]
+        );
+
+        return [
+            'q' => trim((string) $r->query('q', '')),
+
+            'provinsi' => ctype_digit($prov)
+                ? (int) $prov
+                : null,
+
+            'status' => array_key_exists(
+                $status,
+                StatusPengajuan::LABEL_GRUP
+            )
+                ? $status
+                : null,
+
+            'periode' => preg_match(
+                '/^\d{4}-(0[1-9]|1[0-2])$/',
+                $periode
+            )
+                ? $periode
+                : null,
+
+            'urut' => $r->query('urut') === 'terlama'
+                ? 'terlama'
+                : 'terbaru',
+
+            'per' => in_array(
+                $per,
+                self::PER_HALAMAN,
+                true
+            )
+                ? $per
+                : self::PER_HALAMAN[0],
+        ];
+    }
+
+    private function terapkanPeriode(
+        $query,
+        ?string $periode
+    ): void {
+        if ($periode) {
+            $query
+                ->whereYear(
+                    'created_at',
+                    (int) substr($periode, 0, 4)
+                )
+                ->whereMonth(
+                    'created_at',
+                    (int) substr($periode, 5, 2)
+                );
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | QUERY PERMOHONAN
+    |--------------------------------------------------------------------------
+    */
+
+    private function query($user, array $f)
+    {
+        $q = Permohonan::untukModa($user)->with(
+            'kabKotaAsal.provinsi',
+            'kabKotaAsal.wilayah',
+            'pemda.user'
+        );
+
+        if ($f['q'] !== '') {
+            $like = '%'
+                . addcslashes($f['q'], '\\%_')
+                . '%';
+
+            $q->where(function ($w) use ($f, $like) {
+                $w->whereHas(
+                    'kabKotaAsal',
+                    function ($k) use ($like) {
+                        $k->where(
+                            'nama_kab_kota',
+                            'like',
+                            $like
+                        )
+                            ->orWhereHas(
+                                'provinsi',
+                                fn ($p) => $p->where(
+                                    'nama_provinsi',
+                                    'like',
+                                    $like
+                                )
+                            );
+                    }
+                )
+                    ->orWhereHas(
+                        'pemda.user',
+                        function ($u) use ($like) {
+                            $u->where(
+                                'instansi',
+                                'like',
+                                $like
+                            )
+                                ->orWhere(
+                                    'full_name',
+                                    'like',
+                                    $like
+                                );
+                        }
+                    );
+
+                if (
+                    preg_match(
+                        '/^(?:LP-?)?(?:\d{4}-?)?(\d{1,9})$/i',
+                        $f['q'],
+                        $m
+                    )
+                ) {
+                    $w->orWhere(
+                        'id_rute_subsidi',
+                        (int) $m[1]
+                    );
+                }
+            });
+        }
+
+        if ($f['provinsi']) {
+            $q->whereHas(
+                'kabKotaAsal',
+                fn ($k) => $k->where(
+                    'id_provinsi',
+                    $f['provinsi']
+                )
+            );
+        }
+
+        if ($f['status']) {
+            $q->whereIn(
+                'status_pengajuan',
+                StatusPengajuan::GRUP[$f['status']]
+            );
+        }
+
+        $this->terapkanPeriode($q, $f['periode']);
+
+        $arah = $f['urut'] === 'terlama'
+            ? 'asc'
+            : 'desc';
+
+        return $q
+            ->orderBy('created_at', $arah)
+            ->orderBy('id_rute_subsidi', $arah);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | UKURAN DOKUMEN
+    |--------------------------------------------------------------------------
+    */
+
+    private function ukuran(string $path): ?string
+    {
+        $disk = Storage::disk('local');
+
+        if (!$disk->exists($path)) {
+            return null;
+        }
+
+        $byte = $disk->size($path);
+
+        return $byte >= 1048576
+            ? number_format(
+                $byte / 1048576,
+                1,
+                ',',
+                '.'
+            ) . ' MB'
+
+            : number_format(
+                max($byte, 1) / 1024,
+                0,
+                ',',
+                '.'
+            ) . ' KB';
+>>>>>>> 0910d5c911ca44bd84ff0e009248ac8404333f54
     }
 }

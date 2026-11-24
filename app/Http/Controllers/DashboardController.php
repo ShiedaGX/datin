@@ -5,6 +5,8 @@ use App\Models\DataPemda;
 use App\Models\KabKota;
 use App\Models\Provinsi;
 use App\Models\Wilayah;
+use App\Models\RuteSubsidi;
+use App\Support\StatusPengajuan;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -76,6 +78,198 @@ class DashboardController extends Controller
         $terbaru = DataPemda::with('kabKota.provinsi', 'kabKota.wilayah')
             ->terbaru()->limit(5)->get();
 
-        return view('dashboard', compact('kpi', 'distribusi', 'donat', 'totalPemda', 'terbaru'));
+        // Statistik konektivitas: mengikuti cakupan hak akses dan definisi
+        // hubungan yang benar-benar tampil di Peta Konektivitas.
+        $pengguna = auth()->user();
+        $queryKonektivitas = RuteSubsidi::query()
+            ->where('status_pengajuan', StatusPengajuan::FINAL);
+
+        if ($pengguna->isModa()) {
+            $pengguna->id_moda === null
+                ? $queryKonektivitas->whereRaw('1 = 0')
+                : $queryKonektivitas->where('id_moda', $pengguna->id_moda);
+        } elseif (! $pengguna->isSuperAdmin() && ! $pengguna->isIntram()) {
+            $queryKonektivitas->whereHas('pemda', fn ($q) => $q->where('id_user', $pengguna->id_user));
+        }
+
+        // Pemetaan sektor mengikuti Peta Konektivitas: berdasarkan nama komoditas.
+        // Nama yang terdapat di beberapa sektor tidak dipaksakan ke satu sektor.
+        $sektorPerKomoditas = DB::table('master_komoditas as k')
+            ->join('master_sektor as s', 's.id_sektor', '=', 'k.id_sektor')
+            ->get(['k.nama_komoditas', 's.nama_sektor'])
+            ->groupBy(fn ($row) => mb_strtolower(trim((string) $row->nama_komoditas)))
+            ->map(fn ($rows) => $rows->pluck('nama_sektor')->unique()->values()->all());
+
+        $peringkatSektor = [];
+        $peringkatKomoditas = [];
+        $jumlahHubungan = 0;
+        $daerahAsal = [];
+        $daerahTujuan = [];
+        $distribusiModa = [];
+        $peringkatAsal = [];
+        $peringkatTujuan = [];
+        $peringkatProvinsi = [];
+        $kelasJarak = ['<100 km' => 0, '100–300 km' => 0, '300–700 km' => 0, '700–1500 km' => 0, '>1500 km' => 0];
+        $jarakModa = [];
+        $totalJarak = 0.0;
+        $jarakMaks = 0.0;
+        $totalEntri = 0;
+
+        $punyaKoordinat = static fn ($kab): bool => $kab !== null
+            && is_numeric($kab->latitude)
+            && is_numeric($kab->longitude)
+            && abs((float) $kab->latitude) <= 90
+            && abs((float) $kab->longitude) <= 180;
+
+        $queryKonektivitas->with(['moda', 'kabKotaAsal.provinsi', 'tujuan', 'detailKomoditasTujuan'])
+            ->orderBy('id_rute_subsidi')
+            ->chunk(150, function ($pengajuan) use (
+                &$jumlahHubungan, &$daerahAsal, &$daerahTujuan,
+                &$distribusiModa, &$peringkatAsal, &$peringkatSektor, &$peringkatKomoditas,
+                &$peringkatTujuan, &$peringkatProvinsi, &$kelasJarak, &$jarakModa, &$totalJarak, &$jarakMaks, &$totalEntri,
+                $sektorPerKomoditas, $punyaKoordinat
+            ) {
+                foreach ($pengajuan as $rute) {
+                    $asal = $rute->kabKotaAsal;
+                    if (! $punyaKoordinat($asal)) {
+                        continue;
+                    }
+
+                    $namaModa = $rute->moda?->nama_moda ?: (match ((int) $rute->id_moda) {
+                        1 => 'Darat', 2 => 'Laut', 3 => 'Udara', 4 => 'Kereta Api',
+                        default => 'Moda #' . $rute->id_moda,
+                    });
+
+                    foreach ($rute->tujuan as $tujuan) {
+                        if (! $punyaKoordinat($tujuan)) {
+                            continue;
+                        }
+
+                        // Satu hubungan = satu pasangan laporan dan tujuan,
+                        // bukan satu laporan maupun satu komoditas.
+                        $jumlahHubungan++;
+                        $daerahAsal[$asal->id_kab_kota] = true;
+                        $daerahTujuan[$tujuan->id_kab_kota] = true;
+                        $distribusiModa[$namaModa] = ($distribusiModa[$namaModa] ?? 0) + 1;
+
+                        $idAsal = $asal->id_kab_kota;
+                        if (! isset($peringkatAsal[$idAsal])) {
+                            $peringkatAsal[$idAsal] = [
+                                'nama' => $asal->nama_lengkap,
+                                'jumlah' => 0,
+                            ];
+                        }
+                        $peringkatAsal[$idAsal]['jumlah']++;
+
+                        $idTujuan = $tujuan->id_kab_kota;
+                        if (! isset($peringkatTujuan[$idTujuan])) {
+                            $peringkatTujuan[$idTujuan] = ['nama' => $tujuan->nama_lengkap, 'jumlah' => 0];
+                        }
+                        $peringkatTujuan[$idTujuan]['jumlah']++;
+
+                        $namaProvinsi = $asal->provinsi?->nama_provinsi ?: 'Tidak diketahui';
+                        $peringkatProvinsi[$namaProvinsi] = ($peringkatProvinsi[$namaProvinsi] ?? 0) + 1;
+
+                        // Jarak garis lurus (Haversine), sama dengan Peta Konektivitas.
+                        $jarak = $this->jarakKm($asal, $tujuan);
+                        $totalJarak += $jarak;
+                        $jarakMaks = max($jarakMaks, $jarak);
+                        $kelasJarak[$jarak < 100 ? '<100 km' : ($jarak < 300 ? '100–300 km' : ($jarak < 700 ? '300–700 km' : ($jarak <= 1500 ? '700–1500 km' : '>1500 km')))]++;
+                        $jarakModa[$namaModa] = [
+                            'jumlah' => ($jarakModa[$namaModa]['jumlah'] ?? 0) + 1,
+                            'total' => ($jarakModa[$namaModa]['total'] ?? 0) + $jarak,
+                        ];
+
+                        // Hitung setiap entri komoditas hanya pada pasangan
+                        // laporan-tujuan yang valid, sama seperti Peta Konektivitas.
+                        foreach ($rute->detailKomoditasTujuan as $detail) {
+                            if ((int) $detail->id_kab_kota_tujuan !== (int) $tujuan->id_kab_kota) {
+                                continue;
+                            }
+                            $nama = trim((string) $detail->nama_komoditas);
+                            if ($nama === '') {
+                                continue;
+                            }
+                            $key = mb_strtolower($nama);
+                            if (! isset($peringkatKomoditas[$key])) {
+                                $peringkatKomoditas[$key] = ['nama' => $nama, 'jumlah' => 0];
+                            }
+                            $peringkatKomoditas[$key]['jumlah']++;
+
+                            $sektor = $sektorPerKomoditas->get($key, []);
+                            $namaSektor = count($sektor) === 1 ? $sektor[0] : 'Belum terpetakan / ambigu';
+                            $peringkatSektor[$namaSektor] = ($peringkatSektor[$namaSektor] ?? 0) + 1;
+                            $totalEntri++;
+                        }
+                    }
+                }
+            });
+
+        arsort($distribusiModa);
+        uasort($peringkatAsal, static fn ($a, $b) =>
+            ($b['jumlah'] <=> $a['jumlah']) ?: strcmp($a['nama'], $b['nama'])
+        );
+
+        uasort($peringkatTujuan, static fn ($a, $b) =>
+            ($b['jumlah'] <=> $a['jumlah']) ?: strcmp($a['nama'], $b['nama'])
+        );
+        arsort($peringkatProvinsi);
+
+        arsort($peringkatSektor);
+        uasort($peringkatKomoditas, static fn ($a, $b) =>
+            ($b['jumlah'] <=> $a['jumlah']) ?: strcmp($a['nama'], $b['nama'])
+        );
+
+        $konektivitas = [
+            'hubungan' => $jumlahHubungan,
+            'asal' => count($daerahAsal),
+            'tujuan' => count($daerahTujuan),
+            'wilayah_unik' => count($daerahAsal + $daerahTujuan),
+            'moda' => collect($distribusiModa)->map(fn ($jumlah, $nama) => [
+                'nama' => $nama,
+                'jumlah' => $jumlah,
+                'persen' => $jumlahHubungan ? round($jumlah / $jumlahHubungan * 100, 1) : 0,
+            ])->values()->all(),
+            'jarak_rata' => $jumlahHubungan ? round($totalJarak / $jumlahHubungan) : 0,
+            'jarak_maks' => (int) round($jarakMaks),
+            'rasio' => count($daerahAsal) ? round($jumlahHubungan / count($daerahAsal), 1) : 0,
+            'kelas_jarak' => collect($kelasJarak)->map(fn ($jumlah, $nama) => [
+                'nama' => $nama,
+                'jumlah' => $jumlah,
+                'persen' => $jumlahHubungan ? round($jumlah / $jumlahHubungan * 100, 1) : 0,
+            ])->values()->all(),
+            'jarak_moda' => collect($jarakModa)->map(fn ($v, $nama) => [
+                'nama' => $nama,
+                'rata' => (int) round($v['total'] / max(1, $v['jumlah'])),
+            ])->sortByDesc('rata')->values()->all(),
+            'top_asal' => array_slice(array_values($peringkatAsal), 0, 5),
+            'top_tujuan' => array_slice(array_values($peringkatTujuan), 0, 5),
+            'top_provinsi' => collect(array_slice($peringkatProvinsi, 0, 5, true))
+                ->map(fn ($jumlah, $nama) => ['nama' => $nama, 'jumlah' => $jumlah])
+                ->values()->all(),
+            'total_entri' => $totalEntri,
+            'top_sektor' => collect(array_slice($peringkatSektor, 0, 5, true))
+                ->map(fn ($jumlah, $nama) => [
+                    'nama' => $nama,
+                    'jumlah' => $jumlah,
+                    'persen' => $totalEntri ? round($jumlah / $totalEntri * 100, 1) : 0,
+                ])
+                ->values()->all(),
+            'top_komoditas' => array_slice(array_values($peringkatKomoditas), 0, 5),
+        ];
+
+        return view('dashboard', compact('kpi', 'distribusi', 'donat', 'totalPemda', 'terbaru', 'konektivitas'));
+    }
+
+    /** Jarak garis lurus (km), bukan jarak jalan atau lintasan pelayaran/penerbangan. */
+    private function jarakKm($a, $b): float
+    {
+        $lat1 = deg2rad((float) $a->latitude);
+        $lat2 = deg2rad((float) $b->latitude);
+        $dlat = $lat2 - $lat1;
+        $dlon = deg2rad((float) $b->longitude - (float) $a->longitude);
+        $h = sin($dlat / 2) ** 2 + cos($lat1) * cos($lat2) * sin($dlon / 2) ** 2;
+
+        return 6371.0088 * 2 * asin(min(1, sqrt($h)));
     }
 }
